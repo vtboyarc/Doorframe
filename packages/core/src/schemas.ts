@@ -57,11 +57,59 @@ export const findingInputSchema = z.object({
     "non_verifiable",
     "duplicate_candidate",
     "stale_link",
-    "closed_work_without_verification"
+    "closed_work_without_verification",
+    "custom_rule"
   ]),
   title: z.string().min(1),
   description: z.string().min(1),
   entityType: z.enum(["requirement", "workItem", "testCase"]),
   entityId: z.string().min(1),
   recommendation: z.string().optional()
+});
+
+const findingCategoryEnum = z.enum([
+  "missing_verification",
+  "missing_work_trace",
+  "weak_wording",
+  "multi_requirement",
+  "non_verifiable",
+  "duplicate_candidate",
+  "stale_link",
+  "closed_work_without_verification",
+  "custom_rule"
+]);
+
+export const requirementIdPatternSchema = z.object({
+  name: z.string().min(1),
+  regex: z.string().min(1)
+});
+
+export const customRuleSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().default(""),
+  severity: z.enum(["info", "warning", "error"]),
+  category: findingCategoryEnum.default("custom_rule"),
+  condition: z.object({
+    field: z.enum(["text", "title", "status", "type", "priority", "verificationMethod"]),
+    matches: z.string().optional(),
+    notMatches: z.string().optional()
+  }),
+  recommendation: z.string().optional(),
+  enabled: z.boolean().optional()
+});
+
+export const analyzerConfigSchema = z.object({
+  vagueTerms: z.array(z.string()),
+  jaccardThreshold: z.number().min(0).max(1),
+  closedStatuses: z.array(z.string()),
+  draftStatuses: z.array(z.string()),
+  nonVerifiableMinSignals: z.number().int().min(0),
+  disabledCategories: z.array(findingCategoryEnum)
+});
+
+export const rulesetSchema = z.object({
+  requirementIdPatterns: z.array(requirementIdPatternSchema),
+  analyzer: analyzerConfigSchema,
+  customRules: z.array(customRuleSchema)
 });

@@ -1,8 +1,14 @@
 import {
+  DEFAULT_RULESET,
+  normalizeRuleset,
   normalizeText,
+  type AnalyzerConfig,
+  type CustomRule,
   type EntityType,
+  type FindingCategory,
   type FindingInput,
   type Requirement,
+  type Ruleset,
   type TestCase,
   type TraceLink,
   type WorkItem
@@ -15,27 +21,14 @@ export interface AnalysisInput {
   traceLinks: TraceLink[];
 }
 
-const VAGUE_TERMS = [
-  "quickly",
-  "robust",
-  "user-friendly",
-  "as needed",
-  "appropriate",
-  "sufficient",
-  "adequate",
-  "easy",
-  "fast",
-  "efficient",
-  "minimize",
-  "maximize",
-  "should",
-  "may",
-  "where possible",
-  "if practical"
-];
+function isClosedWith(status: string | undefined, closedStatuses: string[]): boolean {
+  return closedStatuses.includes((status ?? "").trim().toLowerCase());
+}
 
-const CLOSED_STATUSES = ["done", "closed", "resolved", "complete", "completed"];
-const DRAFT_REQUIREMENT_STATUSES = ["changed", "draft", "proposed", "in review", "review"];
+function isDraftOrChangedWith(status: string | undefined, draftStatuses: string[]): boolean {
+  const normalized = (status ?? "").trim().toLowerCase();
+  return draftStatuses.some((candidate) => normalized.includes(candidate));
+}
 
 function linkedEntityIds(
   requirement: Requirement,
@@ -56,15 +49,6 @@ function linkedEntityIds(
       return requirementIsSource || requirementIsTarget;
     })
     .map((link) => (link.sourceId === requirement.id ? link.targetId : link.sourceId));
-}
-
-function isClosed(status: string | undefined): boolean {
-  return CLOSED_STATUSES.includes((status ?? "").trim().toLowerCase());
-}
-
-function isDraftOrChanged(status: string | undefined): boolean {
-  const normalized = (status ?? "").trim().toLowerCase();
-  return DRAFT_REQUIREMENT_STATUSES.some((candidate) => normalized.includes(candidate));
 }
 
 function hasPassingTest(requirement: Requirement, testCases: TestCase[], traceLinks: TraceLink[]): boolean {
@@ -160,10 +144,13 @@ export function findMissingWorkTrace(input: AnalysisInput): FindingInput[] {
     }));
 }
 
-export function findWeakRequirements(input: AnalysisInput): FindingInput[] {
+export function findWeakRequirements(
+  input: AnalysisInput,
+  vagueTerms: string[] = DEFAULT_RULESET.analyzer.vagueTerms
+): FindingInput[] {
   return input.requirements.flatMap((requirement) => {
     const text = requirement.text.toLowerCase();
-    const matches = VAGUE_TERMS.filter((term) => {
+    const matches = vagueTerms.filter((term) => {
       const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       return new RegExp(`\\b${escaped}\\b`, "i").test(text);
     });
@@ -200,7 +187,10 @@ export function findMultiShallRequirements(input: AnalysisInput): FindingInput[]
     }));
 }
 
-export function findNonVerifiableRequirements(input: AnalysisInput): FindingInput[] {
+export function findNonVerifiableRequirements(
+  input: AnalysisInput,
+  minSignals: number = DEFAULT_RULESET.analyzer.nonVerifiableMinSignals
+): FindingInput[] {
   return input.requirements
     .filter((requirement) => {
       const text = requirement.text.toLowerCase();
@@ -213,7 +203,7 @@ export function findNonVerifiableRequirements(input: AnalysisInput): FindingInpu
         /\b(ms|millisecond|second|minute|hour|percent|%)\b/.test(text)
       ];
 
-      return signals.filter(Boolean).length < 2;
+      return signals.filter(Boolean).length < minSignals;
     })
     .map((requirement) => ({
       severity: "warning",
@@ -226,7 +216,10 @@ export function findNonVerifiableRequirements(input: AnalysisInput): FindingInpu
     }));
 }
 
-export function findDuplicateCandidates(input: AnalysisInput): FindingInput[] {
+export function findDuplicateCandidates(
+  input: AnalysisInput,
+  threshold: number = DEFAULT_RULESET.analyzer.jaccardThreshold
+): FindingInput[] {
   const findings: FindingInput[] = [];
   const tokenized = input.requirements.map((requirement) => ({
     requirement,
@@ -237,7 +230,7 @@ export function findDuplicateCandidates(input: AnalysisInput): FindingInput[] {
     for (let j = i + 1; j < tokenized.length; j += 1) {
       const score = jaccard(tokenized[i].tokens, tokenized[j].tokens);
 
-      if (score >= 0.82) {
+      if (score >= threshold) {
         findings.push({
           severity: "info",
           category: "duplicate_candidate",
@@ -254,9 +247,12 @@ export function findDuplicateCandidates(input: AnalysisInput): FindingInput[] {
   return findings;
 }
 
-export function findClosedWorkWithoutVerification(input: AnalysisInput): FindingInput[] {
+export function findClosedWorkWithoutVerification(
+  input: AnalysisInput,
+  closedStatuses: string[] = DEFAULT_RULESET.analyzer.closedStatuses
+): FindingInput[] {
   return input.workItems.flatMap((workItem) => {
-    if (!isClosed(workItem.status)) {
+    if (!isClosedWith(workItem.status, closedStatuses)) {
       return [];
     }
 
@@ -285,14 +281,18 @@ export function findClosedWorkWithoutVerification(input: AnalysisInput): Finding
   });
 }
 
-export function findPossibleStaleLinks(input: AnalysisInput): FindingInput[] {
+export function findPossibleStaleLinks(
+  input: AnalysisInput,
+  closedStatuses: string[] = DEFAULT_RULESET.analyzer.closedStatuses,
+  draftStatuses: string[] = DEFAULT_RULESET.analyzer.draftStatuses
+): FindingInput[] {
   return input.workItems.flatMap((workItem) => {
-    if (!isClosed(workItem.status)) {
+    if (!isClosedWith(workItem.status, closedStatuses)) {
       return [];
     }
 
     return requirementsForWorkItem(workItem, input.requirements, input.traceLinks)
-      .filter((requirement) => isDraftOrChanged(requirement.status))
+      .filter((requirement) => isDraftOrChangedWith(requirement.status, draftStatuses))
       .map((requirement) => ({
         severity: "warning",
         category: "stale_link",
@@ -305,15 +305,93 @@ export function findPossibleStaleLinks(input: AnalysisInput): FindingInput[] {
   });
 }
 
-export function generateFindings(input: AnalysisInput): FindingInput[] {
-  return [
+function customRuleFieldValue(requirement: Requirement, field: CustomRule["condition"]["field"]): string {
+  switch (field) {
+    case "title":
+      return requirement.title ?? "";
+    case "status":
+      return requirement.status ?? "";
+    case "type":
+      return requirement.type ?? "";
+    case "priority":
+      return requirement.priority ?? "";
+    case "verificationMethod":
+      return requirement.verificationMethod ?? "";
+    case "text":
+    default:
+      return requirement.text ?? "";
+  }
+}
+
+function safeRegex(pattern: string): RegExp | null {
+  try {
+    return new RegExp(pattern, "i");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Evaluate project-defined declarative {@link CustomRule}s against requirements.
+ * A rule fires when its `matches` regex matches (or `notMatches` regex does not
+ * match) the selected field. Invalid regexes are skipped.
+ */
+export function evaluateCustomRules(input: AnalysisInput, rules: CustomRule[]): FindingInput[] {
+  return rules
+    .filter((rule) => rule.enabled !== false)
+    .flatMap((rule) =>
+      input.requirements.flatMap((requirement) => {
+        const value = customRuleFieldValue(requirement, rule.condition.field);
+        let fired = false;
+
+        if (rule.condition.matches) {
+          const regex = safeRegex(rule.condition.matches);
+          if (regex && regex.test(value)) {
+            fired = true;
+          }
+        }
+
+        if (rule.condition.notMatches) {
+          const regex = safeRegex(rule.condition.notMatches);
+          if (regex && !regex.test(value)) {
+            fired = true;
+          }
+        }
+
+        if (!fired) {
+          return [];
+        }
+
+        return [
+          {
+            severity: rule.severity,
+            category: rule.category,
+            title: `${requirement.externalId}: ${rule.title}`,
+            description: rule.description || `Custom rule "${rule.title}" matched this requirement.`,
+            entityType: "requirement" as const,
+            entityId: requirement.id,
+            recommendation: rule.recommendation
+          }
+        ];
+      })
+    );
+}
+
+export function generateFindings(input: AnalysisInput, ruleset: Ruleset = DEFAULT_RULESET): FindingInput[] {
+  const config: AnalyzerConfig = normalizeRuleset(ruleset).analyzer;
+  const disabled = new Set<FindingCategory>(config.disabledCategories);
+
+  const findings: FindingInput[] = [
     ...findMissingVerification(input),
     ...findMissingWorkTrace(input),
-    ...findWeakRequirements(input),
+    ...findWeakRequirements(input, config.vagueTerms),
     ...findMultiShallRequirements(input),
-    ...findNonVerifiableRequirements(input),
-    ...findDuplicateCandidates(input),
-    ...findClosedWorkWithoutVerification(input),
-    ...findPossibleStaleLinks(input)
+    ...findNonVerifiableRequirements(input, config.nonVerifiableMinSignals),
+    ...findDuplicateCandidates(input, config.jaccardThreshold),
+    ...findClosedWorkWithoutVerification(input, config.closedStatuses),
+    ...findPossibleStaleLinks(input, config.closedStatuses, config.draftStatuses),
+    ...evaluateCustomRules(input, ruleset.customRules ?? [])
   ];
+
+  return findings.filter((finding) => !disabled.has(finding.category));
 }

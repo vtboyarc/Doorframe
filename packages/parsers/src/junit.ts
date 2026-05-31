@@ -1,6 +1,7 @@
 import {
   asArray,
   type ParseResult,
+  type RequirementIdPattern,
   testCaseInputSchema
 } from "@doorframe/core";
 import { XMLParser } from "fast-xml-parser";
@@ -43,7 +44,10 @@ function collectSuites(suite: XmlNode): XmlNode[] {
   return [suite, ...childSuites.flatMap(collectSuites)];
 }
 
-export function parseJUnitXml(input: string): ParseResult<ParsedTestCase> {
+export function parseJUnitXml(
+  input: string,
+  patterns?: RequirementIdPattern[]
+): ParseResult<ParsedTestCase> {
   const parser = new XMLParser({
     attributeNamePrefix: "@_",
     ignoreAttributes: false,
@@ -78,7 +82,7 @@ export function parseJUnitXml(input: string): ParseResult<ParsedTestCase> {
         failureMessage,
         source: "junit-xml",
         rawAttributes: testcase,
-        requirementIds: extractRequirementIds(`${name}\n${classname}\n${failureMessage ?? ""}`)
+        requirementIds: extractRequirementIds(`${name}\n${classname}\n${failureMessage ?? ""}`, patterns)
       };
 
       const validation = testCaseInputSchema.safeParse(candidate);

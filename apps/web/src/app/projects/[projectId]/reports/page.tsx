@@ -32,6 +32,24 @@ export default async function ReportsPage({
             <ExternalLink size={16} />
             Open HTML report
           </a>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            {[
+              { key: "md", label: "Download Markdown" },
+              { key: "json", label: "Download JSON" },
+              { key: "csv", label: "Download CSV matrix" }
+            ].map((format) => (
+              <a
+                key={format.key}
+                href={`/api/projects/${projectId}/report?format=${format.key}&download=1`}
+                className="inline-flex min-h-9 items-center border border-[var(--line)] bg-white px-3"
+              >
+                {format.label}
+              </a>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-[var(--muted)]">
+            The JSON export is also the baseline format consumed by <code>doorframe diff</code>.
+          </p>
         </section>
         <iframe
           title="Traceability report preview"

@@ -19,6 +19,7 @@
       "@doorframe/parsers": ["packages/parsers/src/index.ts"],
       "@doorframe/analyzers": ["packages/analyzers/src/index.ts"],
       "@doorframe/reporting": ["packages/reporting/src/index.ts"],
+      "@doorframe/integrations": ["packages/integrations/src/index.ts"],
       "@doorframe/storage": ["packages/storage/src/index.ts"]
     }
   },

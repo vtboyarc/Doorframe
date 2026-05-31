@@ -6,9 +6,13 @@ const navItems = [
   ["Dashboard", ""],
   ["Imports", "imports"],
   ["Requirements", "requirements"],
+  ["Matrix", "matrix"],
   ["Findings", "findings"],
   ["Trace Graph", "trace-graph"],
-  ["Reports", "reports"]
+  ["Baselines", "baselines"],
+  ["Reports", "reports"],
+  ["Settings", "settings"],
+  ["Audit", "audit"]
 ] as const;
 
 export function PageShell({

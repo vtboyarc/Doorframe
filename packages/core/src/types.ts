@@ -26,7 +26,8 @@ export type FindingCategory =
   | "non_verifiable"
   | "duplicate_candidate"
   | "stale_link"
-  | "closed_work_without_verification";
+  | "closed_work_without_verification"
+  | "custom_rule";
 
 export type TestStatus = "passed" | "failed" | "skipped";
 
