@@ -216,10 +216,10 @@ function closedWorkWithoutPassingRows(data: ProjectData): string {
 function requirementFindingRows(
   data: ProjectData,
   category: Finding["category"],
-  emptyMessage: string
+  emptyMessage: string,
+  requirementsById = entityMap<Requirement>(data.requirements)
 ): string {
   const findings = data.findings.filter((finding) => finding.category === category);
-  const requirementsById = entityMap<Requirement>(data.requirements);
 
   if (findings.length === 0) {
     return emptyRow(4, emptyMessage);
@@ -289,8 +289,46 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
     medium: data.findings.filter((finding) => finding.severity === "warning"),
     low: data.findings.filter((finding) => finding.severity === "info")
   };
-  const isDemoData = data.importBatches.some((batch) => batch.sourceType === "demo");
-  const demoBanner = isDemoData
+  const requirementsById = entityMap<Requirement>(data.requirements);
+  const reqHeader = ["Requirement ID", "Title", "Finding", "Recommendation"];
+  const findingSections = [
+    {
+      title: "Weak requirement language",
+      headers: reqHeader,
+      rows: requirementFindingRows(data, "weak_wording", "No weak wording findings.", requirementsById)
+    },
+    {
+      title: "Multiple requirements in one statement",
+      headers: reqHeader,
+      rows: requirementFindingRows(
+        data,
+        "multi_requirement",
+        "No multi-requirement statements detected.",
+        requirementsById
+      )
+    },
+    {
+      title: "Possibly non-verifiable requirements",
+      headers: reqHeader,
+      rows: requirementFindingRows(
+        data,
+        "non_verifiable",
+        "No possibly non-verifiable requirements detected.",
+        requirementsById
+      )
+    },
+    {
+      title: "Duplicate candidates",
+      headers: ["Candidate pair", "Detail", "Recommendation"],
+      rows: duplicateCandidateRows(data)
+    },
+    {
+      title: "Possible stale trace links",
+      headers: reqHeader,
+      rows: requirementFindingRows(data, "stale_link", "No possible stale trace links detected.", requirementsById)
+    }
+  ];
+  const demoBanner = data.importBatches.some((batch) => batch.sourceType === "demo")
     ? `<p class="demo-banner">This report was generated from fictional Doorframe sample data. It is for demonstration only and must not be used as real review evidence.</p>`
     : "";
 
@@ -404,35 +442,15 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
     <tbody>${closedWorkWithoutPassingRows(data)}</tbody>
   </table>
 
-  <h2>Weak requirement language</h2>
+  ${findingSections
+    .map(
+      (section) => `<h2>${escapeHtml(section.title)}</h2>
   <table>
-    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
-    <tbody>${requirementFindingRows(data, "weak_wording", "No weak wording findings.")}</tbody>
-  </table>
-
-  <h2>Multiple requirements in one statement</h2>
-  <table>
-    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
-    <tbody>${requirementFindingRows(data, "multi_requirement", "No multi-requirement statements detected.")}</tbody>
-  </table>
-
-  <h2>Possibly non-verifiable requirements</h2>
-  <table>
-    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
-    <tbody>${requirementFindingRows(data, "non_verifiable", "No possibly non-verifiable requirements detected.")}</tbody>
-  </table>
-
-  <h2>Duplicate candidates</h2>
-  <table>
-    <thead><tr><th>Candidate pair</th><th>Detail</th><th>Recommendation</th></tr></thead>
-    <tbody>${duplicateCandidateRows(data)}</tbody>
-  </table>
-
-  <h2>Possible stale trace links</h2>
-  <table>
-    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
-    <tbody>${requirementFindingRows(data, "stale_link", "No possible stale trace links detected.")}</tbody>
-  </table>
+    <thead><tr>${section.headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+    <tbody>${section.rows}</tbody>
+  </table>`
+    )
+    .join("\n\n  ")}
 
   <h2>Failed tests by requirement</h2>
   <table>
