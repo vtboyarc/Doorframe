@@ -77,7 +77,7 @@ interface TestCaseRow {
   external_id: string;
   name: string;
   classname: string | null;
-  status: "passed" | "failed" | "skipped";
+  status: "passed" | "failed" | "skipped" | "errored";
   duration: number | null;
   failure_message: string | null;
   source: string;

@@ -263,7 +263,7 @@ function buildRequirementFacts(data: ProjectData): RequirementFact[] {
       linkedTraceLinks: data.traceLinks.filter((link) => linkTouchesRequirement(link, requirement)),
       findings: data.findings.filter((finding) => finding.entityType === "requirement" && finding.entityId === requirement.id),
       passingTests: linkedTestCases.filter((testCase) => testCase.status === "passed"),
-      failedTests: linkedTestCases.filter((testCase) => testCase.status === "failed"),
+      failedTests: linkedTestCases.filter((testCase) => testCase.status === "failed" || testCase.status === "errored"),
       skippedTests: linkedTestCases.filter((testCase) => testCase.status === "skipped")
     };
   });

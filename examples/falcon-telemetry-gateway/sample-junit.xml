@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="falcon-telemetry-gateway" tests="58" failures="2" skipped="1" errors="1">
+  <testsuite name="FalconTelemetryGatewayTests" tests="58" failures="2" skipped="1" errors="1">
+    <testcase classname="TelemetryStatusPanelTests" name="testDisplaysStatusWithinTwoSeconds_REQ_001" time="0.041" />
+    <testcase classname="TelemetryStatusPanelTests" name="testDisplaysPacketHealth_REQ_001" time="0.030" />
+    <testcase classname="AuthenticationAuditTests" name="testFailedLoginIsLogged_REQ_002" time="0.026" />
+    <testcase classname="AuthenticationAuditTests" name="testSourceIpCaptured_REQ_002" time="0.021" />
+    <testcase classname="OperatorAlertTests" name="testCommunicationLossAlert_REQ_003" time="0.008">
+      <failure message="Expected accepted operator alert copy for REQ-003, but the linked work item has not referenced the requirement." />
+    </testcase>
+    <testcase classname="TelemetryStatusPanelTests" name="testRefreshesStatusAfterPacket_REQ_004" time="0.039" />
+    <testcase classname="AuthenticationAuditTests" name="testRetainsAuditRecords_REQ_005" time="0.034" />
+    <testcase classname="PacketValidationTests" name="testMalformedPacketRejected_REQ_007" time="0.018" />
+    <testcase classname="PacketValidationTests" name="testMalformedPacketShowsErrorMessage_REQ_007" time="0.019" />
+    <testcase classname="OperatorBannerTests" name="testDegradedModeBanner_REQ_008" time="0.027" />
+    <testcase classname="ConfigurationStorageTests" name="testConfigWrittenEncrypted_REQ_009" time="0.022" />
+    <testcase classname="RetryDisplayTests" name="testRetryCountDisplayed_REQ_010" time="0.025" />
+    <testcase classname="SettingsAuditTests" name="testSettingsChangeAudited_REQ_012" time="0.020" />
+    <testcase classname="SessionSecurityTests" name="testInactiveSessionLocks_REQ_013" time="0.031" />
+    <testcase classname="TelemetryPacketProcessorTests" name="testPacketProcessedWithinFiveSeconds_REQ_014" time="0.044" />
+    <testcase classname="TelemetryPacketProcessorTests" name="testPacketTimingMetricRecorded_REQ_014" time="0.028" />
+    <testcase classname="PacketValidationTests" name="testDuplicatePacketDiscarded_REQ_015" time="0.023" />
+    <testcase classname="SensorStatusTests" name="testStaleDataLabel_REQ_016" time="0.026" />
+    <testcase classname="RetryBehaviorTests" name="testDroppedPacketRetried_REQ_017" time="0.037" />
+    <testcase classname="RetryBehaviorTests" name="testRetryStopsAfterLimit_REQ_017" time="0.033" />
+    <testcase classname="AuthenticationReviewTests" name="testSourceIpDisplayed_REQ_018" time="0.024" />
+    <testcase classname="ReportExportTests" name="testHtmlReviewExport_REQ_019" time="0.055">
+      <failure message="HTML review export exceeded the 60 second review packet threshold for REQ-019." />
+    </testcase>
+    <testcase classname="ReportAppendixTests" name="testAllRequirementIdsIncluded_REQ_020" time="0.017" />
+    <testcase classname="CsvImportTests" name="testQuotedCommasPreserved_REQ_021" time="0.018" />
+    <testcase classname="CsvImportTests" name="testBlankRequirementIdWarning_REQ_022" time="0.018" />
+    <testcase classname="JiraImportTests" name="testRawFieldsPreserved_REQ_023" time="0.019" />
+    <testcase classname="JunitImportTests" name="testSkippedTestClassified_REQ_024" time="0.016" />
+    <testcase classname="ImportPanelTests" name="testWarningsDisplayed_REQ_025" time="0.029" />
+    <testcase classname="AuditLogTests" name="testReportGenerationAudited_REQ_026" time="0.021" />
+    <testcase classname="TraceabilityMatrixTests" name="testMatrixSortedByRequirementId_REQ_027" time="0.020" />
+    <testcase classname="StorageExportTests" name="testLocalDatabaseExport_REQ_028" time="0.030" />
+    <testcase classname="ReqifImportTests" name="testParentHierarchyPreserved_REQ_029" time="0.033" />
+    <testcase classname="WeakWordingTests" name="testPhraseShownInFinding_REQ_030" time="0.015" />
+    <testcase classname="DuplicateRequirementTests" name="testDuplicateCandidateDetected_REQ_031" time="0.031" />
+    <testcase classname="JunitImportTests" name="testErroredCaseClassified_REQ_032" time="0.004">
+      <skipped message="Errored test import contract not verified yet for REQ-032" />
+    </testcase>
+    <testcase classname="RequirementIdTests" name="testUnderscoreIdNormalized_REQ_033" time="0.018" />
+    <testcase classname="RequirementIdTests" name="testEmbeddedIdDetected_REQ_033" time="0.019" />
+    <testcase classname="ReportAssetTests" name="testNoExternalAssets_REQ_034" time="0.020" />
+    <testcase classname="ReportAssetTests" name="testReportOpensOffline_REQ_034" time="0.024" />
+    <testcase classname="RulesetStorageTests" name="testRulesetSavedLocally_REQ_035" time="0.023" />
+    <testcase classname="RulesetStorageTests" name="testRulesetReloaded_REQ_035" time="0.025" />
+    <testcase classname="ClosedWorkTests" name="testClosedWorkWithoutVerificationListed_REQ_036" time="0.027" />
+    <testcase classname="StaleLinkTests" name="testChangedRequirementLinkedToClosedWork_REQ_037" time="0.020" />
+    <testcase classname="ReportImportSummaryTests" name="testSourceFilenamesShown_REQ_038" time="0.019" />
+    <testcase classname="CliLocalTests" name="testCliRunsWithoutCredentials_REQ_039" time="0.040" />
+    <testcase classname="ProjectCleanupTests" name="testProjectMarkedInactive_REQ_041" time="0.018" />
+    <testcase classname="BaselineDiffTests" name="testDiffCountsShown_REQ_043" time="0.026" />
+    <testcase classname="BaselineDiffTests" name="testAddedRequirementsShown_REQ_043" time="0.022" />
+    <testcase classname="BaselineDiffTests" name="testDeletedRequirementsShown_REQ_043" time="0.021" />
+    <testcase classname="TelemetryStatusPanelTests" name="testPanelHandlesMissingPacket_REQ_001" time="0.032" />
+    <testcase classname="AuthenticationAuditTests" name="testFailureReasonCaptured_REQ_002" time="0.020" />
+    <testcase classname="PacketValidationTests" name="testDuplicateWindowUsesTenSeconds_REQ_015" time="0.018" />
+    <testcase classname="SensorStatusTests" name="testStaleLabelClearsOnPacket_REQ_016" time="0.019" />
+    <testcase classname="AuthenticationReviewTests" name="testAuthenticationReviewScreenLoads_REQ_018" time="0.023" />
+    <testcase classname="JunitImportTests" name="testErroredFailureMessagePreserved_REQ_024" time="0.005">
+      <error message="Synthetic CI runner error used to verify errored JUnit parsing." />
+    </testcase>
+    <testcase classname="WeakWordingTests" name="testRecommendationShown_REQ_030" time="0.016" />
+    <testcase classname="DuplicateRequirementTests" name="testSimilarityScoreReported_REQ_031" time="0.027" />
+    <testcase classname="ReportAssetTests" name="testPrintStylesIncluded_REQ_034" time="0.022" />
+  </testsuite>
+</testsuites>

@@ -16,6 +16,7 @@ export interface MatrixRow {
 export interface ReportSummary {
   requirementsWithoutWork: number;
   requirementsWithoutTests: number;
+  requirementsWithoutPassingTests: number;
   failingTests: number;
 }
 
@@ -50,7 +51,8 @@ export function matrixRows(data: ProjectData): MatrixRow[] {
   return data.requirements.map((requirement) => {
     const workIds = linkedIds(data, requirement.id, "workItem");
     const testIds = linkedIds(data, requirement.id, "testCase");
-    const findings = data.findings.filter((finding) => finding.entityId === requirement.id);
+    const relatedEntityIds = new Set([requirement.id, ...workIds, ...testIds]);
+    const findings = data.findings.filter((finding) => relatedEntityIds.has(finding.entityId));
 
     return {
       requirement,
@@ -72,6 +74,9 @@ export function summarizeReport(data: ProjectData): ReportSummary {
   return {
     requirementsWithoutWork: matrix.filter((row) => row.workItems.length === 0).length,
     requirementsWithoutTests: matrix.filter((row) => row.testCases.length === 0).length,
-    failingTests: data.testCases.filter((test) => test.status === "failed").length
+    requirementsWithoutPassingTests: matrix.filter(
+      (row) => row.testCases.length === 0 || !row.testCases.some((test) => test.status === "passed")
+    ).length,
+    failingTests: data.testCases.filter((test) => test.status === "failed" || test.status === "errored").length
   };
 }

@@ -1,0 +1,55 @@
+{
+  "sampleProject": "Falcon Telemetry Gateway",
+  "expectedRecordCounts": {
+    "requirements": 42,
+    "workItems": 31,
+    "testCases": 58
+  },
+  "expectedFindingCount": 19,
+  "expectedSignals": [
+    {
+      "requirementId": "REQ-003",
+      "categories": ["weak_wording", "missing_work_trace", "missing_verification"],
+      "reason": "REQ-003 uses the vague word quickly, has no work item that explicitly references REQ-003, and has no passing linked test."
+    },
+    {
+      "requirementId": "REQ-014",
+      "categories": ["stale_link"],
+      "reason": "REQ-014 changed from a 5 second packet processing threshold to 2 seconds while closed work still references it."
+    },
+    {
+      "workItemId": "FG-21",
+      "categories": ["missing_work_trace"],
+      "reason": "FG-21 mentions communication loss but intentionally does not include REQ-003, so Doorframe does not create a high-confidence trace link."
+    },
+    {
+      "workItemId": "FG-23",
+      "categories": ["closed_work_without_verification"],
+      "reason": "FG-23 is closed for REQ-006, but REQ-006 has no linked passing test evidence."
+    },
+    {
+      "workItemId": "FG-33",
+      "categories": ["closed_work_without_verification"],
+      "reason": "FG-33 is closed for REQ-019, but the linked review export test fails."
+    },
+    {
+      "workItemId": "FG-41",
+      "categories": ["closed_work_without_verification"],
+      "reason": "FG-41 is resolved for REQ-040, but no passing ReqIFZ verification evidence is linked."
+    },
+    {
+      "requirementId": "REQ-004",
+      "categories": ["duplicate_candidate"],
+      "reason": "REQ-004 is intentionally similar to REQ-001 so the duplicate candidate rule has an obvious hit."
+    }
+  ],
+  "expectedBaselineDiff": [
+    "REQ-014 changes packet processing timing from 5 seconds to 2 seconds.",
+    "REQ-042 is deleted between baselines.",
+    "REQ-043 is added between baselines."
+  ],
+  "notes": [
+    "All sample data is fictional.",
+    "The sample intentionally avoids real program names, contract numbers, government markings, real aircraft names, and classified-sounding details."
+  ]
+}

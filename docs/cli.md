@@ -5,9 +5,9 @@ The CLI runs the same parsers and analyzers as the web app without storing anyth
 ```bash
 npm install
 npm run doorframe -- analyze \
-  --requirements ./examples/sample-requirements.csv \
-  --jira ./examples/sample-jira.csv \
-  --junit ./examples/sample-junit.xml \
+  --requirements ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
+  --jira ./examples/falcon-telemetry-gateway/sample-jira.csv \
+  --junit ./examples/falcon-telemetry-gateway/sample-junit.xml \
   --out ./doorframe-report.html
 ```
 
@@ -29,7 +29,20 @@ The `json` format embeds a portable snapshot used by `doorframe diff`.
 
 ## `diff`
 
-Compare two JSON reports (baselines) produced by `analyze --format json`.
+Compare two requirements baselines and generate an offline HTML diff report.
+
+```bash
+npm run doorframe -- diff \
+  --baseline-a ./examples/falcon-telemetry-gateway/sample-requirements-baseline-a.csv \
+  --baseline-b ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
+  --out ./doorframe-baseline-diff.html
+```
+
+Optional `--jira` and `--junit` inputs add affected work item and test context to changed requirements.
+
+The command detects added requirements, deleted requirements, changed fields, timing/threshold changes, and review concern prompts.
+
+You can still compare two JSON reports produced by `analyze --format json`:
 
 ```bash
 npm run doorframe -- diff --base baseline-a.json --against baseline-b.json

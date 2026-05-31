@@ -3,6 +3,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
+  generateBaselineDiffHtmlReport,
   generateHtmlTraceabilityReport,
   generateJsonReport,
   generateMarkdownTraceabilityReport,
@@ -32,6 +33,7 @@ import {
   defaultRequirementsCsvMapping,
   summarizeProjectData
 } from "@doorframe/storage";
+import { compareRequirementBaselines } from "@doorframe/analyzers";
 import {
   DEFAULT_RULESET,
   diffBaselines,
@@ -53,6 +55,7 @@ function usage(): string {
 
 Usage:
   doorframe analyze --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--reqif spec.reqif] [--format html|md|json|csv] [--ruleset rules.json] [--out report.ext]
+  doorframe diff --baseline-a req-a.csv --baseline-b req-b.csv [--jira jira.csv] [--junit tests.xml] [--out diff.html]
   doorframe diff --base baseline-a.json --against baseline-b.json
   doorframe import-jira --requirements req.csv [--jql "project=FG"] [--format ...] [--out ...]
   doorframe import-github --requirements req.csv [--junit-xml file.xml] [--owner o --repo r] [...]
@@ -236,6 +239,57 @@ async function analyze(args: string[]): Promise<void> {
 
 async function diff(args: string[]): Promise<void> {
   const options = parseOptions(args);
+  if (options["baseline-a"] || options["baseline-b"]) {
+    const baselineAPath = requireOption(options["baseline-a"], "baseline-a");
+    const baselineBPath = requireOption(options["baseline-b"], "baseline-b");
+    const ruleset = await loadRuleset(options.ruleset);
+    const [baselineACsv, baselineBCsv] = await Promise.all([readUtf8(baselineAPath), readUtf8(baselineBPath)]);
+    const baselineA = parseRequirementsCsv(baselineACsv, defaultRequirementsCsvMapping);
+    const baselineB = parseRequirementsCsv(baselineBCsv, defaultRequirementsCsvMapping);
+    const errors = [...baselineA.errors.map((error) => `baseline-a: ${error}`), ...baselineB.errors.map((error) => `baseline-b: ${error}`)];
+
+    const workItems: ParsedWorkItem[] = [];
+    const testCases: ParsedTestCase[] = [];
+    if (options.jira) {
+      const jira = parseJiraCsv(await readUtf8(options.jira), defaultJiraCsvMapping, ruleset.requirementIdPatterns);
+      workItems.push(...jira.records);
+      errors.push(...jira.errors.map((error) => `jira: ${error}`));
+    }
+    if (options.junit) {
+      const junit = parseJUnitXml(await readUtf8(options.junit), ruleset.requirementIdPatterns);
+      testCases.push(...junit.records);
+      errors.push(...junit.errors.map((error) => `junit: ${error}`));
+    }
+
+    if (baselineA.records.length === 0 || baselineB.records.length === 0) {
+      throw new Error(`Baseline diff requires records in both baselines. ${errors.join(" ")}`.trim());
+    }
+
+    const report = compareRequirementBaselines({
+      baselineAName: baselineAPath,
+      baselineBName: baselineBPath,
+      requirementsA: baselineA.records,
+      requirementsB: baselineB.records,
+      workItems,
+      testCases
+    });
+    const outPath = options.out ?? "./doorframe-baseline-diff.html";
+    await fs.writeFile(path.resolve(outPath), generateBaselineDiffHtmlReport(report), "utf8");
+
+    console.log("Doorframe baseline diff complete.");
+    console.log("");
+    console.log(`Requirements added: ${report.summary.added}`);
+    console.log(`Requirements deleted: ${report.summary.deleted}`);
+    console.log(`Requirements changed: ${report.summary.changed}`);
+    console.log(`High concern changes: ${report.summary.highConcern}`);
+    if (errors.length > 0) {
+      console.log(`Import warnings: ${errors.length}`);
+    }
+    console.log("");
+    console.log(`Diff report written to ${outPath}`);
+    return;
+  }
+
   const basePath = requireOption(options.base, "base");
   const againstPath = requireOption(options.against, "against");
 

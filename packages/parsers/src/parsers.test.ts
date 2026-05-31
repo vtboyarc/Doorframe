@@ -39,6 +39,28 @@ describe("parseRequirementsCsv", () => {
       verificationMethod: "Test"
     });
   });
+
+  it("infers ugly headers, trims whitespace, and warns on duplicate ids", () => {
+    const result = parseRequirementsCsv(
+      "Requirement ID,Name,Description,Verified By\n REQ_1 ,Login,The system shall log in users.,Test\nREQ-1,Duplicate,Duplicate row,Test\n",
+      {}
+    );
+
+    expect(result.records).toHaveLength(1);
+    expect(result.records[0]).toMatchObject({
+      externalId: "REQ-1",
+      title: "Login",
+      verificationMethod: "Test"
+    });
+    expect(result.errors.join("\n")).toContain("duplicate requirement ID REQ-1");
+  });
+
+  it("returns a helpful error when required columns are missing", () => {
+    const result = parseRequirementsCsv("Name,Description\nLogin,The system shall log in users.\n", {});
+
+    expect(result.records).toEqual([]);
+    expect(result.errors.join("\n")).toContain("Missing required requirements CSV column for requirement ID");
+  });
 });
 
 describe("parseJiraCsv", () => {
@@ -54,6 +76,15 @@ describe("parseJiraCsv", () => {
     );
 
     expect(result.records[0]?.requirementIds).toEqual(["REQ-1", "SYS-2"]);
+  });
+
+  it("extracts requirement ids from common Jira custom fields and labels", () => {
+    const result = parseJiraCsv(
+      "Issue key,Summary,Description,Status,Issue Type,Labels,Custom field (Requirement IDs)\nFG-1,Work item,No id here,Done,Story,trace-REQ-7,REQ-8\n",
+      {}
+    );
+
+    expect(result.records[0]?.requirementIds).toEqual(["REQ-8", "REQ-7"]);
   });
 });
 
@@ -72,5 +103,21 @@ describe("parseJUnitXml", () => {
     expect(result.records[0]?.status).toBe("passed");
     expect(result.records[1]?.status).toBe("failed");
     expect(result.records[1]?.requirementIds).toEqual(["REQ-2"]);
+  });
+
+  it("parses skipped and errored JUnit cases", () => {
+    const xml = `<testsuite name="doorframe">
+      <testcase classname="ImportTests" name="REQ-3 skipped" time="0.02">
+        <skipped message="not ready" />
+      </testcase>
+      <testcase classname="ImportTests" name="REQ-4 errored" time="0.01">
+        <error message="runner error" />
+      </testcase>
+    </testsuite>`;
+
+    const result = parseJUnitXml(xml);
+
+    expect(result.records.map((record) => record.status)).toEqual(["skipped", "errored"]);
+    expect(result.records[1]?.failureMessage).toBe("runner error");
   });
 });

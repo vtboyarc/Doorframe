@@ -100,6 +100,9 @@ function jaccard(left: Set<string>, right: Set<string>): number {
 export function findMissingVerification(input: AnalysisInput): FindingInput[] {
   return input.requirements.flatMap((requirement) => {
     const linkedTests = linkedEntityIds(requirement, "testCase", input.traceLinks);
+    const hasLinkedPassingTest = input.testCases.some(
+      (testCase) => linkedTests.includes(testCase.id) && testCase.status === "passed"
+    );
     const findings: FindingInput[] = [];
 
     if (!requirement.verificationMethod?.trim()) {
@@ -123,6 +126,16 @@ export function findMissingVerification(input: AnalysisInput): FindingInput[] {
         entityType: "requirement",
         entityId: requirement.id,
         recommendation: "Link passing test evidence or mark why verification is handled outside automated tests."
+      });
+    } else if (!hasLinkedPassingTest) {
+      findings.push({
+        severity: "error",
+        category: "missing_verification",
+        title: `${requirement.externalId} has no passing linked test evidence`,
+        description: "Linked test evidence exists, but none of the linked JUnit test cases are passing.",
+        entityType: "requirement",
+        entityId: requirement.id,
+        recommendation: "Add or link passing verification evidence before relying on this requirement for review."
       });
     }
 

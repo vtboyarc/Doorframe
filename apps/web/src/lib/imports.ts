@@ -117,11 +117,20 @@ export function saveJunitRecords(projectId: string, testCases: ParsedTestCase[])
 
 async function examplesDir(): Promise<string> {
   const candidates = [
+    path.join(process.cwd(), "examples", "falcon-telemetry-gateway"),
+    path.resolve(process.cwd(), "../..", "examples", "falcon-telemetry-gateway"),
     path.join(process.cwd(), "examples"),
     path.resolve(process.cwd(), "../..", "examples")
   ];
 
   for (const candidate of candidates) {
+    try {
+      await fs.access(path.join(candidate, "sample-requirements-baseline-b.csv"));
+      return candidate;
+    } catch {
+      // Try the next likely workspace layout.
+    }
+
     try {
       await fs.access(path.join(candidate, "sample-requirements.csv"));
       return candidate;
@@ -140,7 +149,9 @@ export async function loadDemoProject(projectId: string): Promise<{
 }> {
   const dir = await examplesDir();
   const [requirementsCsv, jiraCsv, junitXml] = await Promise.all([
-    fs.readFile(path.join(dir, "sample-requirements.csv"), "utf8"),
+    fs
+      .readFile(path.join(dir, "sample-requirements-baseline-b.csv"), "utf8")
+      .catch(() => fs.readFile(path.join(dir, "sample-requirements.csv"), "utf8")),
     fs.readFile(path.join(dir, "sample-jira.csv"), "utf8"),
     fs.readFile(path.join(dir, "sample-junit.xml"), "utf8")
   ]);

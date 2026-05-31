@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import type { ProjectData } from "@doorframe/core";
+import { parseJiraCsv, parseJUnitXml, parseRequirementsCsv } from "@doorframe/parsers";
+import {
+  buildProjectDataFromImportedRecords,
+  defaultJiraCsvMapping,
+  defaultRequirementsCsvMapping
+} from "@doorframe/storage";
 import { generateHtmlTraceabilityReport } from "./html";
 import { generateMarkdownTraceabilityReport } from "./markdown";
 import { buildJsonReport, generateJsonReport } from "./json";
@@ -86,6 +94,53 @@ describe("report formats", () => {
     expect(html).toContain("REQ-1");
     expect(html).toContain("FG-1");
     expect(html).toContain("testStatus");
+    expect(html).toContain("Executive Summary");
+    expect(html).toContain("Traceability Matrix");
+    expect(html).toContain("Appendix");
+  });
+
+  it("escapes unsafe HTML and does not reference external resources", () => {
+    const unsafe = fixture();
+    unsafe.project.name = "<script>alert(1)</script>";
+    unsafe.requirements[0].title = "<img src=x onerror=alert(1)>";
+
+    const html = generateHtmlTraceabilityReport(unsafe);
+
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    expect(html).not.toMatch(/<script\b/i);
+    expect(html).not.toMatch(/https?:\/\//i);
+    expect(html).not.toMatch(/@import/i);
+  });
+
+  it("renders the Falcon demo project with expected counts and sections", () => {
+    const demoDir = path.join(process.cwd(), "examples", "falcon-telemetry-gateway");
+    const requirements = parseRequirementsCsv(
+      fs.readFileSync(path.join(demoDir, "sample-requirements-baseline-b.csv"), "utf8"),
+      defaultRequirementsCsvMapping
+    );
+    const jira = parseJiraCsv(
+      fs.readFileSync(path.join(demoDir, "sample-jira.csv"), "utf8"),
+      defaultJiraCsvMapping
+    );
+    const junit = parseJUnitXml(fs.readFileSync(path.join(demoDir, "sample-junit.xml"), "utf8"));
+    const data = buildProjectDataFromImportedRecords({
+      projectName: "Falcon Telemetry Gateway",
+      requirements: requirements.records,
+      workItems: jira.records,
+      testCases: junit.records
+    });
+
+    const html = generateHtmlTraceabilityReport(data);
+
+    expect(data.requirements).toHaveLength(42);
+    expect(data.workItems).toHaveLength(31);
+    expect(data.testCases).toHaveLength(58);
+    expect(data.findings).toHaveLength(19);
+    expect(html).toContain("Falcon Telemetry Gateway");
+    expect(html).toContain("Weak Requirement Language");
+    expect(html).toContain("Closed Work Without Passing Tests");
+    expect(html).toContain("REQ-003");
   });
 
   it("renders Markdown tables", () => {

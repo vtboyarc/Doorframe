@@ -90,3 +90,62 @@ Doorframe must remain useful without AI:
 MCP is optional. Conversational use requires a separate MCP-compatible AI client.
 
 Always document that any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+## Doorframe next-phase priorities
+
+Doorframe is moving toward v0.1.0.
+
+The priority is not more AI. The priority is making Doorframe obviously useful in under ten minutes.
+
+Current priorities:
+1. polished Falcon Telemetry Gateway demo
+2. excellent HTML traceability report
+3. baseline diff
+4. hardened imports
+5. v0.1.0 release readiness
+6. trust/security docs
+7. feedback docs
+8. launch materials
+
+The report is the product artifact. Optimize for a report someone could bring to a requirements review, sprint review, PI planning event, test readiness review, or audit prep meeting.
+
+Keep Doorframe useful without AI.
+
+Do not add direct AI provider calls unless explicitly requested in a later task.
+
+Do not add telemetry.
+
+Do not add SaaS assumptions.
+
+Do not make compliance or approval claims.
+
+When uncertain, choose boring, local, inspectable, and easy to explain.
+
+## Demo data rules
+
+Demo data must be fictional.
+
+Do not use:
+- real program names
+- real weapon systems
+- real aircraft names
+- real contract numbers
+- government markings
+- classified-sounding details
+- proprietary examples
+
+Use fictional project names like Falcon Telemetry Gateway.
+
+The demo should intentionally include traceability gaps, weak wording, missing verification, and changed baseline examples.
+
+## Report rules
+
+Reports should be:
+- offline
+- print-friendly
+- free of external assets
+- HTML-escaped
+- clear enough for a review
+- boring and professional
+
+No hype language in reports.
