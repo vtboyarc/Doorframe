@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="doorframe-example" tests="4" failures="1" skipped="1">
+  <testsuite name="MaintenanceRecordTests" tests="4" failures="1" skipped="1">
+    <testcase classname="MaintenanceRecordTests" name="REQ-100 blocks unauthenticated record access" time="0.042" />
+    <testcase classname="MaintenanceRecordTests" name="REQ-110 search results return within threshold" time="0.087" />
+    <testcase classname="MaintenanceRecordTests" name="REQ-130 writes audit entry for record change" time="0.021">
+      <failure message="Expected audit timestamp to be populated" />
+    </testcase>
+    <testcase classname="MaintenanceRecordTests" name="REQ-140 sends reviewer notification" time="0.000">
+      <skipped message="Notification service test not implemented" />
+    </testcase>
+  </testsuite>
+</testsuites>

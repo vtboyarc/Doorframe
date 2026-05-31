@@ -1,0 +1,7 @@
+ID,Title,Text,Status,Type,Priority,Verification Method,Parent ID
+REQ-100,Access control,"The system shall require an authenticated user before displaying maintenance records.",Approved,System,High,Test,
+REQ-110,Search response time,"The system shall return maintenance record search results within 2 seconds when the database contains up to 50000 records.",Approved,Performance,High,Test,REQ-100
+REQ-120,Export usability,"The export workflow should be easy and user-friendly as needed for reviewers.",Draft,Usability,Medium,Inspection,REQ-100
+REQ-130,Audit event logging,"The system shall record the actor, timestamp, action, and record identifier for each maintenance record change.",Changed,System,High,Test,
+REQ-140,Combined notifications,"The system shall email the reviewer when a record changes and shall create an audit entry for the notification.",Approved,System,Medium,Test,
+REQ-150,Duplicate access control,"The system shall require an authenticated user before displaying maintenance records.",Approved,System,High,Test,

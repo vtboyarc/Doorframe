@@ -1,0 +1,6 @@
+Key,Summary,Description,Status,Issue Type,Assignee,Requirement IDs
+ENG-21,Implement access gate,"Implements REQ-100. Add session checks before maintenance record views.",Done,Story,Avery Chen,
+ENG-22,Optimize search query,"Covers REQ-110 and adds an index for record search.",Resolved,Task,Riley Patel,
+ENG-23,Review export wording,"Review vague wording in REQ-120 before implementation.",In Progress,Task,Morgan Lee,
+ENG-24,Audit event schema,"Implements REQ-130. Schema stores actor timestamp action and record id.",Done,Story,Avery Chen,
+ENG-25,Notification flow,"Implements REQ-140 for reviewer email notification.",Closed,Story,Riley Patel,

@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@doorframe/core": ["../../packages/core/src/index.ts"],
+      "@doorframe/parsers": ["../../packages/parsers/src/index.ts"],
+      "@doorframe/analyzers": ["../../packages/analyzers/src/index.ts"],
+      "@doorframe/reporting": ["../../packages/reporting/src/index.ts"]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": ["node_modules"]
+}
