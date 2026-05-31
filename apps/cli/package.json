@@ -6,7 +6,9 @@
     "doorframe": "./src/index.ts"
   },
   "dependencies": {
+    "@doorframe/analyzers": "0.1.0",
     "@doorframe/core": "0.1.0",
+    "@doorframe/integrations": "0.1.0",
     "@doorframe/parsers": "0.1.0",
     "@doorframe/reporting": "0.1.0",
     "@doorframe/storage": "0.1.0"

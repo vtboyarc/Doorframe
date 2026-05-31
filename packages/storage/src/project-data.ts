@@ -1,6 +1,7 @@
 import { generateFindings } from "@doorframe/analyzers";
 import {
   createId,
+  DEFAULT_RULESET,
   nowIso,
   type Finding,
   type FindingSeverity,
@@ -9,6 +10,7 @@ import {
   type ProjectData,
   type Requirement,
   type RequirementInput,
+  type Ruleset,
   type TestCase,
   type TestCaseInput,
   type TraceLink,
@@ -149,7 +151,10 @@ function addTraceLink(
   );
 }
 
-export function buildProjectDataFromImportedRecords(input: ImportedProjectRecords): ProjectData {
+export function buildProjectDataFromImportedRecords(
+  input: ImportedProjectRecords,
+  ruleset: Ruleset = DEFAULT_RULESET
+): ProjectData {
   const timestamp = nowIso();
   const project: Project = {
     id: createId("project"),
@@ -240,12 +245,15 @@ export function buildProjectDataFromImportedRecords(input: ImportedProjectRecord
     });
   });
 
-  const findingInputs = generateFindings({
-    requirements,
-    workItems,
-    testCases,
-    traceLinks
-  });
+  const findingInputs = generateFindings(
+    {
+      requirements,
+      workItems,
+      testCases,
+      traceLinks
+    },
+    ruleset
+  );
   const findings = findingInputs.map((finding) =>
     withProject<Finding>(
       {
