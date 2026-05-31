@@ -27,6 +27,19 @@ const child = spawn(process.execPath, [tsxBin, entry, ...process.argv.slice(2)],
   stdio: "inherit",
 });
 
+// Forward termination signals to the child so that when an MCP client stops
+// the spawned command (e.g. SIGTERM/SIGINT to this wrapper's PID) the tsx
+// server shuts down too, rather than being orphaned while holding the
+// inherited stdio pipes.
+const forwardedSignals = ["SIGTERM", "SIGINT", "SIGHUP", "SIGQUIT"];
+for (const signal of forwardedSignals) {
+  process.on(signal, () => {
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill(signal);
+    }
+  });
+}
+
 child.on("exit", (code, signal) => {
   if (signal) {
     process.kill(process.pid, signal);
