@@ -1,0 +1,35 @@
+{
+  "requirementIdPatterns": [
+    { "name": "Common prefixes (REQ/SYS/SRS/DOORS)", "regex": "(?:^|[^A-Z0-9])((?:REQ|SYS|SRS|DOORS)[\\s_-]?\\d+[A-Z0-9._-]*)" },
+    { "name": "Shall statements", "regex": "(?:^|[^A-Z0-9])((?:SHALL)[\\s_-]?\\d+)" },
+    { "name": "Project FG features", "regex": "(?:^|[^A-Z0-9])(FR[\\s_-]?\\d+)" }
+  ],
+  "analyzer": {
+    "vagueTerms": ["quickly", "robust", "user-friendly", "as needed", "appropriate", "sufficient", "easy", "fast", "efficient", "should", "may", "where possible", "if practical", "tbd"],
+    "jaccardThreshold": 0.8,
+    "closedStatuses": ["done", "closed", "resolved", "complete", "completed"],
+    "draftStatuses": ["changed", "draft", "proposed", "in review", "review"],
+    "nonVerifiableMinSignals": 2,
+    "disabledCategories": []
+  },
+  "customRules": [
+    {
+      "id": "no-tbd",
+      "title": "Requirement still marked TBD",
+      "description": "Requirement text contains 'TBD' and is not ready for review.",
+      "severity": "error",
+      "category": "custom_rule",
+      "condition": { "field": "text", "matches": "\\btbd\\b" },
+      "recommendation": "Replace TBD placeholders with concrete, verifiable requirement text."
+    },
+    {
+      "id": "require-shall",
+      "title": "Requirement does not use 'shall'",
+      "description": "Normative requirements should state obligations with 'shall'.",
+      "severity": "warning",
+      "category": "custom_rule",
+      "condition": { "field": "text", "notMatches": "\\bshall\\b" },
+      "recommendation": "Phrase the requirement using 'shall' to make the obligation explicit."
+    }
+  ]
+}

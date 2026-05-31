@@ -14,7 +14,8 @@ export default async function AuditPage({ params }: { params: Promise<{ projectI
   const events = listAuditEvents(projectId);
 
   return (
-    <PageShell projectId={projectId} title="Audit Log">
+    <PageShell project={project}>
+      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Audit Log</h1>
       <p style={{ marginBottom: 16, color: "#5c6660" }}>
         Local record of imports, analysis runs, baselines, ruleset changes, and report generation.
       </p>

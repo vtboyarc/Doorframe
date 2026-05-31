@@ -18,7 +18,8 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
   const coverage = rows.length === 0 ? 0 : Math.round((covered / rows.length) * 100);
 
   return (
-    <PageShell projectId={projectId} title="Traceability Matrix">
+    <PageShell project={project}>
+      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Traceability Matrix</h1>
       <p style={{ marginBottom: 16, color: "#5c6660" }}>
         {rows.length} requirements · {coverage}% with both linked work and tests
       </p>

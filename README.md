@@ -27,15 +27,18 @@ Doorframe runs locally by default and does not send imported project data to any
 ## Features
 
 - Create local projects.
-- Import requirements from CSV.
+- Import requirements from CSV with auto-detected column mapping and a preview.
 - Import Jira issues from CSV.
 - Import JUnit XML test results.
-- Import simple ReqIF and ReqIFZ files.
-- Auto-detect requirement IDs in Jira descriptions and test names.
+- Import type-aware ReqIF and ReqIFZ files (named attributes → fields, spec hierarchy → parent links).
+- Auto-detect requirement IDs in Jira descriptions and test names, with configurable ID patterns.
 - Create trace links between requirements, work items, and tests.
-- Detect missing verification, missing work trace, weak wording, multi-requirement smells, duplicate candidates, stale links, and closed work without passing tests.
-- Show a dashboard, requirements table, requirement details, findings, trace graph, and report preview.
-- Generate a local HTML traceability report.
+- Detect missing verification, missing work trace, weak wording, multi-requirement smells, duplicate candidates, stale links, and closed work without passing tests — with tunable thresholds, disabled categories, and project-defined custom rules.
+- Pull live data via connectors: Jira API, GitHub/GitLab test artifacts, and Jenkins test reports (credentials stay local; see `docs/cli.md`).
+- Capture baselines and compare baseline-to-baseline (or against the current state).
+- Show a dashboard, requirements table, traceability matrix, requirement details, findings, trace graph, audit log, and report preview.
+- Generate traceability reports in HTML, Markdown, JSON, and CSV.
+- Keep a local audit log of imports, analysis runs, baselines, ruleset changes, and report generation.
 
 ## Run Locally
 
@@ -88,7 +91,8 @@ apps/cli            Doorframe CLI
 packages/core       Shared types, schemas, and utilities
 packages/parsers    CSV, JUnit XML, ReqIF, ReqIFZ, and ID extraction
 packages/analyzers  Deterministic traceability and review rules
-packages/reporting  HTML report generation
+packages/reporting  HTML, Markdown, JSON, and CSV report generation
+packages/integrations Jira/GitHub/GitLab/Jenkins connectors (+ DOORS Next scaffold)
 packages/storage    Shared project-data assembly helpers
 examples            Fictional sample data
 docs                Project docs

@@ -2,24 +2,22 @@
 
 Doorframe's roadmap keeps the MVP local-first and rule-based. AI is optional later and off by default.
 
-## Near-Term
+## Shipped
 
-- Better ReqIF support
-- Better CSV column mapping
-- Better traceability matrix
-- Baseline-to-baseline diff
-- More report formats
-- Better sample project
+- Type-aware ReqIF support (attribute definitions, enumerations, spec hierarchy → parent links; multi-file `.reqifz`).
+- CSV column mapping inference with import preview.
+- Dedicated traceability matrix view with coverage.
+- Baselines and baseline-to-baseline diff (web UI + `doorframe diff`).
+- Multiple report formats: HTML, Markdown, JSON, CSV.
+- Richer sample project exercising every finding category.
+- Jira API integration and GitLab/GitHub/Jenkins test-artifact import (connector package, env-configured).
+- Configurable requirement ID patterns.
+- Custom analyzer rules and project-level rulesets (per-project settings).
+- Audit log of imports, analysis runs, baselines, ruleset changes, and report generation.
 
-## Mid-Term
+## Researched
 
-- Jira API integration
-- GitLab and GitHub test artifact import
-- Jenkins import
-- DOORS Next integration research
-- Configurable requirement ID patterns
-- Custom analyzer rules
-- Project-level rulesets
+- DOORS Next integration — see `docs/integrations/doors-next.md` (ReqIF round-trip now; OSLC client later).
 
 ## Later
 
@@ -29,7 +27,6 @@ Doorframe's roadmap keeps the MVP local-first and rule-based. AI is optional lat
 - MCP server
 - Internal deployment guide
 - RBAC
-- Audit logs
 - SSO
 - Enterprise support model
 

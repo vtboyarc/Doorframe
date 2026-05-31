@@ -61,14 +61,6 @@ function deepText(value: unknown): string {
   return "";
 }
 
-function collectText(values: unknown): string {
-  return asArray(values as XmlNode | XmlNode[] | undefined)
-    .map((value) => textValue(value))
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-}
-
 function findNodes(node: unknown, key: string): XmlNode[] {
   const out: XmlNode[] = [];
 
@@ -329,7 +321,7 @@ export function parseReqif(input: string): ParseResult<ParsedRequirement> {
     // Fall back to the original heuristic (longest VALUES text) when no mapped
     // text attribute was found, so simple ReqIF files keep working.
     if (!candidate.text) {
-      candidate.text = collectText(specObject["VALUES"]) || candidate.title;
+      candidate.text = deepText(specObject["VALUES"]).replace(/\s+/g, " ").trim() || candidate.title;
     }
 
     records.push(candidate);
