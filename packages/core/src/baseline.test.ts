@@ -1,6 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { diffBaselines, type ProjectSnapshot } from "./baseline";
-import type { Finding, Requirement, TestCase } from "./types";
+import type { Finding, Requirement, TestCase, TraceLink } from "./types";
+
+function link(sourceId: string, targetId: string): TraceLink {
+  return {
+    id: `${sourceId}->${targetId}`,
+    projectId: "p1",
+    sourceType: "requirement",
+    sourceId,
+    targetType: "workItem",
+    targetId,
+    linkType: "implements",
+    confidence: 0.85,
+    source: "jira-csv",
+    createdAt: "now",
+    updatedAt: "now"
+  };
+}
 
 function req(externalId: string, overrides: Partial<Requirement> = {}): Requirement {
   return {
@@ -88,5 +104,14 @@ describe("diffBaselines", () => {
     expect(diff.findings.resolved).toBe(1);
     expect(diff.findings.byCategory.non_verifiable.added).toBe(1);
     expect(diff.findings.byCategory.missing_verification.removed).toBe(1);
+  });
+
+  it("detects rewired trace links even when the count is unchanged", () => {
+    const base = snapshot({ traceLinks: [link("r1", "w1")] });
+    const against = snapshot({ traceLinks: [link("r1", "w2")] });
+
+    const diff = diffBaselines(base, against);
+    expect(diff.traceLinks.added).toBe(1);
+    expect(diff.traceLinks.removed).toBe(1);
   });
 });

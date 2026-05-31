@@ -156,13 +156,22 @@ export function diffBaselines(base: ProjectSnapshot, against: ProjectSnapshot): 
     byCategory[f.category].removed += 1;
   });
 
+  // Compare trace links by stable identity so a removed-and-added pair (net zero
+  // length change) is still reported as one removed and one added.
+  const linkKey = (link: TraceLink): string =>
+    `${link.sourceType}:${link.sourceId}->${link.targetType}:${link.targetId}#${link.linkType}`;
+  const baseLinkKeys = new Set(base.traceLinks.map(linkKey));
+  const againstLinkKeys = new Set(against.traceLinks.map(linkKey));
+  const linksAdded = against.traceLinks.filter((link) => !baseLinkKeys.has(linkKey(link))).length;
+  const linksRemoved = base.traceLinks.filter((link) => !againstLinkKeys.has(linkKey(link))).length;
+
   return {
     requirements: { added: reqAdded, removed: reqRemoved, modified: reqModified },
     workItems: { added: workAdded, removed: workRemoved },
     testCases: { added: testAdded, removed: testRemoved, statusChanged },
     traceLinks: {
-      added: Math.max(0, against.traceLinks.length - base.traceLinks.length),
-      removed: Math.max(0, base.traceLinks.length - against.traceLinks.length)
+      added: linksAdded,
+      removed: linksRemoved
     },
     findings: {
       added: addedFindings.length,

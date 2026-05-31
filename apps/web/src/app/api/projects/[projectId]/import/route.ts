@@ -11,8 +11,10 @@ import { NextResponse } from "next/server";
 import {
   addImportBatch,
   getProject,
-  saveRequirements
+  getRuleset,
+  recordAuditEvent
 } from "@/lib/db";
+import { auditActor } from "@/lib/audit-actor";
 import { rerunAnalysis } from "@/lib/analysis";
 import { saveJiraRecords, saveJunitRecords, saveRequirementRecords } from "@/lib/imports";
 
@@ -45,6 +47,7 @@ export async function POST(
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const text = buffer.toString("utf8");
+  const patterns = getRuleset(projectId).requirementIdPatterns;
   const errors: string[] = [];
   let recordCount = 0;
   let linkCount = 0;
@@ -59,26 +62,28 @@ export async function POST(
       errors.push(...result.errors);
     } else if (sourceType === "jira-csv") {
       const mapping = parseMapping<JiraCsvMapping>(formData.get("mapping"));
-      const result = parseJiraCsv(text, mapping);
+      const result = parseJiraCsv(text, mapping, patterns);
       const saved = saveJiraRecords(projectId, result.records);
       recordCount = saved.recordCount;
       linkCount += saved.linkCount;
       errors.push(...result.errors);
     } else if (sourceType === "junit-xml") {
-      const result = parseJUnitXml(text);
+      const result = parseJUnitXml(text, patterns);
       const saved = saveJunitRecords(projectId, result.records);
       recordCount = saved.recordCount;
       linkCount += saved.linkCount;
       errors.push(...result.errors);
     } else if (sourceType === "reqif") {
       const result = parseReqif(text);
-      const saved = saveRequirements(projectId, result.records);
-      recordCount = saved.length;
+      const saved = saveRequirementRecords(projectId, result.records);
+      recordCount = saved.recordCount;
+      linkCount += saved.linkCount;
       errors.push(...result.errors);
     } else if (sourceType === "reqifz") {
       const result = await parseReqifz(buffer);
-      const saved = saveRequirements(projectId, result.records);
-      recordCount = saved.length;
+      const saved = saveRequirementRecords(projectId, result.records);
+      recordCount = saved.recordCount;
+      linkCount += saved.linkCount;
       errors.push(...result.errors);
     } else {
       return NextResponse.json({ error: "Unsupported import type." }, { status: 400 });
@@ -89,6 +94,13 @@ export async function POST(
   }
 
   const batch = addImportBatch(projectId, sourceType, file.name, recordCount, errors);
+  recordAuditEvent({
+    projectId,
+    action: "import.completed",
+    actor: auditActor(),
+    summary: `Imported ${recordCount} record(s) from ${file.name} (${sourceType}).`,
+    details: { sourceType, filename: file.name, recordCount, linkCount, errorCount: errors.length }
+  });
   const findings = rerunAnalysis(projectId);
 
   return NextResponse.json({

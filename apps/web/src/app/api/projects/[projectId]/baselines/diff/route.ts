@@ -15,7 +15,7 @@ export const GET = async (request: Request, context: { params: Promise<{ project
   const bId = url.searchParams.get("b");
 
   const a = aId ? getBaseline(aId) : null;
-  if (!a) {
+  if (!a || a.projectId !== projectId) {
     return NextResponse.json({ error: "Baseline 'a' not found." }, { status: 404 });
   }
 
@@ -29,7 +29,7 @@ export const GET = async (request: Request, context: { params: Promise<{ project
     bSnapshot = snapshotFromProjectData(data);
   } else {
     const b = getBaseline(bId);
-    if (!b) {
+    if (!b || b.projectId !== projectId) {
       return NextResponse.json({ error: "Baseline 'b' not found." }, { status: 404 });
     }
     bSnapshot = b.snapshot;
