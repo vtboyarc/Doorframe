@@ -213,12 +213,16 @@ function closedWorkWithoutPassingRows(data: ProjectData): string {
     .join("\n");
 }
 
-function weakLanguageRows(data: ProjectData): string {
-  const findings = data.findings.filter((finding) => finding.category === "weak_wording");
+function requirementFindingRows(
+  data: ProjectData,
+  category: Finding["category"],
+  emptyMessage: string
+): string {
+  const findings = data.findings.filter((finding) => finding.category === category);
   const requirementsById = entityMap<Requirement>(data.requirements);
 
   if (findings.length === 0) {
-    return emptyRow(4, "No weak wording findings.");
+    return emptyRow(4, emptyMessage);
   }
 
   return findings
@@ -403,13 +407,31 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
   <h2>Weak requirement language</h2>
   <table>
     <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
-    <tbody>${weakLanguageRows(data)}</tbody>
+    <tbody>${requirementFindingRows(data, "weak_wording", "No weak wording findings.")}</tbody>
+  </table>
+
+  <h2>Multiple requirements in one statement</h2>
+  <table>
+    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
+    <tbody>${requirementFindingRows(data, "multi_requirement", "No multi-requirement statements detected.")}</tbody>
+  </table>
+
+  <h2>Possibly non-verifiable requirements</h2>
+  <table>
+    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
+    <tbody>${requirementFindingRows(data, "non_verifiable", "No possibly non-verifiable requirements detected.")}</tbody>
   </table>
 
   <h2>Duplicate candidates</h2>
   <table>
     <thead><tr><th>Candidate pair</th><th>Detail</th><th>Recommendation</th></tr></thead>
     <tbody>${duplicateCandidateRows(data)}</tbody>
+  </table>
+
+  <h2>Possible stale trace links</h2>
+  <table>
+    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
+    <tbody>${requirementFindingRows(data, "stale_link", "No possible stale trace links detected.")}</tbody>
   </table>
 
   <h2>Failed tests by requirement</h2>

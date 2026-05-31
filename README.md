@@ -4,7 +4,7 @@ Doorframe turns requirements exports, Jira work items, and test results into a t
 
 **Requirements exports are messy. Doorframe makes them reviewable.**
 
-Doorframe is an open-source local-first requirements traceability and review tool. It is useful for teams that export requirements from IBM DOORS, DOORS Next, Jama, Polarion, or similar tools. The first version does not require direct integration with any enterprise system. It works from local exports only.
+Doorframe is an open-source local-first requirements traceability and review tool. It is useful for teams that export requirements from IBM DOORS, DOORS Next, Jama, Polarion, or similar tools. Doorframe does not require direct integration with any enterprise system. It works from local exports only.
 
 Doorframe runs locally by default and does not send imported project data to any external service. Do not use Doorframe with classified, controlled, proprietary, or sensitive data unless your organization has approved that use in your environment.
 
@@ -22,9 +22,9 @@ Doorframe runs locally by default and does not send imported project data to any
 - Not a cloud service.
 - Not a multi-tenant SaaS product.
 - Not a classified-data handling environment.
-- Not dependent on AI for the MVP.
+- Not dependent on AI.
 
-## MVP Features
+## Features
 
 - Create local projects.
 - Import requirements from CSV.
@@ -101,4 +101,4 @@ docker              Docker image definition
 npm test
 ```
 
-The first test suite covers parser behavior and analyzer rules.
+The test suite covers parser behavior and analyzer rules.
