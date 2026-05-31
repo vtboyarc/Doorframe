@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<REQ-IF>
+  <CORE-CONTENT>
+    <REQ-IF-CONTENT>
+      <SPEC-OBJECTS>
+        <SPEC-OBJECT IDENTIFIER="REQ-200" LONG-NAME="Battery temperature limit">
+          <VALUES>
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="The controller shall disconnect charging when battery temperature exceeds 45 C." />
+          </VALUES>
+        </SPEC-OBJECT>
+        <SPEC-OBJECT IDENTIFIER="REQ-210" LONG-NAME="Battery warning text">
+          <VALUES>
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="The interface may show an appropriate warning if practical." />
+          </VALUES>
+        </SPEC-OBJECT>
+      </SPEC-OBJECTS>
+    </REQ-IF-CONTENT>
+  </CORE-CONTENT>
+</REQ-IF>

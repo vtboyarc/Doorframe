@@ -1,0 +1,16 @@
+{
+  "name": "@doorframe/parsers",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@doorframe/core": "0.1.0",
+    "csv-parse": "^6.1.0",
+    "fast-xml-parser": "^5.3.2",
+    "jszip": "^3.10.1"
+  }
+}
