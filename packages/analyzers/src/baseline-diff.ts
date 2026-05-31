@@ -1,4 +1,4 @@
-import { normalizeText, type RawAttributes, type RequirementInput, type TestStatus } from "@doorframe/core";
+import { normalizeText, type RequirementInput, type TestStatus } from "@doorframe/core";
 
 export type BaselineDiffField =
   | "title"
@@ -7,8 +7,7 @@ export type BaselineDiffField =
   | "type"
   | "priority"
   | "verificationMethod"
-  | "parentExternalId"
-  | "rawAttributes";
+  | "parentExternalId";
 
 export type ChangeConcern = "high" | "medium" | "low";
 
@@ -86,8 +85,7 @@ const CHANGE_FIELDS: BaselineDiffField[] = [
   "type",
   "priority",
   "verificationMethod",
-  "parentExternalId",
-  "rawAttributes"
+  "parentExternalId"
 ];
 
 const CONCERN_TERMS = [
@@ -109,14 +107,7 @@ function byExternalId(requirements: RequirementInput[]): Map<string, Requirement
   return new Map(requirements.map((requirement) => [requirement.externalId, requirement]));
 }
 
-function rawString(rawAttributes: RawAttributes | undefined): string {
-  return JSON.stringify(rawAttributes ?? {}, Object.keys(rawAttributes ?? {}).sort());
-}
-
 function fieldValue(requirement: RequirementInput, field: BaselineDiffField): string {
-  if (field === "rawAttributes") {
-    return rawString(requirement.rawAttributes);
-  }
   return requirement[field] ?? "";
 }
 
