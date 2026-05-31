@@ -47,3 +47,46 @@ Preferred adoption paths:
 5. MCP server later
 
 When uncertain, choose boring, local, auditable, and easy to inspect.
+
+## MCP server direction
+
+Doorframe MCP must be read-only until explicitly changed later.
+
+The MCP server is a local bridge between an AI client and a Doorframe project database. It should help users ask questions about requirements, work items, tests, trace links, and findings.
+
+Do not add:
+- telemetry
+- external API calls
+- arbitrary file access
+- generic SQL query tools
+- write/mutation tools
+- cloud assumptions
+
+Use stdio first.
+
+The server should only open the project database path passed at startup.
+
+Keep business logic outside the MCP transport layer. Tools should call testable adapter functions from shared Doorframe packages.
+
+In stdio mode, never write logs to stdout. Use stderr only.
+
+When in doubt, return less data by default and let the user ask for details.
+
+## MCP and AI-provider boundary
+
+Doorframe MCP is not an AI client and does not include an AI model.
+
+Do not add direct OpenAI, Anthropic, or other AI-provider calls to the MCP server.
+
+Doorframe MCP should expose local Doorframe project data to an MCP-compatible client. The client handles the model, chat interface, authentication, and AI-provider policies.
+
+Doorframe must remain useful without AI:
+- local web app
+- CLI
+- parsers
+- analyzers
+- reports
+
+MCP is optional. Conversational use requires a separate MCP-compatible AI client.
+
+Always document that any data returned by Doorframe MCP may become part of the connected AI client's context.
