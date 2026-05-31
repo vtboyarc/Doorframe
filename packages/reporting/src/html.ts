@@ -213,12 +213,16 @@ function closedWorkWithoutPassingRows(data: ProjectData): string {
     .join("\n");
 }
 
-function weakLanguageRows(data: ProjectData): string {
-  const findings = data.findings.filter((finding) => finding.category === "weak_wording");
+function requirementFindingRows(
+  data: ProjectData,
+  category: Finding["category"],
+  emptyMessage: string
+): string {
+  const findings = data.findings.filter((finding) => finding.category === category);
   const requirementsById = entityMap<Requirement>(data.requirements);
 
   if (findings.length === 0) {
-    return emptyRow(4, "No weak wording findings.");
+    return emptyRow(4, emptyMessage);
   }
 
   return findings
@@ -285,6 +289,10 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
     medium: data.findings.filter((finding) => finding.severity === "warning"),
     low: data.findings.filter((finding) => finding.severity === "info")
   };
+  const isDemoData = data.importBatches.some((batch) => batch.sourceType === "demo");
+  const demoBanner = isDemoData
+    ? `<p class="demo-banner">This report was generated from fictional Doorframe sample data. It is for demonstration only and must not be used as real review evidence.</p>`
+    : "";
 
   return `<!doctype html>
 <html lang="en">
@@ -308,6 +316,7 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
     th, td { border: 1px solid #cfd7df; font-size: 12px; padding: 8px; text-align: left; vertical-align: top; }
     th { background: #eef3f7; }
     .warning { border: 1px solid #b8860b; background: #fff8e6; margin: 18px 0; padding: 12px; }
+    .demo-banner { border: 2px solid #b03a2e; background: #fdecea; color: #7b241c; font-weight: bold; margin: 18px 0; padding: 12px; }
     .page-break { break-before: page; }
     @media print {
       body { margin: 0.5in; }
@@ -319,6 +328,7 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
 <body>
   <h1>${escapeHtml(data.project.name)} traceability gap report</h1>
   <p class="meta">Generated ${escapeHtml(generatedAt)} by Doorframe.</p>
+  ${demoBanner}
   <p class="warning">Doorframe runs locally by default and does not send imported project data to any external service. Do not use Doorframe with classified, controlled, proprietary, or sensitive data unless your organization has approved that use in your environment.</p>
 
   <h2>Executive summary</h2>
@@ -397,13 +407,31 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
   <h2>Weak requirement language</h2>
   <table>
     <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
-    <tbody>${weakLanguageRows(data)}</tbody>
+    <tbody>${requirementFindingRows(data, "weak_wording", "No weak wording findings.")}</tbody>
+  </table>
+
+  <h2>Multiple requirements in one statement</h2>
+  <table>
+    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
+    <tbody>${requirementFindingRows(data, "multi_requirement", "No multi-requirement statements detected.")}</tbody>
+  </table>
+
+  <h2>Possibly non-verifiable requirements</h2>
+  <table>
+    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
+    <tbody>${requirementFindingRows(data, "non_verifiable", "No possibly non-verifiable requirements detected.")}</tbody>
   </table>
 
   <h2>Duplicate candidates</h2>
   <table>
-    <thead><tr><th>Candidate</th><th>Similarity</th><th>Recommendation</th></tr></thead>
+    <thead><tr><th>Candidate pair</th><th>Detail</th><th>Recommendation</th></tr></thead>
     <tbody>${duplicateCandidateRows(data)}</tbody>
+  </table>
+
+  <h2>Possible stale trace links</h2>
+  <table>
+    <thead><tr><th>Requirement ID</th><th>Title</th><th>Finding</th><th>Recommendation</th></tr></thead>
+    <tbody>${requirementFindingRows(data, "stale_link", "No possible stale trace links detected.")}</tbody>
   </table>
 
   <h2>Failed tests by requirement</h2>

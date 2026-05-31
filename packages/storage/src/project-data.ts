@@ -38,6 +38,17 @@ export const defaultJiraCsvMapping: JiraCsvMapping = {
   requirementIds: "Requirement IDs"
 };
 
+/**
+ * Trace-link semantics shared by every import path (CLI in-memory build and the
+ * web app's SQLite-backed importers). Keep link types and confidence values here
+ * so the two paths cannot drift apart.
+ */
+export const TRACE_LINK_RULES = {
+  parent: { linkType: "parent", confidence: 0.95 },
+  implements: { linkType: "implements", confidence: 0.85 },
+  verifies: { linkType: "verifies", confidence: 0.8 }
+} as const;
+
 export interface ImportedProjectRecords {
   projectName: string;
   requirements: RequirementInput[];
@@ -175,8 +186,8 @@ export function buildProjectDataFromImportedRecords(input: ImportedProjectRecord
       sourceId: parent.id,
       targetType: "requirement",
       targetId: requirement.id,
-      linkType: "parent",
-      confidence: 0.95,
+      linkType: TRACE_LINK_RULES.parent.linkType,
+      confidence: TRACE_LINK_RULES.parent.confidence,
       source: requirement.source
     });
   });
@@ -198,8 +209,8 @@ export function buildProjectDataFromImportedRecords(input: ImportedProjectRecord
         sourceId: requirement.id,
         targetType: "workItem",
         targetId: workItem.id,
-        linkType: "implements",
-        confidence: 0.85,
+        linkType: TRACE_LINK_RULES.implements.linkType,
+        confidence: TRACE_LINK_RULES.implements.confidence,
         source: parsedWorkItem.source
       });
     });
@@ -222,8 +233,8 @@ export function buildProjectDataFromImportedRecords(input: ImportedProjectRecord
         sourceId: requirement.id,
         targetType: "testCase",
         targetId: testCase.id,
-        linkType: "verifies",
-        confidence: 0.8,
+        linkType: TRACE_LINK_RULES.verifies.linkType,
+        confidence: TRACE_LINK_RULES.verifies.confidence,
         source: parsedTestCase.source
       });
     });
