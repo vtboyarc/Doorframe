@@ -4,7 +4,7 @@ Doorframe is an open-source, local-first requirements traceability and review to
 
 Doorframe is useful without AI. The main product artifact is the HTML traceability gap report.
 
-Doorframe runs locally by default and does not send imported project data to any external service. Do not use Doorframe with classified, controlled, proprietary, or sensitive data unless your organization has approved that use in your environment.
+Doorframe runs locally by default and does not send imported project data to any external service.
 
 ## What Doorframe Is
 
