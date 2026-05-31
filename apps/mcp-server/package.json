@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "bin": {
-    "doorframe-mcp": "src/index.ts"
+    "doorframe-mcp": "bin/doorframe-mcp.mjs"
   },
   "scripts": {
     "dev": "tsx src/index.ts",
@@ -15,6 +15,7 @@
     "@doorframe/core": "0.1.0",
     "@doorframe/storage": "0.1.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "tsx": "^4.21.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
