@@ -11,12 +11,15 @@
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
     "start": "npm run start -w apps/web",
+    "doorframe": "tsx apps/cli/src/index.ts",
+    "lint": "npm run typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.0.14"

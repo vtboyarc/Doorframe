@@ -5,22 +5,16 @@ import {
   parseReqifz,
   parseRequirementsCsv,
   type JiraCsvMapping,
-  type ParsedTestCase,
-  type ParsedWorkItem,
   type RequirementsCsvMapping
 } from "@doorframe/parsers";
 import { NextResponse } from "next/server";
 import {
   addImportBatch,
   getProject,
-  getRequirementByExternalId,
-  saveRequirements,
-  saveTestCases,
-  saveTraceLink,
-  saveWorkItems
+  saveRequirements
 } from "@/lib/db";
 import { rerunAnalysis } from "@/lib/analysis";
-import type { RequirementInput, TestCaseInput, WorkItemInput } from "@doorframe/core";
+import { saveJiraRecords, saveJunitRecords, saveRequirementRecords } from "@/lib/imports";
 
 function parseMapping<T>(value: FormDataEntryValue | null): T {
   if (!value || typeof value !== "string") {
@@ -28,90 +22,6 @@ function parseMapping<T>(value: FormDataEntryValue | null): T {
   }
 
   return JSON.parse(value) as T;
-}
-
-function linkWorkItems(projectId: string, workItems: ParsedWorkItem[]): number {
-  let linksCreated = 0;
-
-  workItems.forEach((workItem) => {
-    const savedWorkItem = saveWorkItems(projectId, [workItem as WorkItemInput])[0];
-    workItem.requirementIds.forEach((requirementId) => {
-      const requirement = getRequirementByExternalId(projectId, requirementId);
-      if (!requirement || !savedWorkItem) {
-        return;
-      }
-
-      saveTraceLink(projectId, {
-        sourceType: "requirement",
-        sourceId: requirement.id,
-        targetType: "workItem",
-        targetId: savedWorkItem.id,
-        linkType: "implements",
-        confidence: 0.85,
-        source: "jira-csv"
-      });
-      linksCreated += 1;
-    });
-  });
-
-  return linksCreated;
-}
-
-function linkTestCases(projectId: string, testCases: ParsedTestCase[]): number {
-  let linksCreated = 0;
-
-  testCases.forEach((testCase) => {
-    const savedTestCase = saveTestCases(projectId, [testCase as TestCaseInput])[0];
-    testCase.requirementIds.forEach((requirementId) => {
-      const requirement = getRequirementByExternalId(projectId, requirementId);
-      if (!requirement || !savedTestCase) {
-        return;
-      }
-
-      saveTraceLink(projectId, {
-        sourceType: "requirement",
-        sourceId: requirement.id,
-        targetType: "testCase",
-        targetId: savedTestCase.id,
-        linkType: "verifies",
-        confidence: 0.8,
-        source: "junit-xml"
-      });
-      linksCreated += 1;
-    });
-  });
-
-  return linksCreated;
-}
-
-function linkRequirementParents(projectId: string, requirements: RequirementInput[]): number {
-  let linksCreated = 0;
-
-  requirements.forEach((requirementInput) => {
-    if (!requirementInput.parentExternalId) {
-      return;
-    }
-
-    const parent = getRequirementByExternalId(projectId, requirementInput.parentExternalId);
-    const child = getRequirementByExternalId(projectId, requirementInput.externalId);
-
-    if (!parent || !child) {
-      return;
-    }
-
-    saveTraceLink(projectId, {
-      sourceType: "requirement",
-      sourceId: parent.id,
-      targetType: "requirement",
-      targetId: child.id,
-      linkType: "parent",
-      confidence: 0.95,
-      source: requirementInput.source
-    });
-    linksCreated += 1;
-  });
-
-  return linksCreated;
 }
 
 export async function POST(
@@ -143,20 +53,22 @@ export async function POST(
     if (sourceType === "requirements-csv") {
       const mapping = parseMapping<RequirementsCsvMapping>(formData.get("mapping"));
       const result = parseRequirementsCsv(text, mapping);
-      const saved = saveRequirements(projectId, result.records);
-      recordCount = saved.length;
-      linkCount += linkRequirementParents(projectId, result.records);
+      const saved = saveRequirementRecords(projectId, result.records);
+      recordCount = saved.recordCount;
+      linkCount += saved.linkCount;
       errors.push(...result.errors);
     } else if (sourceType === "jira-csv") {
       const mapping = parseMapping<JiraCsvMapping>(formData.get("mapping"));
       const result = parseJiraCsv(text, mapping);
-      linkCount += linkWorkItems(projectId, result.records);
-      recordCount = result.records.length;
+      const saved = saveJiraRecords(projectId, result.records);
+      recordCount = saved.recordCount;
+      linkCount += saved.linkCount;
       errors.push(...result.errors);
     } else if (sourceType === "junit-xml") {
       const result = parseJUnitXml(text);
-      linkCount += linkTestCases(projectId, result.records);
-      recordCount = result.records.length;
+      const saved = saveJunitRecords(projectId, result.records);
+      recordCount = saved.recordCount;
+      linkCount += saved.linkCount;
       errors.push(...result.errors);
     } else if (sourceType === "reqif") {
       const result = parseReqif(text);

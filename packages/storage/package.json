@@ -1,0 +1,15 @@
+{
+  "name": "@doorframe/storage",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@doorframe/analyzers": "0.1.0",
+    "@doorframe/core": "0.1.0",
+    "@doorframe/parsers": "0.1.0"
+  }
+}

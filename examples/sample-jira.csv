@@ -1,6 +1,6 @@
 Key,Summary,Description,Status,Issue Type,Assignee,Requirement IDs
-ENG-21,Implement access gate,"Implements REQ-100. Add session checks before maintenance record views.",Done,Story,Avery Chen,
-ENG-22,Optimize search query,"Covers REQ-110 and adds an index for record search.",Resolved,Task,Riley Patel,
-ENG-23,Review export wording,"Review vague wording in REQ-120 before implementation.",In Progress,Task,Morgan Lee,
-ENG-24,Audit event schema,"Implements REQ-130. Schema stores actor timestamp action and record id.",Done,Story,Avery Chen,
-ENG-25,Notification flow,"Implements REQ-140 for reviewer email notification.",Closed,Story,Riley Patel,
+FG-12,Implement telemetry status panel,"Implements REQ-001. Show packet health, last update time, and sensor state in the status panel.",Done,Story,Avery Chen,
+FG-18,Add authentication failure logging,"Implements REQ-002. Capture timestamp, user identifier, source IP, and failure reason.",Resolved,Story,Riley Patel,
+FG-21,Operator alert cleanup,"Clean up communication-loss alert behavior and review operator message wording.",In Progress,Task,Morgan Lee,
+FG-34,Review duplicate telemetry display behavior,"Implements REQ-004. Confirm whether duplicate telemetry status wording should be merged or retained.",Closed,Task,Avery Chen,
+FG-45,Audit retention test follow-up,"Implements REQ-005. Complete retention edge-case tests before the review.",Closed,Task,Riley Patel,

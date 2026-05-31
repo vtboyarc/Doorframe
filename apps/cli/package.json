@@ -1,0 +1,17 @@
+{
+  "name": "@doorframe/cli",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "doorframe": "./src/index.ts"
+  },
+  "dependencies": {
+    "@doorframe/core": "0.1.0",
+    "@doorframe/parsers": "0.1.0",
+    "@doorframe/reporting": "0.1.0",
+    "@doorframe/storage": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1"
+  }
+}

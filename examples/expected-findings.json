@@ -1,0 +1,33 @@
+{
+  "sampleProject": "Falcon Telemetry Gateway",
+  "expectedSignals": [
+    {
+      "requirementId": "REQ-003",
+      "categories": ["weak_wording", "missing_work_trace", "missing_verification"],
+      "reason": "REQ-003 uses the vague word quickly, has no Jira issue that names REQ-003, and has no linked passing test."
+    },
+    {
+      "requirementId": "REQ-004",
+      "categories": ["duplicate_candidate", "closed_work_without_verification"],
+      "reason": "REQ-004 is intentionally similar to REQ-001 and is linked to closed Jira work without a passing linked test."
+    },
+    {
+      "requirementId": "REQ-005",
+      "categories": ["closed_work_without_verification"],
+      "reason": "REQ-005 is linked to closed Jira work, but its linked JUnit test fails."
+    }
+  ],
+  "expectedTraceLinks": [
+    "REQ-001 -> FG-12",
+    "REQ-002 -> FG-18",
+    "REQ-004 -> FG-34",
+    "REQ-005 -> FG-45",
+    "REQ-001 -> TelemetryStatusPanelTests.testDisplaysStatusWithinTwoSeconds_REQ_001",
+    "REQ-002 -> AuthenticationAuditTests.testFailedLoginIsLogged_REQ_002",
+    "REQ-005 -> AuditRetentionTests.testRetainsAuditRecords_REQ_005"
+  ],
+  "notes": [
+    "All sample data is fictional.",
+    "The sample intentionally avoids real program names, contract numbers, government markings, and real system identifiers."
+  ]
+}

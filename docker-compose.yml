@@ -1,0 +1,12 @@
+services:
+  doorframe:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DOORFRAME_DATA_DIR: /data/doorframe
+      NODE_ENV: production
+    volumes:
+      - ./.doorframe-docker:/data/doorframe
