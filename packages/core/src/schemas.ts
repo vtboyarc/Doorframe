@@ -30,7 +30,7 @@ export const testCaseInputSchema = z.object({
   externalId: z.string().min(1),
   name: z.string().min(1),
   classname: z.string().optional(),
-  status: z.enum(["passed", "failed", "skipped"]),
+  status: z.enum(["passed", "failed", "skipped", "errored"]),
   duration: z.number().optional(),
   failureMessage: z.string().optional(),
   source: z.string().min(1),

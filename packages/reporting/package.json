@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@doorframe/analyzers": "0.1.0",
     "@doorframe/core": "0.1.0"
   }
 }

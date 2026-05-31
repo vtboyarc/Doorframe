@@ -2,55 +2,51 @@
 
 Doorframe turns requirements exports, Jira work items, and test results into a traceability gap report you can actually use before a review.
 
-It is built for local analysis of exported engineering data. It does not replace a requirements management system, Jira, a test system, or an organization's official review process.
+Doorframe is local-first and useful without AI. It does not replace a requirements management system, Jira, a test system, or an organization's official review process.
 
-## What Doorframe Accepts
-
-- Requirements CSV exports
-- ReqIF and ReqIFZ exports, with limited MVP support
-- Jira CSV exports
-- JUnit XML test result files
-
-Doorframe detects requirement IDs in Jira and test text with patterns such as `REQ-001`, `SYS-123`, `SRS-123`, `DOORS-123`, and `SHALL-123`.
-
-## Run the Web Demo
+## Run The Demo In Under Ten Minutes
 
 ```bash
 npm install
-npm run dev
-```
-
-Open `http://localhost:3000`. If that port is busy, Next.js will print the actual local URL.
-
-Create a project, then click **Load Demo Project**. Doorframe loads fictional sample data for Falcon Telemetry Gateway and generates dashboard metrics, findings, trace links, and a report.
-
-The demo data is fictional and is added to whichever project you load it into, so use a fresh project rather than one holding real imports. Reports generated from demo data carry a banner marking them as sample-only and not valid review evidence.
-
-## Run the CLI Demo
-
-```bash
 npm run doorframe -- analyze \
-  --requirements ./examples/sample-requirements.csv \
-  --jira ./examples/sample-jira.csv \
-  --junit ./examples/sample-junit.xml \
+  --requirements ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
+  --jira ./examples/falcon-telemetry-gateway/sample-jira.csv \
+  --junit ./examples/falcon-telemetry-gateway/sample-junit.xml \
   --out ./doorframe-report.html
 ```
 
 Open `doorframe-report.html` in a browser.
 
+## Run The Web App
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000`. Create a project, then click **Load Demo Project**.
+
+## Run Baseline Diff
+
+```bash
+npm run doorframe -- diff \
+  --baseline-a ./examples/falcon-telemetry-gateway/sample-requirements-baseline-a.csv \
+  --baseline-b ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
+  --out ./doorframe-baseline-diff.html
+```
+
 ## Import Your Own Files
 
-1. Export requirements from your requirements tool as CSV or ReqIF.
+1. Export requirements from your requirements tool as CSV, ReqIF, or ReqIFZ.
 2. Export Jira issues as CSV.
 3. Export test results from CI as JUnit XML.
 4. Run Doorframe locally with the web app or CLI.
-5. Review the dashboard and findings.
+5. Review findings and the traceability matrix.
 6. Export the HTML traceability report.
 
-CSV imports require column mapping. Keep the first row as headers.
+Doorframe detects requirement IDs in Jira and test text with patterns such as `REQ-001`, `SYS-123`, `SRS-123`, `DOORS-123`, and `SHALL-123`. Requirement ID patterns are configurable in project rulesets.
 
-## Generate a Report
+## Report
 
-The report is a local HTML file. Use browser print-to-PDF if you need a PDF artifact for review prep.
+The report is a local HTML file. It is designed to work offline and print cleanly to PDF from a browser.
 
-The report includes an executive summary, import summary, traceability matrix, findings by severity, requirements with missing links, failed tests by requirement, and raw ID appendices.
+The report includes a cover, executive summary, import summary, top risks before review, traceability matrix, missing work, missing verification, closed work without passing tests, weak wording, failed tests by requirement, duplicate candidates, and an appendix.

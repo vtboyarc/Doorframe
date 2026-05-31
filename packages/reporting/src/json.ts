@@ -12,6 +12,7 @@ export interface JsonReport {
     findings: number;
     requirementsWithoutWork: number;
     requirementsWithoutTests: number;
+    requirementsWithoutPassingTests: number;
     failingTests: number;
   };
   matrix: {
@@ -42,6 +43,7 @@ export function buildJsonReport(data: ProjectData): JsonReport {
       findings: data.findings.length,
       requirementsWithoutWork: summary.requirementsWithoutWork,
       requirementsWithoutTests: summary.requirementsWithoutTests,
+      requirementsWithoutPassingTests: summary.requirementsWithoutPassingTests,
       failingTests: summary.failingTests
     },
     matrix: matrixRows(data).map((row) => ({

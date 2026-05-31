@@ -270,7 +270,13 @@ export function parseReqif(input: string): ParseResult<ParsedRequirement> {
     textNodeName: "#text",
     preserveOrder: false
   });
-  const document = parser.parse(input) as XmlNode;
+  let document: XmlNode;
+  try {
+    document = parser.parse(input) as XmlNode;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "ReqIF XML parse failed.";
+    return { records: [], errors: [`ReqIF XML parse failed: ${message}`] };
+  }
   const specObjects = findNodes(document, "SPEC-OBJECT");
   const attrDefs = buildAttributeDefinitionMap(document);
   const enumValues = buildEnumValueMap(document);

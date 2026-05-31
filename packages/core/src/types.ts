@@ -29,7 +29,7 @@ export type FindingCategory =
   | "closed_work_without_verification"
   | "custom_rule";
 
-export type TestStatus = "passed" | "failed" | "skipped";
+export type TestStatus = "passed" | "failed" | "skipped" | "errored";
 
 export type RawAttributes = Record<string, unknown>;
 

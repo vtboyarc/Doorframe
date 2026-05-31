@@ -23,7 +23,7 @@ export function generateTraceabilityMatrixCsv(data: ProjectData): string {
   const lines = [header.map(csvCell).join(",")];
 
   matrixRows(data).forEach((row) => {
-    const failingTests = row.testCases.filter((test) => test.status === "failed").length;
+    const failingTests = row.testCases.filter((test) => test.status === "failed" || test.status === "errored").length;
     lines.push(
       [
         row.requirement.externalId,

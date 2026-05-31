@@ -1,4 +1,4 @@
-# Website Copy Draft
+# Website Copy
 
 ## Hero
 
@@ -6,11 +6,15 @@
 
 Doorframe turns requirements exports, Jira work items, and test results into a local traceability gap report.
 
-Doorframe is an open-source local-first requirements traceability and review tool. It helps teams find missing work links, missing verification evidence, weak requirement language, duplicate candidates, and stale links before the meeting.
+Primary buttons:
+
+- View on GitHub
+- Run the demo
+- Read the docs
 
 ## Why Doorframe Exists
 
-Requirements reviews often depend on exports from several systems. Requirements live in one tool, work is tracked in Jira, and verification evidence lives in CI test artifacts. By the time gaps are found, the review is already underway.
+Requirements reviews often depend on exports from several systems. Requirements live in one tool, work is tracked in Jira, and verification evidence lives in CI test artifacts. Gaps often appear late, when the meeting is already underway.
 
 Doorframe gives teams a local way to inspect those exports before the review.
 
@@ -25,7 +29,7 @@ Doorframe gives teams a local way to inspect those exports before the review.
 ## What It Imports
 
 - Requirements CSV
-- ReqIF and ReqIFZ, with limited MVP support
+- ReqIF and ReqIFZ
 - Jira CSV
 - JUnit XML
 
@@ -36,24 +40,28 @@ Doorframe gives teams a local way to inspect those exports before the review.
 - Closed work without passing tests
 - Weak or vague requirement wording
 - Duplicate requirement candidates
+- Changed requirements between baselines
 - Possible stale trace links
 
 ## Local-First By Default
 
-Doorframe runs locally by default and does not send imported project data to any external service. Do not use Doorframe with classified, controlled, proprietary, or sensitive data unless your organization has approved that use in your environment.
+Doorframe runs locally by default and does not send imported project data to any external service. It has no telemetry in the MVP and does not require accounts.
 
-## Run The Demo
+## CLI / Web / Docker / MCP
 
-Use the fake Falcon Telemetry Gateway sample project to see a dashboard, trace graph, findings, and HTML report in under five minutes.
+- CLI for quick local reports and scripted review prep.
+- Web app for importing files, browsing findings, and exporting reports.
+- Docker for local or internal deployment.
+- Optional read-only MCP server for local project databases.
 
-## Install Options
+## Sample Report
 
-- Local CLI for developers and CI pipelines
-- Local web app for review prep
-- Docker container for internal deployment
-- Desktop app later
-- MCP server later
+Run the Falcon Telemetry Gateway demo to generate an offline HTML report that can be printed to PDF.
+
+## Security Notes
+
+Doorframe is not approved for classified, controlled, proprietary, or regulated data. Use it only with data your organization has approved for your environment.
 
 ## Roadmap
 
-Near-term work focuses on better ReqIF support, better CSV mapping, a stronger traceability matrix, baseline diffs, report formats, and a richer sample project. Later work may include optional AI review, local model support, enterprise controls, and an MCP server.
+Near-term work focuses on import resilience, report clarity, baseline workflows, packaging, and user feedback. Doorframe must remain useful without AI.

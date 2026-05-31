@@ -32,7 +32,11 @@ function testcaseStatus(testcase: XmlNode): ParsedTestCase["status"] {
     return "skipped";
   }
 
-  if (testcase.failure || testcase.error) {
+  if (testcase.error) {
+    return "errored";
+  }
+
+  if (testcase.failure) {
     return "failed";
   }
 
