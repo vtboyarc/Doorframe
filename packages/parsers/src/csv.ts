@@ -2,6 +2,7 @@ import { parse } from "csv-parse/sync";
 import {
   normalizeRequirementId,
   type ParseResult,
+  type RequirementIdPattern,
   requirementInputSchema,
   workItemInputSchema
 } from "@doorframe/core";
@@ -79,7 +80,8 @@ export function parseRequirementsCsv(
 
 export function parseJiraCsv(
   input: string,
-  mapping: JiraCsvMapping
+  mapping: JiraCsvMapping,
+  patterns?: RequirementIdPattern[]
 ): ParseResult<ParsedWorkItem> {
   const rows = parseRows(input);
   const records: ParsedWorkItem[] = [];
@@ -89,8 +91,8 @@ export function parseJiraCsv(
     const externalId = value(row, mapping.issueKey).toUpperCase();
     const title = value(row, mapping.summary) || externalId;
     const description = value(row, mapping.description);
-    const mappedIds = extractRequirementIds(value(row, mapping.requirementIds));
-    const detectedIds = extractRequirementIds(`${title}\n${description}`);
+    const mappedIds = extractRequirementIds(value(row, mapping.requirementIds), patterns);
+    const detectedIds = extractRequirementIds(`${title}\n${description}`, patterns);
 
     const candidate: ParsedWorkItem = {
       externalId,

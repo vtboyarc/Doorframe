@@ -3,17 +3,25 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   createId,
+  DEFAULT_RULESET,
+  normalizeRuleset,
   nowIso,
   safeJsonParse,
   safeJsonStringify,
+  snapshotFromProjectData,
+  type AuditEvent,
+  type AuditEventInput,
+  type Baseline,
   type Finding,
   type FindingInput,
   type ImportBatch,
   type Project,
   type ProjectData,
+  type ProjectSnapshot,
   type ProjectSummary,
   type Requirement,
   type RequirementInput,
+  type Ruleset,
   type TestCase,
   type TestCaseInput,
   type TraceLink,
@@ -234,11 +242,37 @@ function migrate(db: Db): void {
       errors TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS rulesets (
+      project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+      json TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS baselines (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      snapshot_json TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      timestamp TEXT NOT NULL,
+      action TEXT NOT NULL,
+      actor TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      details TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_requirements_project_id ON requirements(project_id);
     CREATE INDEX IF NOT EXISTS idx_work_items_project_id ON work_items(project_id);
     CREATE INDEX IF NOT EXISTS idx_test_cases_project_id ON test_cases(project_id);
     CREATE INDEX IF NOT EXISTS idx_trace_links_project_id ON trace_links(project_id);
     CREATE INDEX IF NOT EXISTS idx_findings_project_id ON findings(project_id);
+    CREATE INDEX IF NOT EXISTS idx_baselines_project_id ON baselines(project_id);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_project_id ON audit_log(project_id);
   `);
 }
 
@@ -776,4 +810,148 @@ export function getProjectSummary(projectId: string): ProjectSummary | null {
     weakRequirements: data.findings.filter((finding) => finding.category === "weak_wording").length,
     failedTestsLinkedToRequirements
   };
+}
+
+interface RulesetRow {
+  project_id: string;
+  json: string;
+  updated_at: string;
+}
+
+/** Return the project's stored ruleset, falling back to {@link DEFAULT_RULESET}. */
+export function getRuleset(projectId: string): Ruleset {
+  const row = getDb()
+    .prepare("SELECT * FROM rulesets WHERE project_id = ?")
+    .get(projectId) as RulesetRow | undefined;
+
+  if (!row) {
+    return DEFAULT_RULESET;
+  }
+
+  try {
+    return normalizeRuleset(JSON.parse(row.json) as Partial<Ruleset>);
+  } catch {
+    return DEFAULT_RULESET;
+  }
+}
+
+export function saveRuleset(projectId: string, ruleset: Ruleset): Ruleset {
+  const normalized = normalizeRuleset(ruleset);
+  getDb()
+    .prepare(
+      `INSERT INTO rulesets (project_id, json, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(project_id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at`
+    )
+    .run(projectId, JSON.stringify(normalized), nowIso());
+  touchProject(projectId);
+  return normalized;
+}
+
+interface BaselineRow {
+  id: string;
+  project_id: string;
+  label: string;
+  created_at: string;
+  snapshot_json: string;
+}
+
+function baselineFromRow(row: BaselineRow): Baseline {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    label: row.label,
+    createdAt: row.created_at,
+    snapshot: JSON.parse(row.snapshot_json) as ProjectSnapshot
+  };
+}
+
+/** Capture the project's current analyzed data as a named, immutable baseline. */
+export function createBaseline(projectId: string, label: string): Baseline | null {
+  const data = getProjectData(projectId);
+  if (!data) {
+    return null;
+  }
+
+  const baseline: Baseline = {
+    id: createId("baseline"),
+    projectId,
+    label: label.trim() || `Baseline ${nowIso()}`,
+    createdAt: nowIso(),
+    snapshot: snapshotFromProjectData(data)
+  };
+
+  getDb()
+    .prepare(
+      `INSERT INTO baselines (id, project_id, label, created_at, snapshot_json) VALUES (?, ?, ?, ?, ?)`
+    )
+    .run(baseline.id, projectId, baseline.label, baseline.createdAt, JSON.stringify(baseline.snapshot));
+
+  return baseline;
+}
+
+export function listBaselines(projectId: string): Baseline[] {
+  const rows = getDb()
+    .prepare("SELECT * FROM baselines WHERE project_id = ? ORDER BY created_at DESC")
+    .all(projectId) as BaselineRow[];
+  return rows.map(baselineFromRow);
+}
+
+export function getBaseline(baselineId: string): Baseline | null {
+  const row = getDb()
+    .prepare("SELECT * FROM baselines WHERE id = ?")
+    .get(baselineId) as BaselineRow | undefined;
+  return row ? baselineFromRow(row) : null;
+}
+
+interface AuditRow {
+  id: string;
+  project_id: string;
+  timestamp: string;
+  action: string;
+  actor: string;
+  summary: string;
+  details: string | null;
+}
+
+function auditFromRow(row: AuditRow): AuditEvent {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    timestamp: row.timestamp,
+    action: row.action as AuditEvent["action"],
+    actor: row.actor,
+    summary: row.summary,
+    details: row.details ? (JSON.parse(row.details) as Record<string, unknown>) : undefined
+  };
+}
+
+/** Append an audit event. Best-effort: never throws so it cannot break a write. */
+export function recordAuditEvent(event: AuditEventInput): AuditEvent | null {
+  try {
+    const stored: AuditEvent = { ...event, id: createId("audit"), timestamp: nowIso() };
+    getDb()
+      .prepare(
+        `INSERT INTO audit_log (id, project_id, timestamp, action, actor, summary, details)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        stored.id,
+        stored.projectId,
+        stored.timestamp,
+        stored.action,
+        stored.actor,
+        stored.summary,
+        stored.details ? JSON.stringify(stored.details) : null
+      );
+    return stored;
+  } catch {
+    return null;
+  }
+}
+
+export function listAuditEvents(projectId: string, limit = 200): AuditEvent[] {
+  const rows = getDb()
+    .prepare("SELECT * FROM audit_log WHERE project_id = ? ORDER BY timestamp DESC LIMIT ?")
+    .all(projectId, limit) as AuditRow[];
+  return rows.map(auditFromRow);
 }
