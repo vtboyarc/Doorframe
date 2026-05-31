@@ -24,6 +24,8 @@ Open `http://localhost:3000`. If that port is busy, Next.js will print the actua
 
 Create a project, then click **Load Demo Project**. Doorframe loads fictional sample data for Falcon Telemetry Gateway and generates dashboard metrics, findings, trace links, and a report.
 
+The demo data is fictional and is added to whichever project you load it into, so use a fresh project rather than one holding real imports. Reports generated from demo data carry a banner marking them as sample-only and not valid review evidence.
+
 ## Run the CLI Demo
 
 ```bash

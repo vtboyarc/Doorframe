@@ -10,7 +10,8 @@ import {
 } from "@doorframe/parsers";
 import {
   defaultJiraCsvMapping,
-  defaultRequirementsCsvMapping
+  defaultRequirementsCsvMapping,
+  TRACE_LINK_RULES
 } from "@doorframe/storage";
 import {
   getRequirementByExternalId,
@@ -46,8 +47,8 @@ export function saveRequirementRecords(projectId: string, records: RequirementIn
       sourceId: parent.id,
       targetType: "requirement",
       targetId: child.id,
-      linkType: "parent",
-      confidence: 0.95,
+      linkType: TRACE_LINK_RULES.parent.linkType,
+      confidence: TRACE_LINK_RULES.parent.confidence,
       source: requirementInput.source
     });
     linkCount += 1;
@@ -74,8 +75,8 @@ export function saveJiraRecords(projectId: string, workItems: ParsedWorkItem[]):
         sourceId: requirement.id,
         targetType: "workItem",
         targetId: savedWorkItem.id,
-        linkType: "implements",
-        confidence: 0.85,
+        linkType: TRACE_LINK_RULES.implements.linkType,
+        confidence: TRACE_LINK_RULES.implements.confidence,
         source: "jira-csv"
       });
       linkCount += 1;
@@ -103,8 +104,8 @@ export function saveJunitRecords(projectId: string, testCases: ParsedTestCase[])
         sourceId: requirement.id,
         targetType: "testCase",
         targetId: savedTestCase.id,
-        linkType: "verifies",
-        confidence: 0.8,
+        linkType: TRACE_LINK_RULES.verifies.linkType,
+        confidence: TRACE_LINK_RULES.verifies.confidence,
         source: "junit-xml"
       });
       linkCount += 1;

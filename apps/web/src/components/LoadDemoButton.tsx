@@ -10,6 +10,17 @@ export function LoadDemoButton({ projectId }: { projectId: string }) {
   const [message, setMessage] = useState<string | null>(null);
 
   async function loadDemo() {
+    const confirmed = window.confirm(
+      "Load fictional Doorframe sample data (Falcon Telemetry Gateway) into this project?\n\n" +
+        "This adds demo records, trace links, and findings to the current project. If this project " +
+        "already holds real imported data, the sample data will be mixed in. Load the demo into a " +
+        "fresh project instead."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     setIsLoading(true);
     setMessage(null);
 
@@ -49,6 +60,10 @@ export function LoadDemoButton({ projectId }: { projectId: string }) {
         <Database size={16} />
         {isLoading ? "Loading demo" : "Load Demo Project"}
       </button>
+      <p className="mt-2 text-sm text-[var(--muted)]">
+        Loads fictional sample data (Falcon Telemetry Gateway). Use a fresh project so it is not
+        mixed with real imports.
+      </p>
       {message ? <div className="mt-2 text-sm text-[var(--muted)]">{message}</div> : null}
     </div>
   );
