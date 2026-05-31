@@ -10,6 +10,10 @@
   "dependencies": {
     "@doorframe/analyzers": "0.1.0",
     "@doorframe/core": "0.1.0",
-    "@doorframe/parsers": "0.1.0"
+    "@doorframe/parsers": "0.1.0",
+    "better-sqlite3": "^12.10.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13"
   }
 }

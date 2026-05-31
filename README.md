@@ -39,6 +39,7 @@ Doorframe runs locally by default and does not send imported project data to any
 - Show a dashboard, requirements table, traceability matrix, requirement details, findings, trace graph, audit log, and report preview.
 - Generate traceability reports in HTML, Markdown, JSON, and CSV.
 - Keep a local audit log of imports, analysis runs, baselines, ruleset changes, and report generation.
+- Optionally expose a local project database through a read-only stdio MCP server for MCP-compatible AI clients.
 
 ## Run Locally
 
@@ -88,6 +89,7 @@ Suggested demo flow:
 ```text
 apps/web            Next.js UI, API routes, and SQLite persistence
 apps/cli            Doorframe CLI
+apps/mcp-server     Read-only stdio MCP server for local project databases
 packages/core       Shared types, schemas, and utilities
 packages/parsers    CSV, JUnit XML, ReqIF, ReqIFZ, and ID extraction
 packages/analyzers  Deterministic traceability and review rules

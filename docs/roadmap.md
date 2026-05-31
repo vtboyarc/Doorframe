@@ -14,6 +14,7 @@ Doorframe's roadmap keeps the MVP local-first and rule-based. AI is optional lat
 - Configurable requirement ID patterns.
 - Custom analyzer rules and project-level rulesets (per-project settings).
 - Audit log of imports, analysis runs, baselines, ruleset changes, and report generation.
+- Read-only stdio MCP server for local project traceability and review-prep queries.
 
 ## Researched
 
@@ -24,11 +25,44 @@ Doorframe's roadmap keeps the MVP local-first and rule-based. AI is optional lat
 - Optional AI review
 - Optional local LLM support
 - Optional OpenAI and Anthropic integration
-- MCP server
+- Expanded MCP features
 - Internal deployment guide
 - RBAC
 - SSO
 - Enterprise support model
+
+## MCP Roadmap
+
+Near-term MCP:
+
+- read-only stdio MCP server
+- project summary resource
+- findings resource
+- traceability matrix resource
+- review prep prompt
+- requirement detail tool
+- traceability gap tools
+
+Later MCP:
+
+- optional Streamable HTTP transport for internal deployments
+- authentication for HTTP mode
+- configurable redaction
+- configurable result limits
+- project ruleset resource
+- report generation tool
+- baseline comparison tools
+- optional write actions behind explicit user approval
+
+Write actions should remain disabled until the read-only MCP server is stable.
+
+Possible future write tools, not for MVP:
+
+- create_review_note
+- export_review_brief
+- generate_report
+- mark_finding_reviewed
+- attach_local_comment
 
 ## AI Roadmap
 

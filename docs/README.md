@@ -9,6 +9,7 @@ Doorframe is local-first by default. The public website is for marketing, docs, 
 - [Getting started](./getting-started.md)
 - [Sample workflow](./sample-workflow.md)
 - [CLI](./cli.md)
+- [MCP server](./mcp-server.md)
 - [Docker](./docker.md)
 - [Local-first design](./local-first.md)
 - [Security and privacy](./security-and-privacy.md)

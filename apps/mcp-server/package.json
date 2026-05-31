@@ -1,0 +1,23 @@
+{
+  "name": "doorframe-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "doorframe-mcp": "src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "vitest run src/__tests__/*.test.ts",
+    "typecheck": "tsc -p ../../tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@doorframe/core": "0.1.0",
+    "@doorframe/storage": "0.1.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1"
+  }
+}
