@@ -3,14 +3,14 @@
   <CORE-CONTENT>
     <REQ-IF-CONTENT>
       <SPEC-OBJECTS>
-        <SPEC-OBJECT IDENTIFIER="REQ-200" LONG-NAME="Battery temperature limit">
+        <SPEC-OBJECT IDENTIFIER="REQ-006" LONG-NAME="Packet validation">
           <VALUES>
-            <ATTRIBUTE-VALUE-STRING THE-VALUE="The controller shall disconnect charging when battery temperature exceeds 45 C." />
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="The system shall reject telemetry packets with invalid checksums before updating the operator display." />
           </VALUES>
         </SPEC-OBJECT>
-        <SPEC-OBJECT IDENTIFIER="REQ-210" LONG-NAME="Battery warning text">
+        <SPEC-OBJECT IDENTIFIER="REQ-007" LONG-NAME="Operator message wording">
           <VALUES>
-            <ATTRIBUTE-VALUE-STRING THE-VALUE="The interface may show an appropriate warning if practical." />
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="The system may show an appropriate warning if practical." />
           </VALUES>
         </SPEC-OBJECT>
       </SPEC-OBJECTS>

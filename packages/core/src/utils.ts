@@ -9,7 +9,7 @@ export function createId(prefix: string): string {
 }
 
 export function normalizeRequirementId(value: string): string {
-  const trimmed = value.trim().toUpperCase();
+  const trimmed = value.trim().toUpperCase().replace(/[.,;:]+$/, "");
   const shallMatch = trimmed.match(/^SHALL[\s_-]?(\d+)$/i);
 
   if (shallMatch) {

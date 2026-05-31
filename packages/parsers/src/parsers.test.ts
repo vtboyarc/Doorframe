@@ -12,6 +12,12 @@ describe("extractRequirementIds", () => {
       "SHALL-44"
     ]);
   });
+
+  it("detects requirement ids embedded in test names", () => {
+    expect(extractRequirementIds("TelemetryStatusPanelTests.testDisplaysStatusWithinTwoSeconds_REQ_001")).toEqual([
+      "REQ-001"
+    ]);
+  });
 });
 
 describe("parseRequirementsCsv", () => {

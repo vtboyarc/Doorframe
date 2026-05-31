@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="doorframe-example" tests="4" failures="1" skipped="1">
-  <testsuite name="MaintenanceRecordTests" tests="4" failures="1" skipped="1">
-    <testcase classname="MaintenanceRecordTests" name="REQ-100 blocks unauthenticated record access" time="0.042" />
-    <testcase classname="MaintenanceRecordTests" name="REQ-110 search results return within threshold" time="0.087" />
-    <testcase classname="MaintenanceRecordTests" name="REQ-130 writes audit entry for record change" time="0.021">
-      <failure message="Expected audit timestamp to be populated" />
+<testsuites name="falcon-telemetry-gateway" tests="4" failures="1" skipped="1">
+  <testsuite name="FalconTelemetryGatewayTests" tests="4" failures="1" skipped="1">
+    <testcase classname="TelemetryStatusPanelTests" name="testDisplaysStatusWithinTwoSeconds_REQ_001" time="0.041" />
+    <testcase classname="AuthenticationAuditTests" name="testFailedLoginIsLogged_REQ_002" time="0.026" />
+    <testcase classname="AuditRetentionTests" name="testRetainsAuditRecords_REQ_005" time="0.034">
+      <failure message="Expected retention policy to keep records for 365 days" />
     </testcase>
-    <testcase classname="MaintenanceRecordTests" name="REQ-140 sends reviewer notification" time="0.000">
-      <skipped message="Notification service test not implemented" />
+    <testcase classname="OperatorAlertTests" name="testCommunicationLossAlertDraft" time="0.000">
+      <skipped message="No accepted requirement ID linked to this test yet" />
     </testcase>
   </testsuite>
 </testsuites>

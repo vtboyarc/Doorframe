@@ -1,8 +1,8 @@
 import { normalizeRequirementId, uniqueStrings } from "@doorframe/core";
 
 const REQUIREMENT_ID_PATTERN =
-  /\b(?:REQ|SYS|SRS|DOORS)[\s_-]?\d+[A-Z0-9._-]*\b/gi;
-const SHALL_ID_PATTERN = /\bSHALL[\s_-]?\d+\b/gi;
+  /(?:^|[^A-Z0-9])((?:REQ|SYS|SRS|DOORS)[\s_-]?\d+[A-Z0-9._-]*)/gi;
+const SHALL_ID_PATTERN = /(?:^|[^A-Z0-9])((?:SHALL)[\s_-]?\d+)/gi;
 
 export function extractRequirementIds(input: string | null | undefined): string[] {
   if (!input) {
@@ -10,8 +10,8 @@ export function extractRequirementIds(input: string | null | undefined): string[
   }
 
   const matches = [
-    ...(input.match(REQUIREMENT_ID_PATTERN) ?? []),
-    ...(input.match(SHALL_ID_PATTERN) ?? [])
+    ...Array.from(input.matchAll(REQUIREMENT_ID_PATTERN), (match) => match[1]),
+    ...Array.from(input.matchAll(SHALL_ID_PATTERN), (match) => match[1])
   ];
 
   return uniqueStrings(matches.map(normalizeRequirementId));

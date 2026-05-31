@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { LoadDemoButton } from "@/components/LoadDemoButton";
 import { MetricGrid } from "@/components/MetricGrid";
 import { PageShell } from "@/components/PageShell";
 import { getProjectData, getProjectSummary } from "@/lib/db";
@@ -27,12 +28,15 @@ export default async function ProjectDashboardPage({
               Local SQLite project. Import exported data, review trace coverage, and generate an HTML report.
             </p>
           </div>
-          <Link
-            href={`/projects/${projectId}/imports`}
-            className="inline-flex min-h-10 items-center justify-center border border-[var(--accent-strong)] bg-[var(--accent)] px-4 text-white"
-          >
-            Import data
-          </Link>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <LoadDemoButton projectId={projectId} />
+            <Link
+              href={`/projects/${projectId}/imports`}
+              className="inline-flex min-h-10 items-center justify-center border border-[var(--accent-strong)] bg-[var(--accent)] px-4 text-white"
+            >
+              Import data
+            </Link>
+          </div>
         </section>
 
         <MetricGrid summary={summary} />

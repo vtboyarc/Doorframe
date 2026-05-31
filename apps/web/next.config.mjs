@@ -4,7 +4,8 @@ const nextConfig = {
     "@doorframe/core",
     "@doorframe/parsers",
     "@doorframe/analyzers",
-    "@doorframe/reporting"
+    "@doorframe/reporting",
+    "@doorframe/storage"
   ],
   serverExternalPackages: ["better-sqlite3"]
 };
