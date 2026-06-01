@@ -1,12 +1,25 @@
 services:
   doorframe:
+    image: ghcr.io/vtboyarc/doorframe:0.1.0
     build:
       context: .
       dockerfile: docker/Dockerfile
+      args:
+        VERSION: 0.1.0
+        SOURCE_REPOSITORY: https://github.com/vtboyarc/Doorframe
     ports:
       - "3000:3000"
     environment:
-      DOORFRAME_DATA_DIR: /data/doorframe
+      DOORFRAME_DATA_DIR: /data
       NODE_ENV: production
     volumes:
-      - ./.doorframe-docker:/data/doorframe
+      - doorframe-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  doorframe-data:

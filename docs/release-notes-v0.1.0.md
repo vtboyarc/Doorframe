@@ -5,6 +5,7 @@ Doorframe v0.1.0 is the first public release candidate for the local-first trace
 ## Included
 
 - Local web app.
+- npm-served local web app through `npx @doorframe/cli serve`.
 - CLI analysis command.
 - Docker local deployment.
 - Offline HTML traceability report.
@@ -25,10 +26,6 @@ Doorframe v0.1.0 is the first public release candidate for the local-first trace
 ## Quick Demo
 
 ```bash
-npm install
-npm run doorframe -- analyze \
-  --requirements ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
-  --jira ./examples/falcon-telemetry-gateway/sample-jira.csv \
-  --junit ./examples/falcon-telemetry-gateway/sample-junit.xml \
-  --out ./doorframe-report.html
+npx @doorframe/cli demo
+npx @doorframe/cli serve
 ```

@@ -4,6 +4,11 @@ node_modules
 out
 dist
 coverage
+release-artifacts
+apps/cli/docs
+apps/cli/examples
+apps/cli/LICENSE
+apps/cli/web
 .env
 .env.local
 .doorframe

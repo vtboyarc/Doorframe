@@ -7,11 +7,15 @@ Doorframe is local-first by default. The public website is for marketing, docs, 
 ## Start Here
 
 - [Getting started](./getting-started.md)
+- [Install](./install.md)
 - [Sample workflow](./sample-workflow.md)
 - [Falcon demo](./demo.md)
 - [CLI](./cli.md)
 - [MCP server](./mcp-server.md)
 - [Docker](./docker.md)
+- [Company installation](./company-installation.md)
+- [Publishing npm](./publishing-npm.md)
+- [Releasing](./releasing.md)
 - [Local-first design](./local-first.md)
 - [Security and privacy](./security-and-privacy.md)
 - [Security model](./security-model.md)

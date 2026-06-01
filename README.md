@@ -6,6 +6,56 @@ Doorframe is useful without AI. The main product artifact is the HTML traceabili
 
 Doorframe runs locally by default and does not send imported project data to any external service.
 
+## Install And Run
+
+Most users should use npm/npx or Docker. Clone the repo only when contributing, auditing, or changing Doorframe.
+
+Try the CLI without installing:
+
+```bash
+npx @doorframe/cli demo
+```
+
+Run the local web app with npm:
+
+```bash
+npx @doorframe/cli serve
+```
+
+Open the printed local URL, normally `http://localhost:3000`.
+
+Generate a report from local exports:
+
+```bash
+npx @doorframe/cli analyze \
+  --requirements requirements.csv \
+  --jira jira.csv \
+  --junit test-results.xml \
+  --out doorframe-report.html
+```
+
+Install globally:
+
+```bash
+npm install -g @doorframe/cli
+doorframe --help
+doorframe serve
+```
+
+Run the local web app with Docker:
+
+```bash
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.0
+```
+
+Run MCP:
+
+```bash
+npx @doorframe/cli mcp --project ./doorframe.sqlite
+```
+
+See `docs/install.md`, `docs/docker.md`, and `docs/company-installation.md`.
+
 ## What Doorframe Is
 
 - A local review tool for requirements exports.
@@ -26,22 +76,17 @@ Doorframe runs locally by default and does not send imported project data to any
 ## Ten-Minute Demo
 
 ```bash
-npm install
-npm run doorframe -- analyze \
-  --requirements ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
-  --jira ./examples/falcon-telemetry-gateway/sample-jira.csv \
-  --junit ./examples/falcon-telemetry-gateway/sample-junit.xml \
-  --out ./doorframe-report.html
+npx @doorframe/cli demo
 ```
 
-Open `doorframe-report.html` in a browser. The report is offline HTML and can be printed to PDF.
+Open `doorframe-report.html` in a browser. The report is offline HTML and can be printed to PDF. The demo also writes `doorframe-baseline-diff.html`.
 
 The demo project is fictional. It intentionally includes weak wording, missing trace links, missing passing verification, closed work without passing tests, duplicate requirement candidates, and a baseline timing change.
 
 ## Baseline Diff Demo
 
 ```bash
-npm run doorframe -- diff \
+npx @doorframe/cli diff \
   --baseline-a ./examples/falcon-telemetry-gateway/sample-requirements-baseline-a.csv \
   --baseline-b ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
   --out ./doorframe-baseline-diff.html
@@ -50,6 +95,14 @@ npm run doorframe -- diff \
 This detects `REQ-014` changing from a 5 second processing threshold to a 2 second threshold, plus one added and one deleted requirement.
 
 ## Web App
+
+With Docker:
+
+```bash
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.0
+```
+
+From source:
 
 ```bash
 npm run dev
@@ -60,17 +113,17 @@ Open `http://localhost:3000`, create a project, and click **Load Demo Project**.
 ## Docker
 
 ```bash
-docker compose up --build
+docker compose up
 ```
 
-Open `http://localhost:3000`. Docker stores project data in `./.doorframe-docker`.
+Open `http://localhost:3000`. Docker stores project data in the `doorframe-data` volume mounted at `/data`.
 
 ## MCP Server
 
 Doorframe includes an optional read-only stdio MCP server for local Doorframe SQLite project databases.
 
 ```bash
-npm run start -w apps/mcp-server -- --project ./.doorframe/doorframe.sqlite
+npx @doorframe/cli mcp --project ./.doorframe/doorframe.sqlite
 ```
 
 The MCP server is not an AI client and does not call AI providers. Data returned by MCP may enter the connected AI client's context.
@@ -115,5 +168,15 @@ See `SECURITY.md`, `docs/security-model.md`, `docs/threat-model.md`, `docs/no-te
 Near-term work for v0.1.x focuses on better import resilience, clearer reports, baseline workflows, packaged demo artifacts, and user feedback from real review workflows. Optional AI review can come later, but Doorframe must remain useful without AI.
 
 ## Contributing
+
+Clone the repo only when contributing, auditing, or changing Doorframe.
+
+```bash
+git clone https://github.com/vtboyarc/Doorframe.git
+cd Doorframe
+npm install
+npm run build
+npm test
+```
 
 See `CONTRIBUTING.md`. The repository currently uses the existing MIT license in `LICENSE`.

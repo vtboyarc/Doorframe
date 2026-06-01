@@ -9,16 +9,21 @@
   ],
   "scripts": {
     "dev": "npm run dev -w apps/web",
-    "build": "npm run build -w apps/web",
+    "build": "npm run build -w apps/cli && npm run build -w apps/web",
+    "build:cli": "npm run build -w apps/cli",
+    "build:web": "npm run build -w apps/web",
     "start": "npm run start -w apps/web",
-    "doorframe": "tsx apps/cli/src/index.ts",
+    "doorframe": "npm run build -w apps/cli --silent && node apps/cli/dist/index.js",
     "lint": "npm run typecheck",
+    "pack:cli:dry-run": "npm pack --dry-run -w apps/cli",
+    "release:assets": "node scripts/generate-release-assets.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.1",
+    "esbuild": "^0.28.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite-tsconfig-paths": "^5.1.4",
