@@ -23,7 +23,7 @@ docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:lates
 ## Run Pinned Version
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.0
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.1
 ```
 
 Open `http://localhost:3000`.
@@ -47,7 +47,7 @@ Protect the volume like any other project data. Do not import sensitive data unl
 ```bash
 docker build \
   -f docker/Dockerfile \
-  --build-arg VERSION=0.1.0 \
+  --build-arg VERSION=0.1.1 \
   --build-arg SOURCE_REPOSITORY=https://github.com/vtboyarc/Doorframe \
   -t doorframe:local .
 ```
@@ -57,15 +57,15 @@ docker build \
 Companies and contractors should typically scan and mirror the pinned image into an internal registry before use.
 
 ```bash
-docker pull ghcr.io/vtboyarc/doorframe:0.1.0
-docker tag ghcr.io/vtboyarc/doorframe:0.1.0 internal-registry.example.com/tools/doorframe:0.1.0
-docker push internal-registry.example.com/tools/doorframe:0.1.0
+docker pull ghcr.io/vtboyarc/doorframe:0.1.1
+docker tag ghcr.io/vtboyarc/doorframe:0.1.1 internal-registry.example.com/tools/doorframe:0.1.1
+docker push internal-registry.example.com/tools/doorframe:0.1.1
 ```
 
 Then deploy the mirrored image:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.0
+docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.1
 ```
 
 ## Image Notes
