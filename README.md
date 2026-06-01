@@ -47,7 +47,7 @@ doorframe serve
 Run the local web app with Docker:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.0
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.1
 ```
 
 Run MCP:
@@ -101,7 +101,7 @@ This detects `REQ-014` changing from a 5 second processing threshold to a 2 seco
 With Docker:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.0
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.1
 ```
 
 From source:
