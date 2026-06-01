@@ -2,6 +2,12 @@
 
 The Docker image runs the local Doorframe web app. It does not require Postgres, cloud services, telemetry, user accounts, or external APIs.
 
+If you prefer npm instead of Docker, run:
+
+```bash
+npx @doorframe/cli serve
+```
+
 Published images use GitHub Container Registry:
 
 ```text

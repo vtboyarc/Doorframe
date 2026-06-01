@@ -1,6 +1,6 @@
 # Publishing The npm Package
 
-Doorframe's first public npm package is `@doorframe/cli`. It exposes the `doorframe` binary and includes the CLI, demo command, report generation, baseline diff, connector commands, and read-only MCP launcher.
+Doorframe's first public npm package is `@doorframe/cli`. It exposes the `doorframe` binary and includes the local web app server, demo command, report generation, baseline diff, connector commands, and read-only MCP launcher.
 
 Do not publish until the release workflow and package contents have been reviewed.
 
@@ -45,6 +45,7 @@ Verify:
 ```bash
 npx @doorframe/cli@0.1.0 --help
 npx @doorframe/cli@0.1.0 demo
+npx @doorframe/cli@0.1.0 serve
 ```
 
 ## Recommended Later Path: Trusted Publishing

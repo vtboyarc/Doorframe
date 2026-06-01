@@ -16,6 +16,14 @@ Try the CLI without installing:
 npx @doorframe/cli demo
 ```
 
+Run the local web app with npm:
+
+```bash
+npx @doorframe/cli serve
+```
+
+Open the printed local URL, normally `http://localhost:3000`.
+
 Generate a report from local exports:
 
 ```bash
@@ -31,6 +39,7 @@ Install globally:
 ```bash
 npm install -g @doorframe/cli
 doorframe --help
+doorframe serve
 ```
 
 Run the local web app with Docker:

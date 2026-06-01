@@ -12,7 +12,9 @@ await access(cliBin);
 
 const checks = [
   ["--help"],
-  ["demo", "--help"]
+  ["demo", "--help"],
+  ["serve", "--help"],
+  ["mcp", "--help"]
 ];
 
 for (const args of checks) {

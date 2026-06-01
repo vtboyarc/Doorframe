@@ -47,6 +47,7 @@ Initial public preview release for local-first requirements traceability review.
 
 \`\`\`bash
 npx @doorframe/cli@${version} demo
+npx @doorframe/cli@${version} serve
 npm install -g @doorframe/cli@${version}
 doorframe --help
 \`\`\`

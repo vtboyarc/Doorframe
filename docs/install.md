@@ -12,6 +12,20 @@ npx @doorframe/cli demo
 
 This generates a local HTML traceability report and baseline diff report from the fictional Falcon Telemetry Gateway demo data.
 
+## Run The Web App With npm
+
+```bash
+npx @doorframe/cli serve
+```
+
+Open the printed URL, normally `http://localhost:3000`. By default this stores the local SQLite database in `./.doorframe` under the directory where you run the command.
+
+Options:
+
+- `--port <port>` changes the port.
+- `--host <host>` changes the bind host. The default is `127.0.0.1`.
+- `--data-dir <path>` changes the local data directory.
+
 ## Generate A Report
 
 ```bash
@@ -29,9 +43,10 @@ The report is offline HTML and can be reviewed locally or printed to PDF.
 ```bash
 npm install -g @doorframe/cli
 doorframe --help
+doorframe serve
 ```
 
-Global install is useful for local scripts or repeated report generation.
+Global install is useful for running the web app, local scripts, or repeated report generation.
 
 ## Run The Web App With Docker
 

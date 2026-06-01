@@ -22,6 +22,7 @@ describe("doorframe binary", () => {
 
     expect(stdout).toContain("Doorframe CLI");
     expect(stdout).toContain("doorframe demo");
+    expect(stdout).toContain("doorframe serve");
     expect(stdout).toContain("doorframe mcp --project");
   });
 
@@ -32,5 +33,23 @@ describe("doorframe binary", () => {
 
     expect(stdout).toContain("Doorframe demo");
     expect(stdout).toContain("doorframe demo");
+  });
+
+  it("prints serve help", async () => {
+    const { stdout } = await execFileAsync(process.execPath, [cliBin, "serve", "--help"], {
+      cwd: repoRoot
+    });
+
+    expect(stdout).toContain("Doorframe serve");
+    expect(stdout).toContain("doorframe serve");
+  });
+
+  it("prints MCP help", async () => {
+    const { stderr } = await execFileAsync(process.execPath, [cliBin, "mcp", "--help"], {
+      cwd: repoRoot
+    });
+
+    expect(stderr).toContain("Doorframe MCP server");
+    expect(stderr).toContain("doorframe mcp --project");
   });
 });

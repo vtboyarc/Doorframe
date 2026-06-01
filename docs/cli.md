@@ -6,6 +6,12 @@ The CLI runs the same parsers and analyzers as the web app without storing anyth
 npx @doorframe/cli demo
 ```
 
+Start the local web app with npm:
+
+```bash
+npx @doorframe/cli serve
+```
+
 From source:
 
 ```bash
@@ -25,6 +31,22 @@ Optional flags:
 - `--out <path>` Traceability report output path.
 - `--diff-out <path>` Baseline diff report output path.
 - `--skip-diff` Generate only the traceability report.
+
+## `serve`
+
+Start the local Doorframe web app and open the printed URL in a browser.
+
+```bash
+npx @doorframe/cli serve
+```
+
+Options:
+
+- `--port <port>` Port to listen on, default `3000`.
+- `--host <host>` Host to bind, default `127.0.0.1`.
+- `--data-dir <path>` Local data directory, default `./.doorframe` from the directory where you run the command.
+
+The npm-served web app uses the same local-first SQLite storage model as Docker. It does not send imported project data to Doorframe-hosted services.
 
 ## `analyze`
 

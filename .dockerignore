@@ -10,6 +10,7 @@ release-artifacts
 apps/cli/docs
 apps/cli/examples
 apps/cli/LICENSE
+apps/cli/web
 doorframe-report.html
 doorframe-baseline-diff.html
 *.sqlite

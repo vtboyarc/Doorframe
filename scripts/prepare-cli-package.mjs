@@ -30,3 +30,16 @@ await cp(
   path.join(cliDir, "examples", "falcon-telemetry-gateway"),
   { recursive: true }
 );
+
+const standaloneDir = path.join(repoRoot, "apps", "web", ".next", "standalone");
+const packagedWebDir = path.join(cliDir, "web", "standalone");
+await rm(path.join(cliDir, "web"), { force: true, recursive: true });
+await mkdir(path.join(packagedWebDir), { recursive: true });
+await cp(standaloneDir, packagedWebDir, { recursive: true });
+await cp(
+  path.join(repoRoot, "apps", "web", ".next", "static"),
+  path.join(packagedWebDir, "apps", "web", ".next", "static"),
+  { recursive: true }
+);
+await rm(path.join(packagedWebDir, "node_modules"), { force: true, recursive: true });
+await rm(path.join(packagedWebDir, "apps", "web", ".doorframe"), { force: true, recursive: true });

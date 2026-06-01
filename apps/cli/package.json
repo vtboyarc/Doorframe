@@ -19,6 +19,7 @@
   },
   "files": [
     "dist",
+    "web",
     "docs",
     "examples",
     "README.md",
@@ -33,14 +34,22 @@
   "scripts": {
     "build": "node ../../scripts/build-cli.mjs",
     "lint": "npm run typecheck",
-    "prepack": "npm run build && node ../../scripts/prepare-cli-package.mjs && npm run test:bin",
-    "prepublishOnly": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:bin",
+    "prepack": "npm run build && npm --prefix ../.. run build:web && node ../../scripts/prepare-cli-package.mjs && npm run test:bin",
+    "prepublishOnly": "npm --prefix ../.. run typecheck && npm --prefix ../.. run lint && npm --prefix ../.. test && npm run build && npm --prefix ../.. run build:web && node ../../scripts/prepare-cli-package.mjs && npm run test:bin",
     "test": "vitest run src/__tests__/*.test.ts",
     "test:bin": "node ../../scripts/smoke-cli-bin.mjs",
     "typecheck": "tsc -p ../../tsconfig.json --noEmit"
   },
   "dependencies": {
-    "better-sqlite3": "^12.10.0"
+    "@tanstack/react-table": "^8.21.3",
+    "better-sqlite3": "^12.10.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.561.0",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "reactflow": "^11.11.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^24.10.1"

@@ -4,6 +4,7 @@ Doorframe CLI generates local traceability reports from requirements exports, Ji
 
 ```bash
 npx @doorframe/cli demo
+npx @doorframe/cli serve
 npx @doorframe/cli analyze --requirements requirements.csv --jira jira.csv --junit test-results.xml --out doorframe-report.html
 npx @doorframe/cli mcp --project ./doorframe.sqlite
 ```

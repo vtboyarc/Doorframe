@@ -2,6 +2,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   generateBaselineDiffHtmlReport,
@@ -58,6 +59,7 @@ function usage(): string {
 
 Usage:
   doorframe demo [--out report.html] [--diff-out diff.html] [--skip-diff]
+  doorframe serve [--port 3000] [--host 127.0.0.1] [--data-dir ./.doorframe]
   doorframe analyze --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--reqif spec.reqif] [--format html|md|json|csv] [--ruleset rules.json] [--out report.ext]
   doorframe report --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--format html|md|json|csv] [--out report.ext]
   doorframe diff --baseline-a req-a.csv --baseline-b req-b.csv [--jira jira.csv] [--junit tests.xml] [--out diff.html]
@@ -70,6 +72,16 @@ Usage:
 
 Connector credentials are read from DOORFRAME_* environment variables (local-first).
 See docs/cli.md for details.
+`;
+}
+
+function serveUsage(): string {
+  return `Doorframe serve
+
+Usage:
+  doorframe serve [--port 3000] [--host 127.0.0.1] [--data-dir ./.doorframe]
+
+Starts the local Doorframe web app. Open the printed localhost URL in a browser.
 `;
 }
 
@@ -160,6 +172,22 @@ async function resolveDemoFile(filename: string): Promise<string> {
   }
 
   throw new Error(`Unable to locate bundled demo file ${filename}.`);
+}
+
+async function resolveWebServer(): Promise<string> {
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(currentDir, "../web/standalone/apps/web/server.js"),
+    path.resolve(currentDir, "../../../apps/web/.next/standalone/apps/web/server.js")
+  ];
+
+  for (const candidate of candidates) {
+    if (await fileExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error("Unable to locate the packaged Doorframe web app. Run `npm run build -w apps/web` before serving from source.");
 }
 
 async function loadRuleset(rulesetPath: string | undefined): Promise<Ruleset> {
@@ -431,6 +459,56 @@ async function demo(args: string[]): Promise<void> {
   }
 }
 
+async function serve(args: string[]): Promise<void> {
+  if (isHelp(args)) {
+    console.log(serveUsage());
+    return;
+  }
+
+  const options = parseOptions(args);
+  const serverPath = await resolveWebServer();
+  const port = options.port ?? process.env.PORT ?? "3000";
+  const host = options.host ?? process.env.HOSTNAME ?? "127.0.0.1";
+  const dataDir = options["data-dir"] ?? process.env.DOORFRAME_DATA_DIR ?? path.resolve(process.cwd(), ".doorframe");
+  const displayHost = host === "0.0.0.0" ? "localhost" : host;
+
+  console.log(`Starting Doorframe web app at http://${displayHost}:${port}`);
+  console.log(`Using local data directory: ${dataDir}`);
+  console.log("Press Ctrl+C to stop.");
+
+  const child = spawn(process.execPath, [serverPath], {
+    env: {
+      ...process.env,
+      DOORFRAME_DATA_DIR: dataDir,
+      HOSTNAME: host,
+      NEXT_TELEMETRY_DISABLED: "1",
+      NODE_ENV: "production",
+      PORT: port
+    },
+    stdio: "inherit"
+  });
+
+  const forwardedSignals = ["SIGTERM", "SIGINT", "SIGHUP", "SIGQUIT"] as const;
+  for (const signal of forwardedSignals) {
+    process.on(signal, () => {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill(signal);
+      }
+    });
+  }
+
+  await new Promise<void>((resolve) => {
+    child.on("exit", (code, signal) => {
+      if (signal) {
+        process.kill(process.pid, signal);
+        return;
+      }
+      process.exitCode = code ?? 0;
+      resolve();
+    });
+  });
+}
+
 async function importConnector(kind: "jira" | "github" | "gitlab" | "jenkins", args: string[]): Promise<void> {
   const options = parseOptions(args);
   const ruleset = await loadRuleset(options.ruleset);
@@ -515,6 +593,9 @@ async function main(): Promise<void> {
   switch (command) {
     case "demo":
       await demo(args);
+      return;
+    case "serve":
+      await serve(args);
       return;
     case "analyze":
       await analyze(args);

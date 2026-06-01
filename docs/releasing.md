@@ -9,6 +9,7 @@ Do not publish a release until the package contents, Docker image, release notes
 - Local web app
 - `@doorframe/cli` package with `doorframe` binary
 - `doorframe demo`
+- `doorframe serve`
 - `doorframe analyze`
 - `doorframe diff`
 - `doorframe report` alias for report generation
@@ -37,8 +38,9 @@ Do not publish a release until the package contents, Docker image, release notes
 9. Run an npx smoke test:
 
    ```bash
-   npx @doorframe/cli@0.1.0 demo
-   ```
+npx @doorframe/cli@0.1.0 demo
+npx @doorframe/cli@0.1.0 serve
+```
 
 10. Run a Docker smoke test:
 

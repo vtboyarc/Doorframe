@@ -14,6 +14,8 @@ Use this before tagging `v0.1.0`.
   `npm run doorframe -- diff --baseline-a ./examples/falcon-telemetry-gateway/sample-requirements-baseline-a.csv --baseline-b ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv --out ./doorframe-baseline-diff.html`
 - Run CLI binary smoke test: `npm run test:bin -w apps/cli`
 - Review npm package dry run: `npm pack --dry-run -w apps/cli`
+- Install the packed tarball in a clean temp project and run `npx doorframe serve`.
+- Verify `http://127.0.0.1:3000/api/health` returns OK.
 - Run web app: `npm run dev`
 - Run Docker build: `docker compose build`
 - Run Docker smoke test if practical:
@@ -36,6 +38,8 @@ Use this before tagging `v0.1.0`.
 - `bin.doorframe` points to the built CLI.
 - `doorframe --help` works from the built package.
 - `doorframe demo --help` works from the built package.
+- `doorframe serve` starts the local web app from the installed package.
+- `doorframe mcp --help` still works from the installed package.
 - `npm pack --dry-run -w apps/cli` includes only expected files.
 - README and license are included.
 - `publishConfig.access` is `public`.

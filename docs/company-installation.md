@@ -8,6 +8,7 @@ Use npx or a global npm install:
 
 ```bash
 npx @doorframe/cli demo
+npx @doorframe/cli serve
 npm install -g @doorframe/cli
 doorframe --help
 ```

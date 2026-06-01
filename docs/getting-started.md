@@ -14,6 +14,16 @@ Open `doorframe-report.html` in a browser. The demo also writes `doorframe-basel
 
 ## Run The Web App
 
+With npm:
+
+```bash
+npx @doorframe/cli serve
+```
+
+Open the printed URL, normally `http://localhost:3000`.
+
+From source:
+
 ```bash
 npm run dev
 ```
