@@ -138,6 +138,34 @@ Use fictional project names like Falcon Telemetry Gateway.
 
 The demo should intentionally include traceability gaps, weak wording, missing verification, and changed baseline examples.
 
+## Distribution and publishing
+
+Doorframe should be usable without cloning the repo.
+
+Preferred install paths:
+1. npm/npx for CLI and MCP
+2. Docker/GHCR for local web app or internal team deployment
+3. GitHub Releases for versioned release notes and artifacts
+4. source clone only for contributors
+
+Do not make users clone the repo for normal usage.
+
+The npm package should expose a `doorframe` binary.
+
+The first package should be `@doorframe/cli` unless the package scope/name is unavailable.
+
+Docker images should be published to GHCR using versioned tags.
+
+Do not include secrets, .env files, local databases, or unnecessary artifacts in npm packages or Docker images.
+
+Run npm pack --dry-run before publishing.
+
+Keep all install docs local-first and security-conscious.
+
+Do not add telemetry, external AI-provider calls, or SaaS assumptions.
+
+Companies should be able to mirror npm packages and Docker images into internal registries and pin versions.
+
 ## Report rules
 
 Reports should be:

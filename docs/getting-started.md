@@ -7,15 +7,10 @@ Doorframe is local-first and useful without AI. It does not replace a requiremen
 ## Run The Demo In Under Ten Minutes
 
 ```bash
-npm install
-npm run doorframe -- analyze \
-  --requirements ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
-  --jira ./examples/falcon-telemetry-gateway/sample-jira.csv \
-  --junit ./examples/falcon-telemetry-gateway/sample-junit.xml \
-  --out ./doorframe-report.html
+npx @doorframe/cli demo
 ```
 
-Open `doorframe-report.html` in a browser.
+Open `doorframe-report.html` in a browser. The demo also writes `doorframe-baseline-diff.html`.
 
 ## Run The Web App
 
@@ -28,7 +23,7 @@ Open `http://localhost:3000`. Create a project, then click **Load Demo Project**
 ## Run Baseline Diff
 
 ```bash
-npm run doorframe -- diff \
+npx @doorframe/cli diff \
   --baseline-a ./examples/falcon-telemetry-gateway/sample-requirements-baseline-a.csv \
   --baseline-b ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
   --out ./doorframe-baseline-diff.html

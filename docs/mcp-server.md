@@ -74,17 +74,23 @@ Doorframe MCP itself does not generate the AI answer and does not send data to a
 
 ## Install And Run
 
+Normal users should run MCP through the `@doorframe/cli` package:
+
+```bash
+npx @doorframe/cli mcp --project ./doorframe.sqlite
+```
+
 From the repo:
 
 ```bash
 npm install
-npm run --silent dev -w apps/mcp-server -- --project ../../examples/demo-project/doorframe.sqlite
+npm run --silent doorframe -- mcp --project ./.doorframe/doorframe.sqlite
 ```
 
-For an installed binary:
+For a global install:
 
 ```bash
-doorframe-mcp --project ./doorframe.sqlite
+doorframe mcp --project ./doorframe.sqlite
 ```
 
 The server uses stdio transport only. stdout is reserved for MCP protocol messages; diagnostics and startup errors go to stderr.
@@ -99,14 +105,14 @@ Exact configuration format varies by client. A generic MCP server entry looks li
 {
   "mcpServers": {
     "doorframe": {
-      "command": "doorframe-mcp",
-      "args": ["--project", "/absolute/path/to/doorframe.sqlite"]
+      "command": "doorframe",
+      "args": ["mcp", "--project", "/absolute/path/to/doorframe.sqlite"]
     }
   }
 }
 ```
 
-Avoid claiming support for a specific client until you have verified that client's current MCP configuration format.
+Use `npx @doorframe/cli` as the command if the client supports launching through `npx`. Avoid claiming support for a specific client until you have verified that client's current MCP configuration format.
 
 ## Resources
 

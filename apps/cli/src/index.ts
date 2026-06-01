@@ -1,7 +1,8 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   generateBaselineDiffHtmlReport,
   generateHtmlTraceabilityReport,
@@ -43,6 +44,8 @@ import {
   type RequirementInput,
   type Ruleset
 } from "@doorframe/core";
+import { loadProjectDb, usageText as mcpUsageText } from "../../mcp-server/src/project-loader";
+import { runStdioServer } from "../../mcp-server/src/server";
 
 type ReportFormat = "html" | "md" | "json" | "csv";
 
@@ -54,9 +57,12 @@ function usage(): string {
   return `Doorframe CLI
 
 Usage:
+  doorframe demo [--out report.html] [--diff-out diff.html] [--skip-diff]
   doorframe analyze --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--reqif spec.reqif] [--format html|md|json|csv] [--ruleset rules.json] [--out report.ext]
+  doorframe report --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--format html|md|json|csv] [--out report.ext]
   doorframe diff --baseline-a req-a.csv --baseline-b req-b.csv [--jira jira.csv] [--junit tests.xml] [--out diff.html]
   doorframe diff --base baseline-a.json --against baseline-b.json
+  doorframe mcp --project ./doorframe.sqlite
   doorframe import-jira --requirements req.csv [--jql "project=FG"] [--format ...] [--out ...]
   doorframe import-github --requirements req.csv [--junit-xml file.xml] [--owner o --repo r] [...]
   doorframe import-gitlab --requirements req.csv [--project-id N --job-id N] [...]
@@ -64,6 +70,37 @@ Usage:
 
 Connector credentials are read from DOORFRAME_* environment variables (local-first).
 See docs/cli.md for details.
+`;
+}
+
+function demoUsage(): string {
+  return `Doorframe demo
+
+Usage:
+  doorframe demo [--out report.html] [--diff-out diff.html] [--skip-diff]
+
+Generates offline HTML reports from the fictional Falcon Telemetry Gateway sample data.
+`;
+}
+
+function analyzeUsage(command = "analyze"): string {
+  return `Doorframe ${command}
+
+Usage:
+  doorframe ${command} --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--reqif spec.reqif] [--format html|md|json|csv] [--ruleset rules.json] [--out report.ext]
+
+Builds a local traceability report from requirements, Jira CSV, JUnit XML, and ReqIF exports.
+`;
+}
+
+function diffUsage(): string {
+  return `Doorframe diff
+
+Usage:
+  doorframe diff --baseline-a req-a.csv --baseline-b req-b.csv [--jira jira.csv] [--junit tests.xml] [--out diff.html]
+  doorframe diff --base baseline-a.json --against baseline-b.json
+
+Compares requirement baselines or two JSON snapshots from analyze --format json.
 `;
 }
 
@@ -85,6 +122,10 @@ function parseOptions(args: string[]): CliOptions {
   return options;
 }
 
+function isHelp(args: string[]): boolean {
+  return args.includes("--help") || args.includes("-h");
+}
+
 function requireOption(value: string | undefined, name: string): string {
   if (!value) {
     throw new Error(`Missing required option --${name}.`);
@@ -94,6 +135,31 @@ function requireOption(value: string | undefined, name: string): string {
 
 async function readUtf8(filePath: string): Promise<string> {
   return fs.readFile(path.resolve(filePath), "utf8");
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveDemoFile(filename: string): Promise<string> {
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(currentDir, "../examples/falcon-telemetry-gateway", filename),
+    path.resolve(currentDir, "../../../examples/falcon-telemetry-gateway", filename)
+  ];
+
+  for (const candidate of candidates) {
+    if (await fileExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Unable to locate bundled demo file ${filename}.`);
 }
 
 async function loadRuleset(rulesetPath: string | undefined): Promise<Ruleset> {
@@ -200,6 +266,11 @@ async function loadRequirements(options: CliOptions, ruleset: Ruleset): Promise<
 }
 
 async function analyze(args: string[]): Promise<void> {
+  if (isHelp(args)) {
+    console.log(analyzeUsage("analyze"));
+    return;
+  }
+
   const options = parseOptions(args);
   const ruleset = await loadRuleset(options.ruleset);
   const patterns = ruleset.requirementIdPatterns;
@@ -238,6 +309,11 @@ async function analyze(args: string[]): Promise<void> {
 }
 
 async function diff(args: string[]): Promise<void> {
+  if (isHelp(args)) {
+    console.log(diffUsage());
+    return;
+  }
+
   const options = parseOptions(args);
   if (options["baseline-a"] || options["baseline-b"]) {
     const baselineAPath = requireOption(options["baseline-a"], "baseline-a");
@@ -312,6 +388,49 @@ async function diff(args: string[]): Promise<void> {
   console.log(`Findings: +${result.findings.added} added, ${result.findings.resolved} resolved`);
 }
 
+async function demo(args: string[]): Promise<void> {
+  if (isHelp(args)) {
+    console.log(demoUsage());
+    return;
+  }
+
+  const options = parseOptions(args);
+  const requirements = await resolveDemoFile("sample-requirements-baseline-b.csv");
+  const baselineA = await resolveDemoFile("sample-requirements-baseline-a.csv");
+  const baselineB = await resolveDemoFile("sample-requirements-baseline-b.csv");
+  const jira = await resolveDemoFile("sample-jira.csv");
+  const junit = await resolveDemoFile("sample-junit.xml");
+  const reportOut = options.out ?? "./doorframe-report.html";
+  const diffOut = options["diff-out"] ?? "./doorframe-baseline-diff.html";
+
+  await analyze([
+    "--requirements",
+    requirements,
+    "--jira",
+    jira,
+    "--junit",
+    junit,
+    "--out",
+    reportOut
+  ]);
+
+  if (options["skip-diff"] !== "true") {
+    console.log("");
+    await diff([
+      "--baseline-a",
+      baselineA,
+      "--baseline-b",
+      baselineB,
+      "--jira",
+      jira,
+      "--junit",
+      junit,
+      "--out",
+      diffOut
+    ]);
+  }
+}
+
 async function importConnector(kind: "jira" | "github" | "gitlab" | "jenkins", args: string[]): Promise<void> {
   const options = parseOptions(args);
   const ruleset = await loadRuleset(options.ruleset);
@@ -374,15 +493,44 @@ async function importConnector(kind: "jira" | "github" | "gitlab" | "jenkins", a
   );
 }
 
+async function runMcp(args: string[]): Promise<void> {
+  if (isHelp(args)) {
+    console.error(mcpUsageText.replaceAll("doorframe-mcp", "doorframe mcp"));
+    return;
+  }
+
+  const options = parseOptions(args);
+  const projectDb = loadProjectDb(options.project);
+  await runStdioServer(projectDb);
+}
+
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
 
+  if (!command || command === "--help" || command === "-h") {
+    console.log(usage());
+    return;
+  }
+
   switch (command) {
+    case "demo":
+      await demo(args);
+      return;
     case "analyze":
+      await analyze(args);
+      return;
+    case "report":
+      if (isHelp(args)) {
+        console.log(analyzeUsage("report"));
+        return;
+      }
       await analyze(args);
       return;
     case "diff":
       await diff(args);
+      return;
+    case "mcp":
+      await runMcp(args);
       return;
     case "import-jira":
       await importConnector("jira", args);
@@ -398,7 +546,7 @@ async function main(): Promise<void> {
       return;
     default:
       console.log(usage());
-      process.exitCode = command ? 1 : 0;
+      process.exitCode = 1;
   }
 }
 

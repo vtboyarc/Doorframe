@@ -1,17 +1,46 @@
 {
   "name": "@doorframe/cli",
   "version": "0.1.0",
-  "private": true,
+  "description": "Local-first requirements traceability CLI, report generator, demo runner, and read-only MCP launcher.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vtboyarc/Doorframe.git",
+    "directory": "apps/cli"
+  },
+  "homepage": "https://github.com/vtboyarc/Doorframe#readme",
+  "bugs": {
+    "url": "https://github.com/vtboyarc/Doorframe/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
   "bin": {
-    "doorframe": "./src/index.ts"
+    "doorframe": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "examples",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-cli.mjs",
+    "lint": "npm run typecheck",
+    "prepack": "npm run build && node ../../scripts/prepare-cli-package.mjs && npm run test:bin",
+    "prepublishOnly": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:bin",
+    "test": "vitest run src/__tests__/*.test.ts",
+    "test:bin": "node ../../scripts/smoke-cli-bin.mjs",
+    "typecheck": "tsc -p ../../tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@doorframe/analyzers": "0.1.0",
-    "@doorframe/core": "0.1.0",
-    "@doorframe/integrations": "0.1.0",
-    "@doorframe/parsers": "0.1.0",
-    "@doorframe/reporting": "0.1.0",
-    "@doorframe/storage": "0.1.0"
+    "better-sqlite3": "^12.10.0"
   },
   "devDependencies": {
     "@types/node": "^24.10.1"
