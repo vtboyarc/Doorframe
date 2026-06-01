@@ -1,6 +1,6 @@
 {
   "name": "doorframe",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local-first Doorframe web app launcher, traceability report generator, demo runner, and read-only MCP launcher.",
   "license": "MIT",
   "repository": {
@@ -15,7 +15,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "doorframe": "./dist/index.js"
+    "doorframe": "dist/index.js"
   },
   "files": [
     "dist",

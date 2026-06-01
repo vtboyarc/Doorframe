@@ -60,6 +60,7 @@ function usage(): string {
 Usage:
   doorframe demo [--out report.html] [--diff-out diff.html] [--skip-diff]
   doorframe serve [--port 3000] [--host 127.0.0.1] [--data-dir ./.doorframe]
+  doorframe server [--port 3000] [--host 127.0.0.1] [--data-dir ./.doorframe]
   doorframe analyze --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--reqif spec.reqif] [--format html|md|json|csv] [--ruleset rules.json] [--out report.ext]
   doorframe report --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--format html|md|json|csv] [--out report.ext]
   doorframe diff --baseline-a req-a.csv --baseline-b req-b.csv [--jira jira.csv] [--junit tests.xml] [--out diff.html]
@@ -80,6 +81,7 @@ function serveUsage(): string {
 
 Usage:
   doorframe serve [--port 3000] [--host 127.0.0.1] [--data-dir ./.doorframe]
+  doorframe server [--port 3000] [--host 127.0.0.1] [--data-dir ./.doorframe]
 
 Starts the local Doorframe web app. Open the printed localhost URL in a browser.
 `;
@@ -158,6 +160,33 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
+async function findWebServer(rootDir: string): Promise<string | null> {
+  let entries;
+  try {
+    entries = await fs.readdir(rootDir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+
+  for (const entry of entries) {
+    const entryPath = path.join(rootDir, entry.name);
+    if (entry.isFile() && entry.name === "server.js") {
+      const webDir = path.dirname(entryPath);
+      if (path.basename(webDir) === "web" && path.basename(path.dirname(webDir)) === "apps") {
+        return entryPath;
+      }
+    }
+    if (entry.isDirectory()) {
+      const found = await findWebServer(entryPath);
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return null;
+}
+
 async function resolveDemoFile(filename: string): Promise<string> {
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
@@ -176,15 +205,22 @@ async function resolveDemoFile(filename: string): Promise<string> {
 
 async function resolveWebServer(): Promise<string> {
   const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const packagedWebRoot = path.resolve(currentDir, "../web/standalone");
+  const sourceWebRoot = path.resolve(currentDir, "../../../apps/web/.next/standalone");
   const candidates = [
-    path.resolve(currentDir, "../web/standalone/apps/web/server.js"),
-    path.resolve(currentDir, "../../../apps/web/.next/standalone/apps/web/server.js")
+    path.resolve(packagedWebRoot, "apps/web/server.js"),
+    path.resolve(sourceWebRoot, "apps/web/server.js")
   ];
 
   for (const candidate of candidates) {
     if (await fileExists(candidate)) {
       return candidate;
     }
+  }
+
+  const generatedCandidate = (await findWebServer(packagedWebRoot)) ?? (await findWebServer(sourceWebRoot));
+  if (generatedCandidate) {
+    return generatedCandidate;
   }
 
   throw new Error("Unable to locate the packaged Doorframe web app. Run `npm run build -w apps/web` before serving from source.");
@@ -595,6 +631,9 @@ async function main(): Promise<void> {
       await demo(args);
       return;
     case "serve":
+      await serve(args);
+      return;
+    case "server":
       await serve(args);
       return;
     case "analyze":
