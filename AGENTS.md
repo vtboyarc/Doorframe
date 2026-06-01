@@ -152,7 +152,7 @@ Do not make users clone the repo for normal usage.
 
 The npm package should expose a `doorframe` binary.
 
-The first package should be `@doorframe/cli` unless the package scope/name is unavailable.
+The first public npm package should be `doorframe`.
 
 Docker images should be published to GHCR using versioned tags.
 

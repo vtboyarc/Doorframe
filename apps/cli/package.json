@@ -1,7 +1,7 @@
 {
-  "name": "@doorframe/cli",
+  "name": "doorframe",
   "version": "0.1.0",
-  "description": "Local-first requirements traceability CLI, report generator, demo runner, and read-only MCP launcher.",
+  "description": "Local-first Doorframe web app launcher, traceability report generator, demo runner, and read-only MCP launcher.",
   "license": "MIT",
   "repository": {
     "type": "git",

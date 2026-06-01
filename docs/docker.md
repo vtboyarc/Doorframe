@@ -5,7 +5,7 @@ The Docker image runs the local Doorframe web app. It does not require Postgres,
 If you prefer npm instead of Docker, run:
 
 ```bash
-npx @doorframe/cli serve
+npx doorframe serve
 ```
 
 Published images use GitHub Container Registry:

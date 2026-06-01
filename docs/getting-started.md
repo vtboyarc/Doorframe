@@ -7,7 +7,7 @@ Doorframe is local-first and useful without AI. It does not replace a requiremen
 ## Run The Demo In Under Ten Minutes
 
 ```bash
-npx @doorframe/cli demo
+npx doorframe demo
 ```
 
 Open `doorframe-report.html` in a browser. The demo also writes `doorframe-baseline-diff.html`.
@@ -17,7 +17,7 @@ Open `doorframe-report.html` in a browser. The demo also writes `doorframe-basel
 With npm:
 
 ```bash
-npx @doorframe/cli serve
+npx doorframe serve
 ```
 
 Open the printed URL, normally `http://localhost:3000`.
@@ -33,7 +33,7 @@ Open `http://localhost:3000`. Create a project, then click **Load Demo Project**
 ## Run Baseline Diff
 
 ```bash
-npx @doorframe/cli diff \
+npx doorframe diff \
   --baseline-a ./examples/falcon-telemetry-gateway/sample-requirements-baseline-a.csv \
   --baseline-b ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
   --out ./doorframe-baseline-diff.html

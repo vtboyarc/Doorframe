@@ -74,10 +74,10 @@ Doorframe MCP itself does not generate the AI answer and does not send data to a
 
 ## Install And Run
 
-Normal users should run MCP through the `@doorframe/cli` package:
+Normal users should run MCP through the `doorframe` package:
 
 ```bash
-npx @doorframe/cli mcp --project ./doorframe.sqlite
+npx doorframe mcp --project ./doorframe.sqlite
 ```
 
 From the repo:
@@ -112,7 +112,7 @@ Exact configuration format varies by client. A generic MCP server entry looks li
 }
 ```
 
-Use `npx @doorframe/cli` as the command if the client supports launching through `npx`. Avoid claiming support for a specific client until you have verified that client's current MCP configuration format.
+Use `npx doorframe` as the command if the client supports launching through `npx`. Avoid claiming support for a specific client until you have verified that client's current MCP configuration format.
 
 ## Resources
 

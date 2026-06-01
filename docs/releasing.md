@@ -7,7 +7,7 @@ Do not publish a release until the package contents, Docker image, release notes
 ## v0.1.0 Scope
 
 - Local web app
-- `@doorframe/cli` package with `doorframe` binary
+- `doorframe` package with `doorframe` binary
 - `doorframe demo`
 - `doorframe serve`
 - `doorframe analyze`
@@ -38,8 +38,8 @@ Do not publish a release until the package contents, Docker image, release notes
 9. Run an npx smoke test:
 
    ```bash
-npx @doorframe/cli@0.1.0 demo
-npx @doorframe/cli@0.1.0 serve
+npx doorframe@0.1.0 demo
+npx doorframe@0.1.0 serve
 ```
 
 10. Run a Docker smoke test:
@@ -54,9 +54,9 @@ Use semantic versioning:
 
 - Patch: fixes that do not change intended behavior.
 - Minor: new backwards-compatible commands, report sections, imports, or web app features.
-- Major: breaking CLI, report, data, or API changes.
+- Major: breaking command, report, data, or API changes.
 
-For now, version bumping is manual. Keep root, CLI, app, and package versions aligned for a release.
+For now, version bumping is manual. Keep root, command, app, and package versions aligned for a release.
 
 ## Release Workflow
 
@@ -74,7 +74,7 @@ The workflow:
 4. Runs typecheck.
 5. Runs lint.
 6. Runs tests.
-7. Builds the CLI package.
+7. Builds the npm package.
 8. Runs `npm pack --dry-run`.
 9. Builds the web app.
 10. Generates release artifacts.
@@ -88,7 +88,7 @@ The workflow:
 Each release should include:
 
 - Release notes
-- npm package name: `@doorframe/cli`
+- npm package name: `doorframe`
 - Docker image name: `ghcr.io/vtboyarc/doorframe:<version>`
 - Install commands
 - MCP command
@@ -108,8 +108,8 @@ Do not upload local SQLite databases. Prefer sample CSV/XML files and generated 
 
 ## Manual Setup Still Required
 
-- Create or verify the npm organization/scope for `@doorframe`.
-- Publish or reserve `@doorframe/cli`.
+- Create or verify npm access for the `doorframe` package.
+- Publish or reserve `doorframe`.
 - Configure npm Trusted Publishing for `.github/workflows/release.yml`.
 - Set GitHub repository variable `NPM_PUBLISH_ENABLED=true` only after the workflow is reviewed.
 - Confirm GHCR package visibility and permissions after the first image push.

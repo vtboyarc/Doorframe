@@ -7,16 +7,16 @@ Doorframe is designed for local or internal use. Companies should be able to mir
 Use npx or a global npm install:
 
 ```bash
-npx @doorframe/cli demo
-npx @doorframe/cli serve
-npm install -g @doorframe/cli
+npx doorframe demo
+npx doorframe serve
+npm install -g doorframe
 doorframe --help
 ```
 
 For CI or automation:
 
 ```bash
-npx @doorframe/cli analyze \
+npx doorframe analyze \
   --requirements requirements.csv \
   --jira jira.csv \
   --junit test-results.xml \
@@ -44,7 +44,7 @@ docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/to
 Recommended controls:
 
 - Mirror Docker images internally.
-- Mirror `@doorframe/cli` internally.
+- Mirror `doorframe` internally.
 - Pin versions.
 - Scan npm dependencies and Docker images.
 - Run with approved data only.
@@ -64,11 +64,11 @@ Recommended controls:
 
 ## Example npm Mirror Workflow
 
-1. Mirror `@doorframe/cli` into the internal npm registry.
+1. Mirror `doorframe` into the internal npm registry.
 2. Developers run:
 
    ```bash
-   npx @doorframe/cli analyze \
+   npx doorframe analyze \
      --requirements requirements.csv \
      --jira jira.csv \
      --junit test-results.xml \

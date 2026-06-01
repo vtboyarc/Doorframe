@@ -1,5 +1,7 @@
 # Doorframe
 
+[![npm package](https://img.shields.io/npm/v/doorframe?label=npm%20package)](https://www.npmjs.com/package/doorframe)
+
 Doorframe is an open-source, local-first requirements traceability and review tool. It turns requirements exports, Jira work items, and test results into a traceability gap report you can use before a review.
 
 Doorframe is useful without AI. The main product artifact is the HTML traceability gap report.
@@ -8,18 +10,18 @@ Doorframe runs locally by default and does not send imported project data to any
 
 ## Install And Run
 
-Most users should use npm/npx or Docker. Clone the repo only when contributing, auditing, or changing Doorframe.
+Most users should use the [`doorframe` npm package](https://www.npmjs.com/package/doorframe) or Docker. Clone the repo only when contributing, auditing, or changing Doorframe.
 
-Try the CLI without installing:
+Try Doorframe without installing:
 
 ```bash
-npx @doorframe/cli demo
+npx doorframe demo
 ```
 
 Run the local web app with npm:
 
 ```bash
-npx @doorframe/cli serve
+npx doorframe serve
 ```
 
 Open the printed local URL, normally `http://localhost:3000`.
@@ -27,7 +29,7 @@ Open the printed local URL, normally `http://localhost:3000`.
 Generate a report from local exports:
 
 ```bash
-npx @doorframe/cli analyze \
+npx doorframe analyze \
   --requirements requirements.csv \
   --jira jira.csv \
   --junit test-results.xml \
@@ -37,7 +39,7 @@ npx @doorframe/cli analyze \
 Install globally:
 
 ```bash
-npm install -g @doorframe/cli
+npm install -g doorframe
 doorframe --help
 doorframe serve
 ```
@@ -51,7 +53,7 @@ docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.0
 Run MCP:
 
 ```bash
-npx @doorframe/cli mcp --project ./doorframe.sqlite
+npx doorframe mcp --project ./doorframe.sqlite
 ```
 
 See `docs/install.md`, `docs/docker.md`, and `docs/company-installation.md`.
@@ -59,7 +61,7 @@ See `docs/install.md`, `docs/docker.md`, and `docs/company-installation.md`.
 ## What Doorframe Is
 
 - A local review tool for requirements exports.
-- A CLI, web app, Docker setup, and report generator.
+- A local web app, npm package, Docker setup, command-line runner, and report generator.
 - A deterministic analyzer for traceability gaps, weak wording, duplicate candidates, failed tests, stale links, and closed work without passing verification.
 - A way to compare two requirements baselines before a review.
 - An optional read-only MCP server for local project databases.
@@ -76,7 +78,7 @@ See `docs/install.md`, `docs/docker.md`, and `docs/company-installation.md`.
 ## Ten-Minute Demo
 
 ```bash
-npx @doorframe/cli demo
+npx doorframe demo
 ```
 
 Open `doorframe-report.html` in a browser. The report is offline HTML and can be printed to PDF. The demo also writes `doorframe-baseline-diff.html`.
@@ -86,7 +88,7 @@ The demo project is fictional. It intentionally includes weak wording, missing t
 ## Baseline Diff Demo
 
 ```bash
-npx @doorframe/cli diff \
+npx doorframe diff \
   --baseline-a ./examples/falcon-telemetry-gateway/sample-requirements-baseline-a.csv \
   --baseline-b ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
   --out ./doorframe-baseline-diff.html
@@ -123,7 +125,7 @@ Open `http://localhost:3000`. Docker stores project data in the `doorframe-data`
 Doorframe includes an optional read-only stdio MCP server for local Doorframe SQLite project databases.
 
 ```bash
-npx @doorframe/cli mcp --project ./.doorframe/doorframe.sqlite
+npx doorframe mcp --project ./.doorframe/doorframe.sqlite
 ```
 
 The MCP server is not an AI client and does not call AI providers. Data returned by MCP may enter the connected AI client's context.
@@ -139,7 +141,7 @@ CSV and Jira imports preserve raw attributes where practical. Requirement IDs ar
 
 ## Sample Report
 
-Generate the demo report with the CLI command above. A screenshot can be added after the first release artifact is published.
+Generate the demo report with the npm command above. A screenshot can be added after the first release artifact is published.
 
 ## Project Structure
 

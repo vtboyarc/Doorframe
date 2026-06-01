@@ -7,7 +7,7 @@ Doorframe runs locally by default. It does not send imported project data to Doo
 ## Try Without Installing
 
 ```bash
-npx @doorframe/cli demo
+npx doorframe demo
 ```
 
 This generates a local HTML traceability report and baseline diff report from the fictional Falcon Telemetry Gateway demo data.
@@ -15,7 +15,7 @@ This generates a local HTML traceability report and baseline diff report from th
 ## Run The Web App With npm
 
 ```bash
-npx @doorframe/cli serve
+npx doorframe serve
 ```
 
 Open the printed URL, normally `http://localhost:3000`. By default this stores the local SQLite database in `./.doorframe` under the directory where you run the command.
@@ -29,7 +29,7 @@ Options:
 ## Generate A Report
 
 ```bash
-npx @doorframe/cli analyze \
+npx doorframe analyze \
   --requirements requirements.csv \
   --jira jira.csv \
   --junit test-results.xml \
@@ -41,7 +41,7 @@ The report is offline HTML and can be reviewed locally or printed to PDF.
 ## Install Globally
 
 ```bash
-npm install -g @doorframe/cli
+npm install -g doorframe
 doorframe --help
 doorframe serve
 ```
@@ -67,7 +67,7 @@ Compose builds from source when used from this repository and stores data in the
 ## Run MCP
 
 ```bash
-npx @doorframe/cli mcp --project ./doorframe.sqlite
+npx doorframe mcp --project ./doorframe.sqlite
 ```
 
 Doorframe MCP is optional and read-only. It exposes local Doorframe project data to an MCP-compatible client. Data returned by MCP may become part of that client's context, so do not connect it to unapproved AI clients or unapproved data.

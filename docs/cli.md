@@ -1,15 +1,15 @@
 # Doorframe CLI
 
-The CLI runs the same parsers and analyzers as the web app without storing anything. Most users should run it with `npx` or install `@doorframe/cli`; contributors can also run it from source.
+The command-line runner uses the same parsers and analyzers as the web app without storing anything. Most users should run it with `npx` or install `doorframe`; contributors can also run it from source.
 
 ```bash
-npx @doorframe/cli demo
+npx doorframe demo
 ```
 
 Start the local web app with npm:
 
 ```bash
-npx @doorframe/cli serve
+npx doorframe serve
 ```
 
 From source:
@@ -23,7 +23,7 @@ npm run doorframe -- demo
 Generate offline reports from the fictional Falcon Telemetry Gateway sample.
 
 ```bash
-npx @doorframe/cli demo
+npx doorframe demo
 ```
 
 Optional flags:
@@ -37,7 +37,7 @@ Optional flags:
 Start the local Doorframe web app and open the printed URL in a browser.
 
 ```bash
-npx @doorframe/cli serve
+npx doorframe serve
 ```
 
 Options:
@@ -53,7 +53,7 @@ The npm-served web app uses the same local-first SQLite storage model as Docker.
 Build a traceability report from local files.
 
 ```bash
-npx @doorframe/cli analyze \
+npx doorframe analyze \
   --requirements ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
   --jira ./examples/falcon-telemetry-gateway/sample-jira.csv \
   --junit ./examples/falcon-telemetry-gateway/sample-junit.xml \
@@ -79,7 +79,7 @@ The `json` format embeds a portable snapshot used by `doorframe diff`.
 Compare two requirements baselines and generate an offline HTML diff report.
 
 ```bash
-npx @doorframe/cli diff \
+npx doorframe diff \
   --baseline-a ./examples/falcon-telemetry-gateway/sample-requirements-baseline-a.csv \
   --baseline-b ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv \
   --out ./doorframe-baseline-diff.html
@@ -92,7 +92,7 @@ The command detects added requirements, deleted requirements, changed fields, ti
 You can still compare two JSON reports produced by `analyze --format json`:
 
 ```bash
-npx @doorframe/cli diff --base baseline-a.json --against baseline-b.json
+npx doorframe diff --base baseline-a.json --against baseline-b.json
 ```
 
 Prints added/removed/modified requirements, work-item and test changes, and finding deltas.
@@ -105,10 +105,10 @@ unless you write the report). Combine with `--requirements`/`--reqif` for a full
 report.
 
 ```bash
-npx @doorframe/cli import-jira    --requirements req.csv --jql "project = FG"
-npx @doorframe/cli import-github  --requirements req.csv --junit-xml ci-junit.xml
-npx @doorframe/cli import-gitlab  --requirements req.csv --project-id 42 --job-id 1001
-npx @doorframe/cli import-jenkins --requirements req.csv --job my-app --build 17
+npx doorframe import-jira    --requirements req.csv --jql "project = FG"
+npx doorframe import-github  --requirements req.csv --junit-xml ci-junit.xml
+npx doorframe import-gitlab  --requirements req.csv --project-id 42 --job-id 1001
+npx doorframe import-jenkins --requirements req.csv --job my-app --build 17
 ```
 
 Environment variables:
@@ -126,5 +126,5 @@ Environment variables:
 - All processing happens locally.
 - The CLI does not write to the database used by the web app.
 - Use the web app to store projects, baselines, findings, and audit history over time.
-- Run MCP with `npx @doorframe/cli mcp --project ./doorframe.sqlite`.
+- Run MCP with `npx doorframe mcp --project ./doorframe.sqlite`.
 - MCP is optional and read-only.

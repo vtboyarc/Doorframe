@@ -1,13 +1,13 @@
 # Publishing The npm Package
 
-Doorframe's first public npm package is `@doorframe/cli`. It exposes the `doorframe` binary and includes the local web app server, demo command, report generation, baseline diff, connector commands, and read-only MCP launcher.
+Doorframe's public npm package is `doorframe`. It exposes the `doorframe` binary and includes the local web app server, demo command, report generation, baseline diff, connector commands, and read-only MCP launcher.
 
 Do not publish until the release workflow and package contents have been reviewed.
 
 ## One-Time Setup
 
-1. Create an npm account or npm organization that can own the `@doorframe` scope.
-2. Reserve or verify the package name `@doorframe/cli`.
+1. Create or verify an npm account that can publish the `doorframe` package.
+2. Reserve or verify the package name `doorframe`.
 3. Confirm the package exposes the command:
 
    ```bash
@@ -15,11 +15,11 @@ Do not publish until the release workflow and package contents have been reviewe
    ```
 
 4. Confirm package metadata in `apps/cli/package.json`:
-   - `name` is `@doorframe/cli`
+   - `name` is `doorframe`
    - `version` matches the release tag
    - `license` is present
    - `repository`, `homepage`, and `bugs` point to the GitHub repo
-   - `bin.doorframe` points to the built CLI
+   - `bin.doorframe` points to the built command entrypoint
    - `files` is an allowlist
    - `publishConfig.access` is `public`
 
@@ -30,7 +30,7 @@ npm install
 npm pack --dry-run -w apps/cli
 ```
 
-Review the file list. It should contain built CLI code, README, license, selected docs, and fictional sample data. It should not contain `.env` files, local databases, `node_modules`, coverage output, temp files, or unrelated build artifacts.
+Review the file list. It should contain built command code, README, license, selected docs, the packaged local web app, and fictional sample data. It should not contain `.env` files, local databases, `node_modules`, coverage output, temp files, or unrelated build artifacts.
 
 ## Manual First Publish
 
@@ -43,9 +43,9 @@ npm publish -w apps/cli --access public
 Verify:
 
 ```bash
-npx @doorframe/cli@0.1.0 --help
-npx @doorframe/cli@0.1.0 demo
-npx @doorframe/cli@0.1.0 serve
+npx doorframe@0.1.0 --help
+npx doorframe@0.1.0 demo
+npx doorframe@0.1.0 serve
 ```
 
 ## Recommended Later Path: Trusted Publishing
@@ -68,6 +68,6 @@ To enable npm publishing in GitHub Actions, set repository variable:
 NPM_PUBLISH_ENABLED=true
 ```
 
-If that variable is absent or not `true`, the release workflow skips npm publishing while still running checks, building the CLI package, building the Docker image, and creating the GitHub Release.
+If that variable is absent or not `true`, the release workflow skips npm publishing while still running checks, building the npm package, building the Docker image, and creating the GitHub Release.
 
 Do not hardcode npm tokens in the repo. If a temporary token fallback is used, store it only as a GitHub Actions secret named `NPM_TOKEN` and remove it after Trusted Publishing is working.

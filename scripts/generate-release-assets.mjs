@@ -46,16 +46,16 @@ Initial public preview release for local-first requirements traceability review.
 ## Install
 
 \`\`\`bash
-npx @doorframe/cli@${version} demo
-npx @doorframe/cli@${version} serve
-npm install -g @doorframe/cli@${version}
+npx doorframe@${version} demo
+npx doorframe@${version} serve
+npm install -g doorframe@${version}
 doorframe --help
 \`\`\`
 
 ## CLI
 
 \`\`\`bash
-npx @doorframe/cli@${version} analyze \\
+npx doorframe@${version} analyze \\
   --requirements requirements.csv \\
   --jira jira.csv \\
   --junit test-results.xml \\
@@ -65,7 +65,7 @@ npx @doorframe/cli@${version} analyze \\
 ## MCP
 
 \`\`\`bash
-npx @doorframe/cli@${version} mcp --project ./doorframe.sqlite
+npx doorframe@${version} mcp --project ./doorframe.sqlite
 \`\`\`
 
 Doorframe MCP is optional and read-only. It does not include an AI model or call AI providers.

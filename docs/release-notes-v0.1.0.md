@@ -5,7 +5,7 @@ Doorframe v0.1.0 is the first public release candidate for the local-first trace
 ## Included
 
 - Local web app.
-- npm-served local web app through `npx @doorframe/cli serve`.
+- npm-served local web app through `npx doorframe serve`.
 - CLI analysis command.
 - Docker local deployment.
 - Offline HTML traceability report.
@@ -26,6 +26,6 @@ Doorframe v0.1.0 is the first public release candidate for the local-first trace
 ## Quick Demo
 
 ```bash
-npx @doorframe/cli demo
-npx @doorframe/cli serve
+npx doorframe demo
+npx doorframe serve
 ```
