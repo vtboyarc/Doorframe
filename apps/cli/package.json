@@ -1,6 +1,6 @@
 {
   "name": "doorframe",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Local-first Doorframe web app launcher, traceability report generator, demo runner, and read-only MCP launcher.",
   "license": "MIT",
   "repository": {

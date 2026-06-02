@@ -113,6 +113,25 @@ describe("Doorframe MCP tool data adapters", () => {
     expect(result.gaps[0].severity).toBe("high");
   });
 
+  it("honors the configured MCP result cap for traceability gaps", () => {
+    const result = getTraceabilityGapsData(
+      projectDb(),
+      {
+        gapType: "all",
+        limit: 100
+      },
+      {
+        mode: "standard",
+        maxResults: 1
+      }
+    );
+
+    expect(result.limit.limit).toBe(1);
+    expect(result.limit.returned).toBe(1);
+    expect(result.limit.total).toBeGreaterThan(1);
+    expect(result.limit.capped).toBe(true);
+  });
+
   it("summarizes review risk from findings and traceability data", () => {
     const result = getReviewRiskSummaryData(projectDb(), {
       reviewType: "test_readiness_review",
@@ -122,6 +141,23 @@ describe("Doorframe MCP tool data adapters", () => {
     expect(result.topRisks.length).toBeGreaterThan(0);
     expect(result.summary).toContain("Doorframe findings and traceability data");
     expect(result.suggestedDiscussionPoints.some((point) => point.includes("verification"))).toBe(true);
+  });
+
+  it("honors the configured MCP result cap for review risk summaries", () => {
+    const result = getReviewRiskSummaryData(
+      projectDb(),
+      {
+        reviewType: "test_readiness_review",
+        limit: 100
+      },
+      {
+        mode: "standard",
+        maxResults: 1
+      }
+    );
+
+    expect(result.topRisks).toHaveLength(1);
+    expect(result.affectedRequirements).toHaveLength(1);
   });
 
   it("returns trace links for one requirement", () => {

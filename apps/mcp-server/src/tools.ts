@@ -796,11 +796,12 @@ export function getTraceabilityGapsData(
     gapType?: GapType;
     severity?: PublicSeverity;
     limit?: number;
-  }
+  },
+  options: Partial<DoorframeMcpOptions> = {}
 ) {
   const data = projectDb.loadProjectData();
   const gapType = filters.gapType ?? "all";
-  const limit = clampLimit(filters.limit, 25, 100);
+  const limit = resultLimit(filters.limit, options, 25, 100);
   const filtered = allTraceabilityGaps(data)
     .filter((gap) => gapType === "all" || gap.gapType === gapType)
     .filter((gap) => !filters.severity || gap.severity === filters.severity);
@@ -865,15 +866,16 @@ function discussionPointsFor(gaps: TraceabilityGap[], reviewType: ReviewType): s
 
 export function getReviewRiskSummaryData(
   projectDb: ProjectDb,
-  options: {
+  args: {
     reviewType?: ReviewType;
     limit?: number;
-  }
+  },
+  options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const reviewType = options.reviewType ?? "general";
-  const limit = clampLimit(options.limit, 10, 100);
+  const reviewType = args.reviewType ?? "general";
+  const limit = resultLimit(args.limit, options, 10, 100);
   const data = projectDb.loadProjectData();
-  const gaps = getTraceabilityGapsData(projectDb, { gapType: "all", limit }).gaps;
+  const gaps = getTraceabilityGapsData(projectDb, { gapType: "all", limit }, options).gaps;
   const affectedRequirements = Array.from(
     new Map(gaps.map((gap) => [gap.requirement.id, gap.requirement])).values()
   ).slice(0, limit);
@@ -1853,14 +1855,18 @@ export function getReviewBriefData(
   const baselineSummary = getBaselineDiffSummaryData(projectDb, args, options);
   const changedRequirements = listChangedRequirementsData(projectDb, { ...args, changeType: "changed", limit }, options);
   const staleTraceCandidates = getStaleTraceCandidatesData(projectDb, { ...args, limit }, options);
-  const topGaps = getTraceabilityGapsData(projectDb, { gapType: "all", limit });
-  const missingVerification = getTraceabilityGapsData(projectDb, { gapType: "missing_tests", limit });
-  const failedTests = getTraceabilityGapsData(projectDb, { gapType: "failed_tests", limit });
-  const weakRequirements = getTraceabilityGapsData(projectDb, {
-    gapType: "weak_requirement_language",
-    limit
-  });
-  const reviewRisk = getReviewRiskSummaryData(projectDb, { reviewType: args.reviewType ?? "general", limit });
+  const topGaps = getTraceabilityGapsData(projectDb, { gapType: "all", limit }, options);
+  const missingVerification = getTraceabilityGapsData(projectDb, { gapType: "missing_tests", limit }, options);
+  const failedTests = getTraceabilityGapsData(projectDb, { gapType: "failed_tests", limit }, options);
+  const weakRequirements = getTraceabilityGapsData(
+    projectDb,
+    {
+      gapType: "weak_requirement_language",
+      limit
+    },
+    options
+  );
+  const reviewRisk = getReviewRiskSummaryData(projectDb, { reviewType: args.reviewType ?? "general", limit }, options);
 
   return {
     project: projectSummary.project,
@@ -2073,7 +2079,7 @@ export function registerDoorframeTools(
     },
     (args) =>
       safeTool("get_traceability_gaps", auditProject(), options, args, () => {
-        const data = getTraceabilityGapsData(projectDb, args);
+        const data = getTraceabilityGapsData(projectDb, args, options);
         return toolResult(formatTraceabilityGapsText(data), data);
       })
   );
@@ -2092,7 +2098,7 @@ export function registerDoorframeTools(
     },
     (args) =>
       safeTool("get_review_risk_summary", auditProject(), options, args, () => {
-        const data = getReviewRiskSummaryData(projectDb, args);
+        const data = getReviewRiskSummaryData(projectDb, args, options);
         return toolResult(formatReviewRiskSummaryText(data), data);
       })
   );

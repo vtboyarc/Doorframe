@@ -170,6 +170,14 @@ The first public npm package should be `doorframe`.
 
 Docker images should be published to GHCR using versioned tags.
 
+PRs that should publish user-visible changes must be release-ready before merge:
+- The release workflow must continue to run on `push` to `main` and publish both the `doorframe` npm package and GHCR Docker image.
+- Bump `apps/cli/package.json` to the next unpublished npm version before merge, because npm package versions are immutable.
+- Keep root `package.json` and root `package-lock.json` version metadata aligned with `apps/cli/package.json`.
+- Update versioned install examples in README/docs when the pinned Docker or npm version changes.
+- Check npm availability for the target version, for example `npm view doorframe@<version> version`; a 404 means the version is still publishable.
+- If the version already exists on npm from a different commit, the main-merge workflow will skip npm publishing, so the PR is not release-ready until the version is bumped.
+
 Do not include secrets, .env files, local databases, or unnecessary artifacts in npm packages or Docker images.
 
 Run npm pack --dry-run before publishing.
