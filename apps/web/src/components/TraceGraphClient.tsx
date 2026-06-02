@@ -2,12 +2,14 @@
 
 import ReactFlow, { Background, Controls, type Edge, type Node } from "reactflow";
 import "reactflow/dist/style.css";
+import { testStatusColor } from "@/lib/severity";
 
 type GraphNode = {
   id: string;
   type: string;
   label: string;
   title: string;
+  status?: string;
 };
 
 type GraphEdge = {
@@ -33,6 +35,11 @@ export function TraceGraphClient({ nodes, edges }: { nodes: GraphNode[]; edges: 
   const counts: Record<string, number> = {};
   const flowNodes: Node[] = nodes.map((node) => {
     counts[node.type] = (counts[node.type] ?? 0) + 1;
+    // Test nodes are colored by result so failures stand out; everything
+    // else falls back to the per-type color.
+    const statusColor = node.type === "testCase" && node.status ? testStatusColor(node.status) : null;
+    const color = statusColor ?? colors[node.type] ?? "#333";
+    const failing = node.status === "failed" || node.status === "errored";
     return {
       id: node.id,
       position: {
@@ -49,9 +56,9 @@ export function TraceGraphClient({ nodes, edges }: { nodes: GraphNode[]; edges: 
         )
       },
       style: {
-        border: `1px solid ${colors[node.type] ?? "#333"}`,
+        border: `${failing ? 2 : 1}px solid ${color}`,
         borderRadius: 4,
-        color: colors[node.type] ?? "#333",
+        color,
         width: 220
       }
     };

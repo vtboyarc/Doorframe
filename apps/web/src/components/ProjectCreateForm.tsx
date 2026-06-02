@@ -5,7 +5,7 @@ import { useState } from "react";
 
 export function ProjectCreateForm() {
   const router = useRouter();
-  const [name, setName] = useState("Doorframe Demo");
+  const [name, setName] = useState("New Doorframe Project");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +32,8 @@ export function ProjectCreateForm() {
 
   return (
     <div className="border border-[var(--line)] bg-white p-4">
-      <label className="block text-sm font-medium" htmlFor="project-name">
+      <h2 className="text-base font-semibold">Create empty project</h2>
+      <label className="mt-3 block text-sm font-medium" htmlFor="project-name">
         Project name
       </label>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">

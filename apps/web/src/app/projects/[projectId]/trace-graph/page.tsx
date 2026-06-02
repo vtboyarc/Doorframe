@@ -32,7 +32,8 @@ export default async function TraceGraphPage({
       id: testCase.id,
       type: "testCase",
       label: testCase.name,
-      title: testCase.status
+      title: testCase.status,
+      status: testCase.status
     }))
   ];
   const edges = data.traceLinks.map((link) => ({

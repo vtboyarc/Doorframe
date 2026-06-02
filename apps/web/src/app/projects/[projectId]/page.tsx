@@ -4,6 +4,7 @@ import { LoadDemoButton } from "@/components/LoadDemoButton";
 import { MetricGrid } from "@/components/MetricGrid";
 import { PageShell } from "@/components/PageShell";
 import { getProjectData, getProjectSummary } from "@/lib/db";
+import { humanize, severityBadgeClass } from "@/lib/severity";
 
 export default async function ProjectDashboardPage({
   params
@@ -18,21 +19,28 @@ export default async function ProjectDashboardPage({
     notFound();
   }
 
+  const hasProjectData =
+    summary.totalRequirements > 0 ||
+    summary.totalWorkItems > 0 ||
+    summary.totalTests > 0 ||
+    summary.totalTraceLinks > 0 ||
+    summary.totalFindings > 0;
+
   return (
     <PageShell project={data.project}>
       <div className="flex flex-col gap-6">
-        <section className="flex flex-col justify-between gap-4 border border-[var(--line)] bg-white p-5 md:flex-row">
+        <section className="grid gap-4 border border-[var(--line)] bg-white p-5 lg:grid-cols-[1fr_auto]">
           <div>
             <h1 className="text-2xl font-semibold">{data.project.name}</h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
               Local SQLite project. Import exported data, review trace coverage, and generate an HTML report.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-            <LoadDemoButton projectId={projectId} />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start lg:justify-end">
+            <LoadDemoButton projectId={projectId} hasProjectData={hasProjectData} />
             <Link
               href={`/projects/${projectId}/imports`}
-              className="inline-flex min-h-10 items-center justify-center border border-[var(--accent-strong)] bg-[var(--accent)] px-4 text-white"
+              className="inline-flex min-h-10 items-center justify-center whitespace-nowrap border border-[var(--accent-strong)] bg-[var(--accent)] px-4 text-white"
             >
               Import data
             </Link>
@@ -65,8 +73,11 @@ export default async function ProjectDashboardPage({
               {data.findings.slice(0, 5).map((finding) => (
                 <div key={finding.id} className="py-3 text-sm">
                   <div className="font-medium">{finding.title}</div>
-                  <div className="text-[var(--muted)]">
-                    {finding.severity} · {finding.category.replaceAll("_", " ")}
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className={`border px-1.5 py-0.5 text-xs font-medium uppercase ${severityBadgeClass[finding.severity]}`}>
+                      {finding.severity}
+                    </span>
+                    <span className="text-[var(--muted)]">{humanize(finding.category)}</span>
                   </div>
                 </div>
               ))}

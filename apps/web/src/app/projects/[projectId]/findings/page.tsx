@@ -2,6 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { getProjectData } from "@/lib/db";
+import { humanize, severityBadgeClass } from "@/lib/severity";
+
+const activeFilterClass = "border-[var(--accent-strong)] bg-[var(--accent)] text-white";
+const inactiveFilterClass = "border-[var(--line)] bg-white hover:border-[var(--accent)]";
 
 const categories = [
   "missing_verification",
@@ -43,7 +47,8 @@ export default async function FindingsPage({
       <div className="mb-4 flex flex-wrap gap-2">
         <Link
           href={`/projects/${projectId}/findings`}
-          className="border border-[var(--line)] bg-white px-3 py-2 text-sm"
+          aria-current={!category ? "page" : undefined}
+          className={`border px-3 py-2 text-sm ${!category ? activeFilterClass : inactiveFilterClass}`}
         >
           All
         </Link>
@@ -51,9 +56,10 @@ export default async function FindingsPage({
           <Link
             key={item}
             href={`/projects/${projectId}/findings?category=${item}`}
-            className="border border-[var(--line)] bg-white px-3 py-2 text-sm"
+            aria-current={category === item ? "page" : undefined}
+            className={`border px-3 py-2 text-sm ${category === item ? activeFilterClass : inactiveFilterClass}`}
           >
-            {item.replaceAll("_", " ")}
+            {humanize(item)}
           </Link>
         ))}
       </div>
@@ -62,8 +68,10 @@ export default async function FindingsPage({
         {findings.map((finding) => (
           <article key={finding.id} className="border border-[var(--line)] bg-white p-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="border border-[var(--line)] px-2 py-1 text-xs uppercase">{finding.severity}</span>
-              <span className="text-sm text-[var(--muted)]">{finding.category.replaceAll("_", " ")}</span>
+              <span className={`border px-2 py-1 text-xs font-medium uppercase ${severityBadgeClass[finding.severity]}`}>
+                {finding.severity}
+              </span>
+              <span className="text-sm text-[var(--muted)]">{humanize(finding.category)}</span>
             </div>
             <h2 className="mt-2 font-semibold">{finding.title}</h2>
             <p className="mt-1 text-sm">{finding.description}</p>

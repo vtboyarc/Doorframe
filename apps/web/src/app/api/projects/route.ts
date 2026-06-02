@@ -7,7 +7,7 @@ export function GET() {
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { name?: string };
-  const project = createProject(body.name ?? "Doorframe Demo");
+  const project = createProject(body.name ?? "Untitled Project");
 
   return NextResponse.json({ project }, { status: 201 });
 }
