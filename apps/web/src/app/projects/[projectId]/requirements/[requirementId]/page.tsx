@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { getProjectData, getRequirement } from "@/lib/db";
+import { humanize, severityBadgeClass, testStatusClass } from "@/lib/severity";
 import { linkedTestCases, linkedWorkItems, requirementFindings } from "@/lib/view-models";
 
 export default async function RequirementDetailPage({
@@ -79,7 +80,10 @@ export default async function RequirementDetailPage({
               {testCases.map((testCase) => (
                 <div key={testCase.id} className="py-2">
                   <div className="font-medium">{testCase.name}</div>
-                  <div className="text-[var(--muted)]">{testCase.classname ?? "No classname"} · {testCase.status}</div>
+                  <div className="text-[var(--muted)]">
+                    {testCase.classname ?? "No classname"} ·{" "}
+                    <span className={`font-medium ${testStatusClass[testCase.status]}`}>{testCase.status}</span>
+                  </div>
                   {testCase.failureMessage ? <div className="mt-1 text-[var(--danger)]">{testCase.failureMessage}</div> : null}
                 </div>
               ))}
@@ -93,7 +97,12 @@ export default async function RequirementDetailPage({
               {findings.map((finding) => (
                 <div key={finding.id} className="py-2">
                   <div className="font-medium">{finding.title}</div>
-                  <div className="text-[var(--muted)]">{finding.category.replaceAll("_", " ")} · {finding.severity}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className={`border px-1.5 py-0.5 text-xs font-medium uppercase ${severityBadgeClass[finding.severity]}`}>
+                      {finding.severity}
+                    </span>
+                    <span className="text-[var(--muted)]">{humanize(finding.category)}</span>
+                  </div>
                   {finding.recommendation ? <div className="mt-1">{finding.recommendation}</div> : null}
                 </div>
               ))}

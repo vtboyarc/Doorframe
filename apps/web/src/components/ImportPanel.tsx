@@ -202,7 +202,13 @@ export function ImportPanel({ projectId }: { projectId: string }) {
           className="mt-2 w-full border border-[var(--line)] bg-white p-2"
         />
 
-        {activeFields.length > 0 ? (
+        {activeFields.length > 0 && headers.length === 0 ? (
+          <p className="mt-4 text-sm text-[var(--muted)]">
+            Choose a CSV file to map its columns. Doorframe pre-fills the mapping from the file headers.
+          </p>
+        ) : null}
+
+        {activeFields.length > 0 && headers.length > 0 ? (
           <div className="mt-4 space-y-3">
             <div className="text-sm font-medium">Column mapping</div>
             {activeFields.map(([field, label]) => (
