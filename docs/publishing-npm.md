@@ -2,7 +2,7 @@
 
 Doorframe's public npm package is `doorframe`. It exposes the `doorframe` binary and includes the local web app server, demo command, report generation, baseline diff, connector commands, and read-only MCP launcher.
 
-The GitHub release workflow publishes from `main` after a PR merge. npm package versions are immutable, so the merged PR must update `apps/cli/package.json` to a version that has not already been published.
+The GitHub release workflow publishes from `main` after a PR merge. npm package versions are immutable, so a PR that should publish a new npm package must update `apps/cli/package.json` to a version that has not already been published.
 
 ## One-Time Setup
 
@@ -48,12 +48,12 @@ Review the file list. It should contain built command code, README, license, sel
 When a PR merges to `main`, `.github/workflows/release.yml`:
 
 1. Reads the package name and version from `apps/cli/package.json`.
-2. Fails early if `doorframe@<version>` already exists on npm from a different commit.
+2. Checks whether `doorframe@<version>` already exists on npm.
 3. Runs install, typecheck, lint, tests, build, and `npm pack --dry-run`.
-4. Publishes `doorframe@<version>` with the `latest` npm dist-tag. If `NPM_TOKEN` is present, the workflow uses that repository secret; otherwise it uses npm Trusted Publishing.
+4. Publishes `doorframe@<version>` with the `latest` npm dist-tag when the version is unpublished. If `NPM_TOKEN` is present, the workflow uses that repository secret; otherwise it uses npm Trusted Publishing.
 5. Builds and pushes the GHCR Docker image.
 
-If the workflow fails because the npm version already exists from a different commit, bump `apps/cli/package.json` in a new PR and merge that before publishing again. If a rerun sees the same version already published from the same commit, it skips npm publishing and continues to the Docker image.
+If the npm version already exists from a different commit on a main-branch run, the workflow skips npm publishing and continues to the Docker image. Bump `apps/cli/package.json` in a PR that should publish a new npm package version. If a rerun sees the same version already published from the same commit, it skips npm publishing and continues to the Docker image.
 
 ## Manual First Publish
 

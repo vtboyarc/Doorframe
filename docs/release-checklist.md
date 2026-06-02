@@ -53,7 +53,8 @@ Use this before merging a PR that should publish a new Doorframe npm package and
 - Image builds.
 - Image runs.
 - Healthcheck passes if practical.
-- Main branch images are tagged with `<version>`, `main`, `main-<short-sha>`, and `latest` for non-prerelease versions.
+- Main branch images are tagged with `main`, `main-<short-sha>`, and `latest` for non-prerelease versions.
+- Main branch images are tagged with `<version>` when the npm version is unpublished or already belongs to the same commit.
 - Tagged stable releases are also tagged with the minor version such as `0.1`.
 - Image is pushed to GHCR.
 - No secrets or `.env` files are included.

@@ -25,7 +25,7 @@ Publishing runs from the `main` branch after a PR merge. Because npm package ver
 2. Update `CHANGELOG.md`.
 3. Run the release checklist in `docs/release-checklist.md`.
 4. Merge the PR to `main`.
-5. GitHub Actions runs checks, builds packages, runs `npm pack --dry-run`, publishes the `doorframe` npm package with the configured npm auth path, and pushes the Docker image to GHCR.
+5. GitHub Actions runs checks, builds packages, runs `npm pack --dry-run`, publishes the `doorframe` npm package with the configured npm auth path when the version is unpublished, and pushes the Docker image to GHCR.
 6. Verify the npm package.
 7. Verify the Docker image in GHCR.
 8. Optional: create and push the version tag to create the GitHub Release and uploaded release artifacts:
@@ -77,7 +77,7 @@ On `main`, the workflow:
 1. Checks out the repo.
 2. Sets up Node.
 3. Resolves the publish version from `apps/cli/package.json`.
-4. Fails early if that npm version already exists from a different commit.
+4. Checks whether that npm version is unpublished.
 5. Installs dependencies.
 6. Runs typecheck.
 7. Runs lint.
@@ -85,10 +85,10 @@ On `main`, the workflow:
 9. Builds the npm package.
 10. Builds the web app.
 11. Runs `npm pack --dry-run`.
-12. Publishes npm through the `NPM_TOKEN` repository secret when present, otherwise through Trusted Publishing.
-13. Builds and pushes the Docker image to GHCR with `<version>`, `main`, `main-<sha>`, and `latest` tags. Prerelease versions do not move `latest`.
+12. Publishes npm through the `NPM_TOKEN` repository secret when present, otherwise through Trusted Publishing. If the npm version already exists from a different commit on `main`, npm publishing is skipped because npm versions are immutable.
+13. Builds and pushes the Docker image to GHCR with `main`, `main-<sha>`, and `latest` tags. It also pushes `<version>` when that npm version is unpublished or already belongs to the same commit. Prerelease versions do not move `latest`.
 
-On a `v*.*.*` tag, the workflow also validates that the tag matches `apps/cli/package.json`, generates release artifacts, creates the GitHub Release, and uploads generated HTML reports, checksums, and the npm tarball. If the npm version was already published from `main`, the tag run skips npm publishing and continues.
+On a `v*.*.*` tag, the workflow also validates that the tag matches `apps/cli/package.json`, generates release artifacts, creates the GitHub Release, and uploads generated HTML reports, checksums, and the npm tarball. If the npm version was already published from the same commit, the tag run skips npm publishing and continues.
 
 ## GitHub Release Contents
 
