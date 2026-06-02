@@ -113,7 +113,8 @@ const docs = [
   "docker.md",
   "security-model.md",
   "no-telemetry.md",
-  "data-handling.md"
+  "data-handling.md",
+  "mcp-troubleshooting.md"
 ];
 
 await cp(path.join(repoRoot, "LICENSE"), path.join(cliDir, "LICENSE"));
@@ -123,6 +124,9 @@ await mkdir(path.join(cliDir, "docs"), { recursive: true });
 for (const doc of docs) {
   await cp(path.join(repoRoot, "docs", doc), path.join(cliDir, "docs", doc));
 }
+await cp(path.join(repoRoot, "docs", "mcp-clients"), path.join(cliDir, "docs", "mcp-clients"), {
+  recursive: true
+});
 
 await rm(path.join(cliDir, "examples"), { force: true, recursive: true });
 await mkdir(path.join(cliDir, "examples"), { recursive: true });

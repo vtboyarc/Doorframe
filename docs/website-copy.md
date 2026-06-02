@@ -4,7 +4,9 @@
 
 # Traceability gaps should not surprise you during a review.
 
-Doorframe turns requirements exports, Jira work items, and test results into a local traceability gap report.
+Doorframe turns requirements exports, work items, and test results into local traceability reports you can review before the meeting.
+
+Run Doorframe locally, import your requirements/work/test data, and generate review-ready reports for missing verification, stale trace links, weak requirement language, and baseline changes. Optional read-only MCP support lets approved AI clients query scoped Doorframe project context without uploading entire exports into chat.
 
 Primary buttons:
 
@@ -23,7 +25,7 @@ Doorframe gives teams a local way to inspect those exports before the review.
 1. Export requirements from your requirements tool.
 2. Export work items from Jira.
 3. Export test results from CI.
-4. Run Doorframe locally.
+4. Run Doorframe locally and open it in your browser.
 5. Review gaps before the meeting.
 
 ## What It Imports
@@ -45,16 +47,18 @@ Doorframe gives teams a local way to inspect those exports before the review.
 
 ## Local-First By Default
 
-Doorframe runs locally by default and does not send imported project data to any external service. It has no telemetry in the MVP and does not require accounts.
+Doorframe runs locally by default and does not send imported project data to any external service. It has no telemetry and does not require accounts.
 
-## CLI / Web / Docker / MCP
+## Web / Docker / Reports / MCP
 
-- CLI for quick local reports and scripted review prep.
 - Web app for importing files, browsing findings, and exporting reports.
 - Docker for local or internal deployment.
+- Command-line report generation for scripted review prep.
 - Optional read-only MCP server that lets approved AI clients query local Doorframe project context through scoped tools.
 
 Doorframe works without AI. The optional MCP server lets approved AI clients ask for traceability gaps, changed requirements, stale trace candidates, and review-brief facts without uploading an entire requirements export into a chat window. Doorframe does not include a model and does not call OpenAI, Anthropic, or any AI provider directly.
+
+MCP configuration is generated inside the Doorframe web app from the project MCP Setup page.
 
 ## Sample Report
 

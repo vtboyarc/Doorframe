@@ -1,8 +1,8 @@
 {
   "name": "doorframe-monorepo",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
-  "description": "Open-source requirements traceability and review tooling for regulated engineering teams.",
+  "description": "Turn requirements exports, work items, and test results into local traceability reports with optional read-only MCP support.",
   "workspaces": [
     "apps/*",
     "packages/*"

@@ -12,6 +12,8 @@ Doorframe is local-first by default. The public website is for marketing, docs, 
 - [Falcon demo](./demo.md)
 - [CLI](./cli.md)
 - [MCP server](./mcp-server.md)
+- [MCP client setup](./mcp-clients/README.md)
+- [MCP troubleshooting](./mcp-troubleshooting.md)
 - [Docker](./docker.md)
 - [Company installation](./company-installation.md)
 - [Publishing npm](./publishing-npm.md)

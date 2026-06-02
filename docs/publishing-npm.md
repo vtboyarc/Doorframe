@@ -1,6 +1,6 @@
 # Publishing The npm Package
 
-Doorframe's public npm package is `doorframe`. It exposes the `doorframe` binary and includes the local web app server, demo command, report generation, baseline diff, connector commands, and read-only MCP launcher.
+Doorframe's public npm package is `doorframe`. It exposes the `doorframe` binary and includes the local web app server, demo command, report generation, baseline diff, connector commands, and optional read-only MCP support.
 
 The GitHub release workflow publishes from `main` after a PR merge. npm package versions are immutable, so a PR that should publish a new npm package must update `apps/cli/package.json` to a version that has not already been published.
 
@@ -66,9 +66,9 @@ npm publish -w apps/cli --access public
 Verify:
 
 ```bash
-npx doorframe@0.1.4 --help
-npx doorframe@0.1.4 demo
-npx doorframe@0.1.4 serve
+npx doorframe@0.1.5 --help
+npx doorframe@0.1.5 demo
+npx doorframe@0.1.5 serve
 ```
 
 ## Publishing Authentication

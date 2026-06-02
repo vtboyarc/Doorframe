@@ -4,7 +4,7 @@ Doorframe runs locally by default and does not send imported project data to any
 
 ## Direct Boundaries
 
-- Doorframe is not approved for classified data.
+- Doorframe does not decide whether an environment is approved for classified, controlled, proprietary, export-controlled, or sensitive data.
 - Doorframe is not a compliance certification.
 - Doorframe does not make a system FedRAMP, IL4, IL5, CMMC, NIST, or export-control compliant.
 - Doorframe does not make a program review-ready by itself.
@@ -14,7 +14,7 @@ Organizations are responsible for approving their own use of Doorframe in their 
 
 ## Data Handling
 
-The MVP:
+Doorframe:
 
 - Stores project data locally.
 - Uses SQLite for the local web app.

@@ -1,6 +1,6 @@
 # Doorframe Architecture
 
-Doorframe is local-first. The MVP stores imported data in a SQLite database created under the web app's `.doorframe` directory unless `DOORFRAME_DATA_DIR` is set.
+Doorframe is local-first. The web app stores imported data in a SQLite database created under `.doorframe` unless `DOORFRAME_DATA_DIR` is set.
 
 ## Packages
 
@@ -17,7 +17,7 @@ Doorframe is local-first. The MVP stores imported data in a SQLite database crea
 
 - Each project has a `Ruleset` (ID patterns, analyzer config, custom rules) in the `rulesets` table; analysis falls back to `DEFAULT_RULESET`.
 - Baselines persist a serialized `ProjectSnapshot`; `diffBaselines` compares two snapshots by `externalId`.
-- Mutating actions append to the `audit_log` table, attributed to the OS user (no accounts in the MVP).
+- Mutating actions append to the `audit_log` table, attributed to the OS user. Doorframe does not require user accounts.
 
 ## Import Flow
 
@@ -35,4 +35,4 @@ Connectors (`packages/integrations`) are pure functions that take an injectable 
 
 ## Non-Goals
 
-The MVP does not use cloud storage, telemetry, or external AI services, and it does not claim to replace official requirements management tools. Optional outbound connectors (Jira/GitHub/GitLab/Jenkins) only run when the user explicitly configures credentials.
+Doorframe does not use cloud storage, telemetry, or external AI services by default, and it does not claim to replace official requirements management tools. Optional outbound connectors (Jira/GitHub/GitLab/Jenkins) only run when the user explicitly configures credentials.

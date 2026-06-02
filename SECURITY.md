@@ -1,6 +1,6 @@
 # Security Policy
 
-Doorframe is local-first MVP software. It is not approved for classified data, controlled data, regulated data, or any other sensitive use unless your organization approves that use in your own environment.
+Doorframe is local-first traceability and review software. Do not use it with classified, controlled, proprietary, export-controlled, or sensitive data unless your organization has approved that use in your environment.
 
 ## Supported Versions
 
@@ -15,7 +15,7 @@ For anything sensitive, share only a minimal sanitized reproduction.
 ## Security Model
 
 - Doorframe runs locally by default.
-- Doorframe has no telemetry in the MVP.
+- Doorframe has no telemetry.
 - Doorframe does not phone home.
 - Doorframe does not call AI providers by default.
 - Generated reports are offline HTML with no external scripts, fonts, images, or CDNs.

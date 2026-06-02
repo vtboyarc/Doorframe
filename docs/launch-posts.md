@@ -14,4 +14,4 @@ Doorframe is for the boring work before a review: checking whether requirements,
 
 The v0.1.0 demo takes requirements CSV, Jira-style CSV, and JUnit XML, then generates a local HTML report. The report is the product artifact. It is meant to be readable in a review, printable to PDF, and useful without AI.
 
-Doorframe is local-first, has no telemetry in the MVP, and does not require accounts. MCP is optional and read-only.
+Doorframe is local-first, has no telemetry, and does not require accounts. MCP is optional and read-only.

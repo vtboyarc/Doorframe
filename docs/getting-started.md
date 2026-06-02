@@ -44,7 +44,7 @@ npx doorframe diff \
 1. Export requirements from your requirements tool as CSV, ReqIF, or ReqIFZ.
 2. Export Jira issues as CSV.
 3. Export test results from CI as JUnit XML.
-4. Run Doorframe locally with the web app or CLI.
+4. Run Doorframe locally with the web app.
 5. Review findings and the traceability matrix.
 6. Export the HTML traceability report.
 
@@ -55,3 +55,9 @@ Doorframe detects requirement IDs in Jira and test text with patterns such as `R
 The report is a local HTML file. It is designed to work offline and print cleanly to PDF from a browser.
 
 The report includes a cover, executive summary, import summary, top risks before review, traceability matrix, missing work, missing verification, closed work without passing tests, weak wording, failed tests by requirement, duplicate candidates, and an appendix.
+
+## Optional MCP Setup
+
+Doorframe works without AI. If your organization has approved an MCP-compatible AI client and model for the project data, open your project in the Doorframe web app and go to **MCP Setup**.
+
+The page generates the local stdio MCP config, shows data-minimization settings, runs a health check, and provides starter questions. Doorframe MCP remains read-only and does not call AI providers directly.

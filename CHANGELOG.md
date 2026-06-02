@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.5 - Draft
+
+- Add a browser-first MCP Setup page with generated client configs, data-minimization controls, health checks, starter questions, and setup docs.
+- Clarify Docker and local stdio MCP limitations.
+
 ## v0.1.3 - Draft
 
 - Publish the local web app onboarding updates from PR #16 through the npm and Docker release path.

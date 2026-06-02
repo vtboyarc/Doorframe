@@ -31,7 +31,7 @@ docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:lates
 ## Run Pinned Version
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.4
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.5
 ```
 
 Open `http://localhost:3000`.
@@ -50,12 +50,26 @@ The app reads `DOORFRAME_DATA_DIR=/data` in the container. The SQLite database i
 
 Protect the volume like any other project data. Do not import sensitive data unless your organization has approved Doorframe for that use in your environment.
 
+## Using MCP When Doorframe Is Running In Docker
+
+Doorframe web app can run in Docker.
+
+Local stdio MCP usually requires the AI client to launch a local process. A browser page alone cannot make a desktop AI client launch MCP.
+
+If Doorframe is running only inside Docker, the MCP server path and database path must be available to the AI client. A container path such as `/data/doorframe.sqlite` is not usually readable by a desktop AI client on the host.
+
+For individual users, the easiest path may be running the Doorframe MCP server locally alongside the web app and pointing it at a host-visible Doorframe SQLite database.
+
+For teams, the future path is remote/internal MCP over HTTP with authentication and organization approval controls. That is not part of the first local stdio MCP setup.
+
+Do not assume Docker-based MCP works unless the AI client can launch the MCP server process and read the same project database path.
+
 ## Build Locally
 
 ```bash
 docker build \
   -f docker/Dockerfile \
-  --build-arg VERSION=0.1.4 \
+  --build-arg VERSION=0.1.5 \
   --build-arg SOURCE_REPOSITORY=https://github.com/vtboyarc/Doorframe \
   -t doorframe:local .
 ```
@@ -65,15 +79,15 @@ docker build \
 Companies and contractors should typically scan and mirror the pinned image into an internal registry before use.
 
 ```bash
-docker pull ghcr.io/vtboyarc/doorframe:0.1.4
-docker tag ghcr.io/vtboyarc/doorframe:0.1.4 internal-registry.example.com/tools/doorframe:0.1.4
-docker push internal-registry.example.com/tools/doorframe:0.1.4
+docker pull ghcr.io/vtboyarc/doorframe:0.1.5
+docker tag ghcr.io/vtboyarc/doorframe:0.1.5 internal-registry.example.com/tools/doorframe:0.1.5
+docker push internal-registry.example.com/tools/doorframe:0.1.5
 ```
 
 Then deploy the mirrored image:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.4
+docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.5
 ```
 
 ## Image Notes
@@ -84,6 +98,6 @@ docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/to
 - The image has a healthcheck at `/api/health`.
 - OCI labels include source repository, version, license, title, and description.
 - Main branch publishes get `main`, `main-<short-sha>`, and `latest` tags for non-prerelease versions.
-- Main branch publishes also include version tags such as `0.1.4` when that version is unpublished or already belongs to the same commit.
+- Main branch publishes also include version tags such as `0.1.5` when that version is unpublished or already belongs to the same commit.
 - Tagged stable releases also get minor tags such as `0.1`.
 - Prereleases should not receive the `latest` tag.

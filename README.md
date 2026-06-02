@@ -2,31 +2,57 @@
 
 [![npm package](https://img.shields.io/npm/v/doorframe?label=npm%20package)](https://www.npmjs.com/package/doorframe)
 
-Doorframe is an open-source, local-first requirements traceability and review tool. It turns requirements exports, Jira work items, and test results into a traceability gap report you can use before a review.
+Doorframe is a local-first requirements traceability tool. It runs in your browser, imports requirements/work/test data, and generates review-ready reports for gaps like missing verification, stale trace links, weak requirement language, and baseline changes.
 
-Doorframe is useful without AI. The main product artifact is the HTML traceability gap report.
+Doorframe also includes optional read-only MCP support, so approved AI clients can query a local Doorframe project through scoped tools instead of relying on full requirements exports uploaded into chat.
 
-Doorframe runs locally by default and does not send imported project data to any external service.
+Doorframe works without AI. It has no telemetry and does not call OpenAI, Anthropic, or any other AI provider directly.
 
-Doorframe works without AI. The optional MCP server lets approved AI clients query a local Doorframe project through read-only tools. Instead of uploading an entire requirements export into a chat window, the AI client can ask Doorframe for scoped data like traceability gaps, changed requirements, stale trace candidates, and review briefs. Doorframe does not include a model and does not call OpenAI, Anthropic, or any AI provider directly.
+## What Doorframe does
 
-## Install And Run
+Doorframe helps engineering teams turn messy requirements data into reviewable traceability reports.
 
-Most users should use the [`doorframe` npm package](https://www.npmjs.com/package/doorframe) or Docker. Clone the repo only when contributing, auditing, or changing Doorframe.
+It can help identify:
 
-Try Doorframe without installing:
+- requirements without linked work items
+- requirements without verification evidence
+- weak or vague requirement language
+- stale trace links across baselines
+- changed requirements between baselines
+- closed work without passing test evidence
+- failed or skipped tests linked to requirements
 
-```bash
-npx doorframe demo
-```
+Doorframe is not a replacement for DOORS, DOORS Next, Jama, Polarion, Jira, or your official requirements process. It is a local-first review and traceability layer that works from exported data.
 
-Run the local web app with npm:
+## Run Doorframe
+
+Run the local web app:
 
 ```bash
 npx doorframe serve
 ```
 
-Open the printed local URL, normally `http://localhost:3000`.
+Then open:
+
+```text
+http://localhost:3000
+```
+
+Load the fictional Falcon Telemetry Gateway demo:
+
+```bash
+npx doorframe demo
+```
+
+Run with Docker:
+
+```bash
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:latest
+```
+
+Then open Doorframe in your browser and use the app from there.
+
+Doorframe is not meant to require cloning the repository for normal use. Most users should run it with npm or Docker.
 
 Generate a report from local exports:
 
@@ -38,27 +64,53 @@ npx doorframe analyze \
   --out doorframe-report.html
 ```
 
-Install globally:
+## Optional MCP support
 
-```bash
-npm install -g doorframe
-doorframe --help
-doorframe serve
-```
+Doorframe MCP gives an approved AI client a narrow, read-only way to query a local Doorframe project.
 
-Run the local web app with Docker:
+Instead of uploading an entire DOORS export or requirements spreadsheet into a chat window, an AI client can ask Doorframe for scoped project facts through MCP tools:
 
-```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.4
-```
+- project summary
+- traceability gaps
+- changed requirements
+- stale trace candidates
+- missing verification
+- failed tests linked to requirements
+- review brief data
 
-Run MCP:
+Doorframe MCP is read-only. It does not mutate requirements, work items, tests, findings, baselines, reports, or project data.
 
-```bash
-npx doorframe mcp --project ./doorframe.sqlite
-```
+Doorframe MCP is model-agnostic. It can be used with MCP-compatible clients your organization approves. Doorframe does not decide whether a given AI client, model, deployment, network, or dataset is approved for your environment.
+
+Doorframe itself does not include an AI model and does not call OpenAI, Anthropic, or any other AI provider directly. The connected AI client supplies the model, chat UI, authentication, provider configuration, and data handling.
+
+Run Doorframe, open a project in your browser, go to **MCP Setup**, pick an approved AI client, run the health check, and copy the generated local stdio config.
+
+## Local, internal, and air-gapped use
+
+Doorframe is designed to run locally by default. It has no telemetry and does not call external AI providers.
+
+For restricted or air-gapped environments, organizations can mirror the npm package or Docker image into an internal registry, scan it, pin a version, and run Doorframe fully inside their approved environment.
+
+In air-gapped use, Doorframe can still generate reports, compare baselines, run analyzers, and expose a local read-only MCP server. If AI is used, the connected AI client and model must also be approved and available inside that environment.
+
+Doorframe does not make a system approved, compliant, or authorized by itself. Your organization is responsible for approving tools, models, networks, data handling, and deployment patterns before use.
 
 See `docs/install.md`, `docs/docker.md`, and `docs/company-installation.md`.
+
+## Security and data handling
+
+Doorframe runs locally by default. It does not include telemetry and does not send project data to AI providers.
+
+Do not use Doorframe with classified, controlled, proprietary, export-controlled, or sensitive data unless your organization has approved that use in your environment.
+
+Doorframe does not claim to be DoD-approved, FedRAMP-approved, CMMC-compliant, NIST-compliant, IL4/IL5 approved, or approved for classified or CUI data. It is a local-first traceability and review tool. Approval decisions belong to your organization.
+
+## Pinned Docker Version
+
+```bash
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.5
+```
 
 ## What Doorframe Is
 
@@ -73,7 +125,7 @@ See `docs/install.md`, `docs/docker.md`, and `docs/company-installation.md`.
 - Not a DOORS, Jama, Polarion, Jira, or test-management replacement.
 - Not a SaaS.
 - Not an AI requirement generator.
-- Not approved for classified data.
+- Not approved for classified, CUI, proprietary, export-controlled, or sensitive data by Doorframe itself.
 - Not a compliance certification.
 - Not a substitute for official program, product, quality, security, or audit processes.
 
@@ -103,7 +155,7 @@ This detects `REQ-014` changing from a 5 second processing threshold to a 2 seco
 With Docker:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.4
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.5
 ```
 
 From source:
@@ -122,17 +174,17 @@ docker compose up
 
 Open `http://localhost:3000`. Docker stores project data in the `doorframe-data` volume mounted at `/data`.
 
-## MCP Server
+## MCP Setup
 
 Doorframe includes an optional read-only stdio MCP server for local Doorframe SQLite project databases.
 
-```bash
-npx doorframe mcp --project ./.doorframe/doorframe.sqlite --mode standard --max-results 25
-```
+Run Doorframe, open it in your browser, and configure MCP from the project settings. The MCP Setup page generates the exact command your AI client needs to launch the local Doorframe MCP server.
 
 The MCP server is not an AI client and does not call AI providers. It exposes scoped local context such as traceability gaps, changed requirements, stale trace candidates, and review-brief facts. Data returned by MCP may enter the connected AI client's context.
 
-Use `--mode summary`, `--mode standard`, `--mode detailed`, `--max-results`, `--hide-raw-text`, and optional `--audit-log ./doorframe-mcp-audit.jsonl` to control result scope. See `docs/mcp-server.md`, `docs/mcp-value-case.md`, `docs/mcp-vs-file-upload.md`, `docs/mcp-data-minimization.md`, `docs/mcp-approved-ai-client-guidance.md`, and `docs/mcp-audit-logging.md`.
+Advanced users can still run the generated command manually, for example `npx doorframe mcp --project ./.doorframe/doorframe.sqlite --mode standard --max-results 25`.
+
+Use `--mode summary`, `--mode standard`, `--mode detailed`, `--max-results`, `--hide-raw-text`, and optional `--audit-log ./doorframe-mcp-audit.jsonl` to control result scope. See `docs/mcp-server.md`, `docs/mcp-clients/README.md`, `docs/mcp-troubleshooting.md`, `docs/mcp-value-case.md`, `docs/mcp-vs-file-upload.md`, `docs/mcp-data-minimization.md`, `docs/mcp-approved-ai-client-guidance.md`, and `docs/mcp-audit-logging.md`.
 
 ## Inputs
 
@@ -151,7 +203,7 @@ Generate the demo report with the npm command above. A screenshot can be added a
 
 ```text
 apps/web            Next.js UI, API routes, and SQLite persistence
-apps/cli            Doorframe CLI
+apps/cli            Doorframe package command and local web app launcher
 apps/mcp-server     Read-only stdio MCP server for local project databases
 packages/core       Shared types, schemas, rulesets, baselines, and utilities
 packages/parsers    CSV, JUnit XML, ReqIF, ReqIFZ, and ID extraction
@@ -163,11 +215,7 @@ docs                Project docs
 docker              Docker image definition
 ```
 
-## Security And Privacy
-
-Doorframe has no telemetry in the MVP. It does not phone home, require accounts, or call AI providers by default. Reports are generated without external scripts, fonts, images, or CDN assets.
-
-See `SECURITY.md`, `docs/security-model.md`, `docs/threat-model.md`, `docs/no-telemetry.md`, and `docs/data-handling.md`.
+For more security and privacy detail, see `SECURITY.md`, `docs/security-model.md`, `docs/threat-model.md`, `docs/no-telemetry.md`, and `docs/data-handling.md`.
 
 ## Roadmap
 
