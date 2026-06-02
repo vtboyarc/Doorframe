@@ -2,10 +2,15 @@
 
 import { loadProjectDb, usageText } from "./project-loader";
 import { runStdioServer } from "./server";
+import { normalizeMcpMode, type DoorframeMcpOptions } from "./options";
 
 interface CliArgs {
   project?: string;
   help?: boolean;
+  mode?: DoorframeMcpOptions["mode"];
+  maxResults?: number;
+  hideRawText?: boolean;
+  auditLogPath?: string;
 }
 
 function parseArgs(args: string[]): CliArgs {
@@ -23,6 +28,25 @@ function parseArgs(args: string[]): CliArgs {
       parsed.project = args[index + 1];
       index += 1;
     }
+
+    if (arg === "--mode") {
+      parsed.mode = normalizeMcpMode(args[index + 1]);
+      index += 1;
+    }
+
+    if (arg === "--max-results") {
+      parsed.maxResults = Number(args[index + 1]);
+      index += 1;
+    }
+
+    if (arg === "--hide-raw-text") {
+      parsed.hideRawText = true;
+    }
+
+    if (arg === "--audit-log") {
+      parsed.auditLogPath = args[index + 1];
+      index += 1;
+    }
   }
 
   return parsed;
@@ -37,7 +61,12 @@ async function main(): Promise<void> {
   }
 
   const projectDb = loadProjectDb(args.project);
-  await runStdioServer(projectDb);
+  await runStdioServer(projectDb, {
+    mode: args.mode,
+    maxResults: args.maxResults,
+    hideRawText: args.hideRawText,
+    auditLogPath: args.auditLogPath
+  });
 }
 
 main().catch((error: unknown) => {

@@ -54,6 +54,8 @@ Doorframe MCP must be read-only until explicitly changed later.
 
 The MCP server is a local bridge between an AI client and a Doorframe project database. It should help users ask questions about requirements, work items, tests, trace links, and findings.
 
+For regulated-team use cases, treat Doorframe MCP as the controlled local traceability context layer. The approved AI client is the assistant. Doorframe MCP should expose narrow, read-only local project facts such as traceability gaps, changed requirements, stale trace candidates, and review-brief facts.
+
 Do not add:
 - telemetry
 - external API calls
@@ -71,6 +73,15 @@ Keep business logic outside the MCP transport layer. Tools should call testable 
 In stdio mode, never write logs to stdout. Use stderr only.
 
 When in doubt, return less data by default and let the user ask for details.
+
+Support data minimization:
+- `summary` mode returns IDs, titles, counts, categories, and summaries.
+- `standard` mode is the default and returns short excerpts when useful.
+- `detailed` mode can return full requirement text in detail tools.
+- `--hide-raw-text` should hide raw requirement text even in detail paths.
+- `--max-results` should cap supported result sets.
+
+Optional MCP audit logging must be off by default. When enabled, log sanitized JSONL metadata only: timestamp, project id/name if available, tool name, high-level parameters, result count, mode, success/failure, and duration. Do not log full requirement text, work item descriptions, test failure messages, raw imported file contents, environment variables, or secrets.
 
 ## MCP and AI-provider boundary
 
@@ -90,6 +101,9 @@ Doorframe must remain useful without AI:
 MCP is optional. Conversational use requires a separate MCP-compatible AI client.
 
 Always document that any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Always document this warning:
+“Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
 
 ## Doorframe next-phase priorities
 

@@ -46,6 +46,7 @@ import {
   type Ruleset
 } from "@doorframe/core";
 import { loadProjectDb, usageText as mcpUsageText } from "../../mcp-server/src/project-loader";
+import { normalizeMcpMode } from "../../mcp-server/src/options";
 import { runStdioServer } from "../../mcp-server/src/server";
 
 type ReportFormat = "html" | "md" | "json" | "csv";
@@ -65,7 +66,7 @@ Usage:
   doorframe report --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--format html|md|json|csv] [--out report.ext]
   doorframe diff --baseline-a req-a.csv --baseline-b req-b.csv [--jira jira.csv] [--junit tests.xml] [--out diff.html]
   doorframe diff --base baseline-a.json --against baseline-b.json
-  doorframe mcp --project ./doorframe.sqlite
+  doorframe mcp --project ./doorframe.sqlite [--mode summary|standard|detailed] [--max-results 25] [--hide-raw-text] [--audit-log ./doorframe-mcp-audit.jsonl]
   doorframe import-jira --requirements req.csv [--jql "project=FG"] [--format ...] [--out ...]
   doorframe import-github --requirements req.csv [--junit-xml file.xml] [--owner o --repo r] [...]
   doorframe import-gitlab --requirements req.csv [--project-id N --job-id N] [...]
@@ -615,7 +616,12 @@ async function runMcp(args: string[]): Promise<void> {
 
   const options = parseOptions(args);
   const projectDb = loadProjectDb(options.project);
-  await runStdioServer(projectDb);
+  await runStdioServer(projectDb, {
+    mode: normalizeMcpMode(options.mode),
+    maxResults: options["max-results"] ? Number(options["max-results"]) : undefined,
+    hideRawText: options["hide-raw-text"] === "true",
+    auditLogPath: options["audit-log"]
+  });
 }
 
 async function main(): Promise<void> {

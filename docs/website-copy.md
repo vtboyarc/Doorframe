@@ -52,7 +52,9 @@ Doorframe runs locally by default and does not send imported project data to any
 - CLI for quick local reports and scripted review prep.
 - Web app for importing files, browsing findings, and exporting reports.
 - Docker for local or internal deployment.
-- Optional read-only MCP server for local project databases.
+- Optional read-only MCP server that lets approved AI clients query local Doorframe project context through scoped tools.
+
+Doorframe works without AI. The optional MCP server lets approved AI clients ask for traceability gaps, changed requirements, stale trace candidates, and review-brief facts without uploading an entire requirements export into a chat window. Doorframe does not include a model and does not call OpenAI, Anthropic, or any AI provider directly.
 
 ## Sample Report
 
@@ -61,6 +63,8 @@ Run the Falcon Telemetry Gateway demo to generate an offline HTML report that ca
 ## Security Notes
 
 Doorframe is not approved for classified, controlled, proprietary, or regulated data. Use it only with data your organization has approved for your environment.
+
+Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.
 
 ## Roadmap
 

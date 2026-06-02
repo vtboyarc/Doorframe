@@ -3,10 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   safeJsonParse,
+  type Baseline,
   type Finding,
   type ImportBatch,
   type Project,
   type ProjectData,
+  type ProjectSnapshot,
   type Requirement,
   type TestCase,
   type TraceLink,
@@ -30,6 +32,7 @@ export class ReadOnlyProjectLoadError extends Error {
 export interface ReadOnlyProjectDatabase {
   readonly path: string;
   loadProjectData(): ProjectData;
+  listBaselines(): Baseline[];
 }
 
 interface ProjectRow {
@@ -122,6 +125,14 @@ interface ImportBatchRow {
   imported_at: string;
   record_count: number;
   errors: string | null;
+}
+
+interface BaselineRow {
+  id: string;
+  project_id: string;
+  label: string;
+  created_at: string;
+  snapshot_json: string;
 }
 
 function validateProjectPath(projectPath: string | undefined): string {
@@ -262,8 +273,25 @@ function importBatchFromRow(row: ImportBatchRow): ImportBatch {
   };
 }
 
+function baselineFromRow(row: BaselineRow): Baseline {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    label: row.label,
+    createdAt: row.created_at,
+    snapshot: JSON.parse(row.snapshot_json) as ProjectSnapshot
+  };
+}
+
 function allByProject<Row>(db: Db, table: string, projectId: string, orderBy: string): Row[] {
   return db.prepare(`SELECT * FROM ${table} WHERE project_id = ? ORDER BY ${orderBy}`).all(projectId) as Row[];
+}
+
+function hasTable(db: Db, tableName: string): boolean {
+  const row = db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?")
+    .get(tableName) as { name: string } | undefined;
+  return Boolean(row);
 }
 
 export function loadProjectDataFromSqlite(projectPath: string): ProjectData {
@@ -317,6 +345,33 @@ export function loadProjectDataFromSqlite(projectPath: string): ProjectData {
   }
 }
 
+export function loadProjectBaselinesFromSqlite(projectPath: string): Baseline[] {
+  const resolvedPath = validateProjectPath(projectPath);
+  const db = openReadOnlyDb(resolvedPath);
+
+  try {
+    const projectRow = db
+      .prepare("SELECT * FROM projects ORDER BY updated_at DESC LIMIT 1")
+      .get() as ProjectRow | undefined;
+
+    if (!projectRow || !hasTable(db, "baselines")) {
+      return [];
+    }
+
+    const rows = allByProject<BaselineRow>(db, "baselines", projectRow.id, "created_at DESC");
+    return rows.map(baselineFromRow);
+  } catch (error) {
+    if (error instanceof ReadOnlyProjectLoadError) {
+      throw error;
+    }
+
+    const message = error instanceof Error ? error.message : "unknown SQLite error";
+    throw new ReadOnlyProjectLoadError("BAD_DATABASE", `Could not read Doorframe baselines: ${message}`);
+  } finally {
+    db.close();
+  }
+}
+
 export function openReadOnlyProjectDatabase(projectPath: string): ReadOnlyProjectDatabase {
   const resolvedPath = validateProjectPath(projectPath);
 
@@ -324,6 +379,9 @@ export function openReadOnlyProjectDatabase(projectPath: string): ReadOnlyProjec
     path: resolvedPath,
     loadProjectData() {
       return loadProjectDataFromSqlite(resolvedPath);
+    },
+    listBaselines() {
+      return loadProjectBaselinesFromSqlite(resolvedPath);
     }
   };
 }

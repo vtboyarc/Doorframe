@@ -8,6 +8,8 @@ Doorframe is useful without AI. The main product artifact is the HTML traceabili
 
 Doorframe runs locally by default and does not send imported project data to any external service.
 
+Doorframe works without AI. The optional MCP server lets approved AI clients query a local Doorframe project through read-only tools. Instead of uploading an entire requirements export into a chat window, the AI client can ask Doorframe for scoped data like traceability gaps, changed requirements, stale trace candidates, and review briefs. Doorframe does not include a model and does not call OpenAI, Anthropic, or any AI provider directly.
+
 ## Install And Run
 
 Most users should use the [`doorframe` npm package](https://www.npmjs.com/package/doorframe) or Docker. Clone the repo only when contributing, auditing, or changing Doorframe.
@@ -125,10 +127,12 @@ Open `http://localhost:3000`. Docker stores project data in the `doorframe-data`
 Doorframe includes an optional read-only stdio MCP server for local Doorframe SQLite project databases.
 
 ```bash
-npx doorframe mcp --project ./.doorframe/doorframe.sqlite
+npx doorframe mcp --project ./.doorframe/doorframe.sqlite --mode standard --max-results 25
 ```
 
-The MCP server is not an AI client and does not call AI providers. Data returned by MCP may enter the connected AI client's context.
+The MCP server is not an AI client and does not call AI providers. It exposes scoped local context such as traceability gaps, changed requirements, stale trace candidates, and review-brief facts. Data returned by MCP may enter the connected AI client's context.
+
+Use `--mode summary`, `--mode standard`, `--mode detailed`, `--max-results`, `--hide-raw-text`, and optional `--audit-log ./doorframe-mcp-audit.jsonl` to control result scope. See `docs/mcp-server.md`, `docs/mcp-value-case.md`, `docs/mcp-vs-file-upload.md`, `docs/mcp-data-minimization.md`, `docs/mcp-approved-ai-client-guidance.md`, and `docs/mcp-audit-logging.md`.
 
 ## Inputs
 

@@ -7,7 +7,7 @@ import {
 export const usageText = `Doorframe MCP server
 
 Usage:
-  doorframe-mcp --project ./path/to/doorframe.sqlite
+  doorframe-mcp --project ./path/to/doorframe.sqlite [--mode summary|standard|detailed] [--max-results 25] [--hide-raw-text] [--audit-log ./doorframe-mcp-audit.jsonl]
 
 The server uses stdio transport and writes only MCP protocol messages to stdout.
 Logs and startup errors are written to stderr.`;

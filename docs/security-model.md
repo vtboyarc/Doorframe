@@ -25,6 +25,12 @@ The MCP server is optional and read-only. It opens only the project database pat
 
 Data returned by MCP may enter the connected AI client's context. Do not connect MCP to data your organization has not approved for that client.
 
+Doorframe MCP does not include an AI model and does not call AI providers directly. The connected AI client handles model access, chat UI, authentication, provider policies, logging, and data handling.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
+MCP supports `--mode summary`, `--mode standard`, `--mode detailed`, `--max-results`, and `--hide-raw-text` to reduce returned data. Optional `--audit-log` writes a local sanitized JSONL record of MCP tool calls. It does not log full requirement text, work item descriptions, test failure messages, raw imported file contents, environment variables, or secrets.
+
 ## Docker
 
 Docker is a local deployment convenience. Treat the mounted data directory as project data. Protect it with your normal workstation or internal environment controls.
