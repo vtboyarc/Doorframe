@@ -37,6 +37,7 @@ Use this before merging a PR that should publish a new Doorframe npm package and
 - Package name is `doorframe`.
 - Version is unpublished on npm before merging to `main`.
 - Version matches the release tag when creating a GitHub Release.
+- npm publishing auth is configured through Trusted Publishing or the GitHub Actions repository secret `NPM_TOKEN`.
 - `bin.doorframe` points to the built command entrypoint.
 - `doorframe --help` works from the built package.
 - `doorframe demo --help` works from the built package.

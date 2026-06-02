@@ -25,7 +25,7 @@ Publishing runs from the `main` branch after a PR merge. Because npm package ver
 2. Update `CHANGELOG.md`.
 3. Run the release checklist in `docs/release-checklist.md`.
 4. Merge the PR to `main`.
-5. GitHub Actions runs checks, builds packages, runs `npm pack --dry-run`, publishes the `doorframe` npm package through npm Trusted Publishing, and pushes the Docker image to GHCR.
+5. GitHub Actions runs checks, builds packages, runs `npm pack --dry-run`, publishes the `doorframe` npm package with the configured npm auth path, and pushes the Docker image to GHCR.
 6. Verify the npm package.
 7. Verify the Docker image in GHCR.
 8. Optional: create and push the version tag to create the GitHub Release and uploaded release artifacts:
@@ -85,7 +85,7 @@ On `main`, the workflow:
 9. Builds the npm package.
 10. Builds the web app.
 11. Runs `npm pack --dry-run`.
-12. Publishes npm through Trusted Publishing.
+12. Publishes npm through the `NPM_TOKEN` repository secret when present, otherwise through Trusted Publishing.
 13. Builds and pushes the Docker image to GHCR with `<version>`, `main`, `main-<sha>`, and `latest` tags. Prerelease versions do not move `latest`.
 
 On a `v*.*.*` tag, the workflow also validates that the tag matches `apps/cli/package.json`, generates release artifacts, creates the GitHub Release, and uploads generated HTML reports, checksums, and the npm tarball. If the npm version was already published from `main`, the tag run skips npm publishing and continues.
@@ -117,5 +117,5 @@ Do not upload local SQLite databases. Prefer sample CSV/XML files and generated 
 
 - Create or verify npm access for the `doorframe` package.
 - Publish or reserve `doorframe`.
-- Configure npm Trusted Publishing for `.github/workflows/release.yml`.
+- Configure npm Trusted Publishing for `.github/workflows/release.yml`, or add a temporary GitHub Actions repository secret named `NPM_TOKEN`.
 - Confirm GHCR package visibility and permissions after the first image push.

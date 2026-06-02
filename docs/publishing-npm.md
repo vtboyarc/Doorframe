@@ -28,6 +28,11 @@ The GitHub release workflow publishes from `main` after a PR merge. npm package 
    - Repository: `Doorframe`
    - Workflow filename: `release.yml`
    - Allowed action: `npm publish`
+6. Optional fallback: create a GitHub repository secret named `NPM_TOKEN` only if Trusted Publishing is not ready.
+   - Location: `vtboyarc/Doorframe` -> Settings -> Secrets and variables -> Actions -> Repository secrets.
+   - Secret name: `NPM_TOKEN`
+   - Secret value: an npm automation or publish token for the `doorframe` package.
+   - Do not commit npm tokens to the repository.
 
 ## Local Dry Run
 
@@ -45,7 +50,7 @@ When a PR merges to `main`, `.github/workflows/release.yml`:
 1. Reads the package name and version from `apps/cli/package.json`.
 2. Fails early if `doorframe@<version>` already exists on npm from a different commit.
 3. Runs install, typecheck, lint, tests, build, and `npm pack --dry-run`.
-4. Publishes `doorframe@<version>` with the `latest` npm dist-tag through Trusted Publishing.
+4. Publishes `doorframe@<version>` with the `latest` npm dist-tag. If `NPM_TOKEN` is present, the workflow uses that repository secret; otherwise it uses npm Trusted Publishing.
 5. Builds and pushes the GHCR Docker image.
 
 If the workflow fails because the npm version already exists from a different commit, bump `apps/cli/package.json` in a new PR and merge that before publishing again. If a rerun sees the same version already published from the same commit, it skips npm publishing and continues to the Docker image.
@@ -66,10 +71,12 @@ npx doorframe@0.1.0 demo
 npx doorframe@0.1.0 serve
 ```
 
-## Trusted Publishing
+## Publishing Authentication
 
-npm Trusted Publishing lets GitHub Actions publish through OIDC instead of long-lived npm tokens. This is the required automated release path for Doorframe.
+npm Trusted Publishing lets GitHub Actions publish through OIDC instead of long-lived npm tokens. This is the preferred automated release path for Doorframe.
 
 The release workflow already has `id-token: write`. npm Trusted Publishing currently requires an npm CLI version that supports OIDC publishing and a compatible Node runtime, so the workflow updates npm before the publish step.
 
-Do not hardcode npm tokens in the repo. Avoid long-lived `NPM_TOKEN` publishing once Trusted Publishing is configured.
+If Trusted Publishing cannot be used yet, store a token only as the GitHub Actions repository secret `NPM_TOKEN`. The workflow masks the secret and passes it to `npm publish` as `NODE_AUTH_TOKEN`.
+
+Avoid long-lived `NPM_TOKEN` publishing once Trusted Publishing is configured.
