@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.3 - Draft
+
+- Publish the local web app onboarding updates from PR #16 through the npm and Docker release path.
+
 ## v0.1.0 - Draft
 
 Initial public release candidate for Doorframe.
