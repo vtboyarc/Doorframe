@@ -2,7 +2,7 @@
 
 Doorframe's public npm package is `doorframe`. It exposes the `doorframe` binary and includes the local web app server, demo command, report generation, baseline diff, connector commands, and read-only MCP launcher.
 
-Do not publish until the release workflow and package contents have been reviewed.
+The GitHub release workflow publishes from `main` after a PR merge. npm package versions are immutable, so the merged PR must update `apps/cli/package.json` to a version that has not already been published.
 
 ## One-Time Setup
 
@@ -16,12 +16,18 @@ Do not publish until the release workflow and package contents have been reviewe
 
 4. Confirm package metadata in `apps/cli/package.json`:
    - `name` is `doorframe`
-   - `version` matches the release tag
+   - `version` is the next unpublished semantic version
    - `license` is present
    - `repository`, `homepage`, and `bugs` point to the GitHub repo
    - `bin.doorframe` points to the built command entrypoint
    - `files` is an allowlist
    - `publishConfig.access` is `public`
+5. Configure npm Trusted Publishing:
+   - Publisher: GitHub Actions
+   - GitHub owner or organization: `vtboyarc`
+   - Repository: `Doorframe`
+   - Workflow filename: `release.yml`
+   - Allowed action: `npm publish`
 
 ## Local Dry Run
 
@@ -31,6 +37,18 @@ npm pack --dry-run -w apps/cli
 ```
 
 Review the file list. It should contain built command code, README, license, selected docs, the packaged local web app, and fictional sample data. It should not contain `.env` files, local databases, `node_modules`, coverage output, temp files, or unrelated build artifacts.
+
+## Main Branch Publishing
+
+When a PR merges to `main`, `.github/workflows/release.yml`:
+
+1. Reads the package name and version from `apps/cli/package.json`.
+2. Fails early if `doorframe@<version>` already exists on npm from a different commit.
+3. Runs install, typecheck, lint, tests, build, and `npm pack --dry-run`.
+4. Publishes `doorframe@<version>` with the `latest` npm dist-tag through Trusted Publishing.
+5. Builds and pushes the GHCR Docker image.
+
+If the workflow fails because the npm version already exists from a different commit, bump `apps/cli/package.json` in a new PR and merge that before publishing again. If a rerun sees the same version already published from the same commit, it skips npm publishing and continues to the Docker image.
 
 ## Manual First Publish
 
@@ -48,26 +66,10 @@ npx doorframe@0.1.0 demo
 npx doorframe@0.1.0 serve
 ```
 
-## Recommended Later Path: Trusted Publishing
+## Trusted Publishing
 
-npm Trusted Publishing lets GitHub Actions publish through OIDC instead of long-lived npm tokens. This is the recommended release path once the package exists and the workflow has been reviewed.
-
-Configure the npm package trusted publisher with:
-
-- Publisher: GitHub Actions
-- GitHub owner or organization: `vtboyarc`
-- Repository: `Doorframe`
-- Workflow filename: `release.yml`
-- Allowed action: `npm publish`
+npm Trusted Publishing lets GitHub Actions publish through OIDC instead of long-lived npm tokens. This is the required automated release path for Doorframe.
 
 The release workflow already has `id-token: write`. npm Trusted Publishing currently requires an npm CLI version that supports OIDC publishing and a compatible Node runtime, so the workflow updates npm before the publish step.
 
-To enable npm publishing in GitHub Actions, set repository variable:
-
-```text
-NPM_PUBLISH_ENABLED=true
-```
-
-If that variable is absent or not `true`, the release workflow skips npm publishing while still running checks, building the npm package, building the Docker image, and creating the GitHub Release.
-
-Do not hardcode npm tokens in the repo. If a temporary token fallback is used, store it only as a GitHub Actions secret named `NPM_TOKEN` and remove it after Trusted Publishing is working.
+Do not hardcode npm tokens in the repo. Avoid long-lived `NPM_TOKEN` publishing once Trusted Publishing is configured.

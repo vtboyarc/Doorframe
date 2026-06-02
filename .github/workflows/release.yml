@@ -2,13 +2,20 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: write
   packages: write
   id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -29,16 +36,57 @@ jobs:
           node-version: "22.14.0"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Validate tag matches package version
+      - name: Resolve publish version
         id: version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
-          if [ "$VERSION" != "$PACKAGE_VERSION" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match package version $PACKAGE_VERSION" >&2
+          PACKAGE_NAME="$(node -p "require('./apps/cli/package.json').name")"
+          PACKAGE_VERSION="$(node -p "require('./apps/cli/package.json').version")"
+          ROOT_VERSION="$(node -p "require('./package.json').version")"
+
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            if [ "$VERSION" != "$PACKAGE_VERSION" ]; then
+              echo "Tag $GITHUB_REF_NAME does not match $PACKAGE_NAME package version $PACKAGE_VERSION" >&2
+              exit 1
+            fi
+            RELEASE_KIND="tag"
+          elif [ "$GITHUB_REF_NAME" = "main" ]; then
+            VERSION="$PACKAGE_VERSION"
+            RELEASE_KIND="main"
+          else
+            echo "This workflow only publishes from main or v*.*.* tags. Current ref: $GITHUB_REF_NAME" >&2
             exit 1
           fi
+
+          if [ "$ROOT_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "::warning::Root package version $ROOT_VERSION does not match $PACKAGE_NAME package version $PACKAGE_VERSION."
+          fi
+
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_kind=$RELEASE_KIND" >> "$GITHUB_OUTPUT"
+
+      - name: Check npm package version
+        id: npm_version
+        run: |
+          PACKAGE_SPEC="${{ steps.version.outputs.package_name }}@${{ steps.version.outputs.version }}"
+          PUBLISHED_VERSION="$(npm view "$PACKAGE_SPEC" version 2>/dev/null || true)"
+
+          if [ -n "$PUBLISHED_VERSION" ]; then
+            PUBLISHED_GIT_HEAD="$(npm view "$PACKAGE_SPEC" gitHead 2>/dev/null || true)"
+            if [ "$PUBLISHED_GIT_HEAD" = "$GITHUB_SHA" ]; then
+              echo "::notice::$PACKAGE_SPEC is already published from this commit; skipping npm publish."
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+            elif [ "${{ steps.version.outputs.release_kind }}" = "tag" ]; then
+              echo "::warning::$PACKAGE_SPEC already exists on npm with gitHead '$PUBLISHED_GIT_HEAD'; skipping npm publish for this tag."
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::$PACKAGE_SPEC already exists on npm with gitHead '$PUBLISHED_GIT_HEAD'. Bump apps/cli/package.json before merging to main so npm can publish an immutable new version."
+              exit 1
+            fi
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Install dependencies
         run: npm ci
@@ -62,24 +110,20 @@ jobs:
         run: npm pack --dry-run -w apps/cli
 
       - name: Generate release artifacts
+        if: ${{ steps.version.outputs.release_kind == 'tag' }}
         run: npm run release:assets
 
       - name: Create npm tarball artifact
+        if: ${{ steps.version.outputs.release_kind == 'tag' }}
         run: npm pack -w apps/cli --pack-destination release-artifacts
 
       - name: Ensure npm supports trusted publishing
-        if: ${{ vars.NPM_PUBLISH_ENABLED == 'true' }}
+        if: ${{ steps.npm_version.outputs.publish == 'true' }}
         run: npm install -g npm@^11.5.1
 
       - name: Publish npm package
-        if: ${{ vars.NPM_PUBLISH_ENABLED == 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish -w apps/cli --access public
-
-      - name: Skip npm publish
-        if: ${{ vars.NPM_PUBLISH_ENABLED != 'true' }}
-        run: echo "Skipping npm publish. Set repository variable NPM_PUBLISH_ENABLED=true after npm Trusted Publishing is configured and the release workflow is reviewed."
+        if: ${{ steps.npm_version.outputs.publish == 'true' }}
+        run: npm publish -w apps/cli --access public --tag latest
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -94,9 +138,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=ref,event=branch
+            type=sha,prefix=main-,enable=${{ github.ref == 'refs/heads/main' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
+            type=raw,value=latest,enable=${{ !contains(steps.version.outputs.version, '-') && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
           labels: |
             org.opencontainers.image.title=Doorframe
             org.opencontainers.image.description=Local-first requirements traceability web app
@@ -115,6 +161,7 @@ jobs:
             SOURCE_REPOSITORY=${{ github.server_url }}/${{ github.repository }}
 
       - name: Create GitHub Release
+        if: ${{ steps.version.outputs.release_kind == 'tag' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

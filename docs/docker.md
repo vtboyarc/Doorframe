@@ -14,6 +14,13 @@ Published images use GitHub Container Registry:
 ghcr.io/vtboyarc/doorframe:<version>
 ```
 
+After a PR merges to `main`, the release workflow publishes:
+
+- `ghcr.io/vtboyarc/doorframe:<version>`
+- `ghcr.io/vtboyarc/doorframe:main`
+- `ghcr.io/vtboyarc/doorframe:main-<short-sha>`
+- `ghcr.io/vtboyarc/doorframe:latest` for non-prerelease versions
+
 ## Run Latest Stable
 
 ```bash
@@ -75,5 +82,6 @@ docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/to
 - The image exposes port `3000`.
 - The image has a healthcheck at `/api/health`.
 - OCI labels include source repository, version, license, title, and description.
-- Stable releases get version tags such as `0.1.0`, minor tags such as `0.1`, and `latest`.
+- Main branch publishes get version tags such as `0.1.1`, `main`, `main-<short-sha>`, and `latest` for non-prerelease versions.
+- Tagged stable releases also get minor tags such as `0.1`.
 - Prereleases should not receive the `latest` tag.
