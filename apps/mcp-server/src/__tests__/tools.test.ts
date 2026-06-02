@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { loadProjectDataFromSqlite } from "@doorframe/storage";
+import { loadProjectBaselinesFromSqlite, loadProjectDataFromSqlite } from "@doorframe/storage";
 import {
   findOrphanItemsData,
+  getBaselineDiffSummaryData,
+  getRequirementChangeDetailData,
   getProjectSummaryData,
   getRequirementDetailData,
   getReviewRiskSummaryData,
+  getReviewBriefData,
+  getStaleTraceCandidatesData,
   getTraceLinksForRequirementData,
   getTraceabilityGapsData,
+  listChangedRequirementsData,
   listFindingsData,
   searchRequirementsData
 } from "../tools";
@@ -15,7 +20,8 @@ import { createDemoProjectDb } from "./fixtures";
 function projectDb() {
   const dbPath = createDemoProjectDb();
   return {
-    loadProjectData: () => loadProjectDataFromSqlite(dbPath)
+    loadProjectData: () => loadProjectDataFromSqlite(dbPath),
+    listBaselines: () => loadProjectBaselinesFromSqlite(dbPath)
   };
 }
 
@@ -45,6 +51,21 @@ describe("Doorframe MCP tool data adapters", () => {
     expect(result.requirements).toHaveLength(1);
     expect(result.requirements[0].externalId).toBe("REQ-002");
     expect(result.requirements[0].textExcerpt).toContain("appropriate logging");
+  });
+
+  it("hides raw requirement text in summary mode", () => {
+    const result = searchRequirementsData(
+      projectDb(),
+      {
+        query: "logging",
+        limit: 5
+      },
+      { mode: "summary" }
+    );
+
+    expect(result.requirements).toHaveLength(1);
+    expect(result.requirements[0].textExcerpt).toBeUndefined();
+    expect(result.requirements[0].rawTextHidden).toBe(true);
   });
 
   it("returns requirement details without raw imports", () => {
@@ -125,5 +146,64 @@ describe("Doorframe MCP tool data adapters", () => {
       "testCase:TC-003",
       "workItem:DOOR-3"
     ]);
+  });
+
+  it("returns baseline diff summary", () => {
+    const result = getBaselineDiffSummaryData(projectDb());
+
+    expect(result.baselineA.id).toBe("baseline_old");
+    expect(result.baselineB.id).toBe("baseline_new");
+    expect(result.summary.added).toBe(1);
+    expect(result.summary.deleted).toBe(1);
+    expect(result.summary.changed).toBe(1);
+    expect(result.summary.highConcern).toBe(1);
+  });
+
+  it("lists changed requirements with concern filters", () => {
+    const result = listChangedRequirementsData(projectDb(), {
+      changeType: "changed",
+      concernLevel: "high",
+      limit: 10
+    });
+
+    expect(result.requirements).toHaveLength(1);
+    expect(result.requirements[0]).toMatchObject({
+      changeType: "changed",
+      externalId: "REQ-001",
+      concern: "high"
+    });
+  });
+
+  it("returns requirement change detail with stale trace indicators", () => {
+    const result = getRequirementChangeDetailData(projectDb(), { requirementId: "REQ-001" });
+
+    expect(result.found).toBe(true);
+    if (!result.found) {
+      throw new Error("expected change detail");
+    }
+
+    expect(result.changedFields.map((change) => (change as { field: string }).field)).toContain("text");
+    expect(result.staleTraceIndicators).toEqual(expect.arrayContaining(["numeric-threshold-change"]));
+    expect(result.traceSummary.linkedWorkItems).toHaveLength(1);
+  });
+
+  it("finds stale trace candidates from baseline changes", () => {
+    const result = getStaleTraceCandidatesData(projectDb(), { limit: 10 });
+
+    expect(result.candidates.map((candidate) => candidate.requirement.externalId)).toEqual(
+      expect.arrayContaining(["REQ-001", "REQ-004"])
+    );
+    expect(result.grouped.byConcern.high).toBeGreaterThanOrEqual(1);
+  });
+
+  it("returns structured review brief facts", () => {
+    const result = getReviewBriefData(projectDb(), {
+      reviewType: "test_readiness_review",
+      limit: 5
+    });
+
+    expect(result.briefBoundary).toContain("not an AI-generated final answer");
+    expect(result.changedRequirements.length).toBeGreaterThan(0);
+    expect(result.staleTraceCandidates.length).toBeGreaterThan(0);
   });
 });

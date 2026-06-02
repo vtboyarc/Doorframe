@@ -101,6 +101,14 @@ export function createDemoProjectDb(): string {
       record_count INTEGER NOT NULL,
       errors TEXT
     );
+
+    CREATE TABLE baselines (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      label TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      snapshot_json TEXT NOT NULL
+    );
   `);
 
   const insertProject = db.prepare("INSERT INTO projects VALUES (?, ?, ?, ?)");
@@ -260,6 +268,329 @@ export function createDemoProjectDb(): string {
     3,
     "[]"
   );
+
+  const baseRequirement = {
+    projectId: "project_1",
+    source: "requirements-csv",
+    type: "functional",
+    createdAt: now,
+    updatedAt: now
+  };
+  const oldSnapshot = {
+    requirements: [
+      {
+        ...baseRequirement,
+        id: "req_1",
+        externalId: "REQ-001",
+        title: "Authenticate users",
+        text: "The system shall authenticate users within 5 seconds.",
+        status: "approved",
+        priority: "high",
+        verificationMethod: "test"
+      },
+      {
+        ...baseRequirement,
+        id: "req_2",
+        externalId: "REQ-002",
+        title: "Record audit trail",
+        text: "The system shall provide appropriate logging.",
+        status: "changed",
+        priority: "medium"
+      },
+      {
+        ...baseRequirement,
+        id: "req_4",
+        externalId: "REQ-004",
+        title: "Retired export format",
+        text: "The system shall export legacy reports.",
+        status: "approved",
+        priority: "low",
+        verificationMethod: "test"
+      }
+    ],
+    workItems: [
+      {
+        id: "work_1",
+        projectId: "project_1",
+        externalId: "DOOR-1",
+        title: "Implement authentication",
+        description: "",
+        status: "done",
+        type: "story",
+        assignee: "Ava",
+        source: "jira-csv",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "work_2",
+        projectId: "project_1",
+        externalId: "DOOR-2",
+        title: "Implement export",
+        description: "",
+        status: "closed",
+        type: "story",
+        assignee: "Noah",
+        source: "jira-csv",
+        createdAt: now,
+        updatedAt: now
+      }
+    ],
+    testCases: [
+      {
+        id: "test_1",
+        projectId: "project_1",
+        externalId: "TC-001",
+        name: "auth within 5 seconds",
+        classname: "AuthTest",
+        status: "passed",
+        duration: 0.1,
+        source: "junit-xml",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "test_2",
+        projectId: "project_1",
+        externalId: "TC-002",
+        name: "export fails",
+        classname: "ExportTest",
+        status: "failed",
+        duration: 0.2,
+        failureMessage: "expected legacy report",
+        source: "junit-xml",
+        createdAt: now,
+        updatedAt: now
+      }
+    ],
+    traceLinks: [
+      {
+        id: "trace_1",
+        projectId: "project_1",
+        sourceType: "requirement",
+        sourceId: "req_1",
+        targetType: "workItem",
+        targetId: "work_1",
+        linkType: "implements",
+        confidence: 0.9,
+        source: "jira-csv",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "trace_2",
+        projectId: "project_1",
+        sourceType: "requirement",
+        sourceId: "req_1",
+        targetType: "testCase",
+        targetId: "test_1",
+        linkType: "verifies",
+        confidence: 0.9,
+        source: "junit-xml",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "trace_old_4_work",
+        projectId: "project_1",
+        sourceType: "requirement",
+        sourceId: "req_4",
+        targetType: "workItem",
+        targetId: "work_2",
+        linkType: "implements",
+        confidence: 0.9,
+        source: "jira-csv",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "trace_old_4_test",
+        projectId: "project_1",
+        sourceType: "requirement",
+        sourceId: "req_4",
+        targetType: "testCase",
+        targetId: "test_2",
+        linkType: "verifies",
+        confidence: 0.9,
+        source: "junit-xml",
+        createdAt: now,
+        updatedAt: now
+      }
+    ],
+    findings: []
+  };
+  const currentSnapshot = {
+    requirements: [
+      {
+        ...baseRequirement,
+        id: "req_1",
+        externalId: "REQ-001",
+        title: "Authenticate users",
+        text: "The system shall authenticate users within 2 seconds.",
+        status: "approved",
+        priority: "high",
+        verificationMethod: "test"
+      },
+      {
+        ...baseRequirement,
+        id: "req_2",
+        externalId: "REQ-002",
+        title: "Record audit trail",
+        text: "The system shall provide appropriate logging.",
+        status: "changed",
+        priority: "medium"
+      },
+      {
+        ...baseRequirement,
+        id: "req_3",
+        externalId: "REQ-003",
+        title: "Export reports",
+        text: "The system shall export CSV and shall export JSON.",
+        status: "approved",
+        priority: "medium",
+        verificationMethod: "test"
+      }
+    ],
+    workItems: [
+      {
+        id: "work_1",
+        projectId: "project_1",
+        externalId: "DOOR-1",
+        title: "Implement authentication",
+        description: "",
+        status: "done",
+        type: "story",
+        assignee: "Ava",
+        source: "jira-csv",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "work_2",
+        projectId: "project_1",
+        externalId: "DOOR-2",
+        title: "Implement export",
+        description: "",
+        status: "closed",
+        type: "story",
+        assignee: "Noah",
+        source: "jira-csv",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "work_3",
+        projectId: "project_1",
+        externalId: "DOOR-3",
+        title: "Unlinked cleanup",
+        description: "",
+        status: "open",
+        type: "task",
+        assignee: "Ava",
+        source: "jira-csv",
+        createdAt: now,
+        updatedAt: now
+      }
+    ],
+    testCases: [
+      {
+        id: "test_1",
+        projectId: "project_1",
+        externalId: "TC-001",
+        name: "auth within 5 seconds",
+        classname: "AuthTest",
+        status: "passed",
+        duration: 0.1,
+        source: "junit-xml",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "test_2",
+        projectId: "project_1",
+        externalId: "TC-002",
+        name: "export fails",
+        classname: "ExportTest",
+        status: "failed",
+        duration: 0.2,
+        failureMessage: "expected CSV",
+        source: "junit-xml",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "test_3",
+        projectId: "project_1",
+        externalId: "TC-003",
+        name: "unlinked skipped",
+        classname: "OtherTest",
+        status: "skipped",
+        duration: 0.2,
+        source: "junit-xml",
+        createdAt: now,
+        updatedAt: now
+      }
+    ],
+    traceLinks: [
+      {
+        id: "trace_1",
+        projectId: "project_1",
+        sourceType: "requirement",
+        sourceId: "req_1",
+        targetType: "workItem",
+        targetId: "work_1",
+        linkType: "implements",
+        confidence: 0.9,
+        source: "jira-csv",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "trace_2",
+        projectId: "project_1",
+        sourceType: "requirement",
+        sourceId: "req_1",
+        targetType: "testCase",
+        targetId: "test_1",
+        linkType: "verifies",
+        confidence: 0.9,
+        source: "junit-xml",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "trace_3",
+        projectId: "project_1",
+        sourceType: "requirement",
+        sourceId: "req_3",
+        targetType: "workItem",
+        targetId: "work_2",
+        linkType: "implements",
+        confidence: 0.9,
+        source: "jira-csv",
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: "trace_4",
+        projectId: "project_1",
+        sourceType: "requirement",
+        sourceId: "req_3",
+        targetType: "testCase",
+        targetId: "test_2",
+        linkType: "verifies",
+        confidence: 0.9,
+        source: "junit-xml",
+        createdAt: now,
+        updatedAt: now
+      }
+    ],
+    findings: []
+  };
+
+  const insertBaseline = db.prepare("INSERT INTO baselines VALUES (?, ?, ?, ?, ?)");
+  insertBaseline.run("baseline_old", "project_1", "Baseline A", "2025-12-01T00:00:00.000Z", JSON.stringify(oldSnapshot));
+  insertBaseline.run("baseline_new", "project_1", "Baseline B", "2026-01-01T00:00:00.000Z", JSON.stringify(currentSnapshot));
 
   db.close();
   return dbPath;

@@ -2,23 +2,35 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
 import type { ReadOnlyProjectDatabase } from "@doorframe/storage";
 import { jsonResource } from "./formatters";
+import type { DoorframeMcpOptions } from "./options";
 import {
+  formatBaselineDiffSummaryText,
   formatFindingsText,
   formatProjectSummaryText,
+  formatReviewBriefText,
   formatReviewRiskSummaryText,
+  formatStaleTraceCandidatesText,
+  getBaselineDiffSummaryData,
   getProjectSummaryData,
+  getReviewBriefData,
   getReviewRiskSummaryData,
+  getStaleTraceCandidatesData,
   getTraceabilityGapsData,
   getTraceabilityMatrixData,
   listFindingsData
 } from "./tools";
 
-type ProjectDb = Pick<ReadOnlyProjectDatabase, "loadProjectData">;
+type ProjectDb = Pick<ReadOnlyProjectDatabase, "loadProjectData"> &
+  Partial<Pick<ReadOnlyProjectDatabase, "listBaselines">>;
 
 export const projectSummaryUri = "doorframe://project/summary";
 export const projectFindingsUri = "doorframe://project/findings";
 export const traceabilityMatrixUri = "doorframe://project/traceability-matrix";
 export const reviewPrepUri = "doorframe://project/review-prep";
+export const baselineDiffUri = "doorframe://project/baseline-diff";
+export const staleTracesUri = "doorframe://project/stale-traces";
+export const testReadinessReviewBriefUri = "doorframe://project/review-brief/test-readiness";
+export const requirementsReviewBriefUri = "doorframe://project/review-brief/requirements-review";
 
 export function readProjectSummaryResource(projectDb: ProjectDb): ReadResourceResult {
   const summary = getProjectSummaryData(projectDb);
@@ -60,7 +72,55 @@ export function readReviewPrepResource(projectDb: ProjectDb): ReadResourceResult
   });
 }
 
-export function registerDoorframeResources(server: McpServer, projectDb: ProjectDb): void {
+export function readBaselineDiffResource(
+  projectDb: ProjectDb,
+  options: Partial<DoorframeMcpOptions> = {}
+): ReadResourceResult {
+  const baselineDiff = getBaselineDiffSummaryData(projectDb, {}, options);
+  return jsonResource(baselineDiffUri, {
+    ...baselineDiff,
+    readableText: formatBaselineDiffSummaryText(baselineDiff)
+  });
+}
+
+export function readStaleTracesResource(
+  projectDb: ProjectDb,
+  options: Partial<DoorframeMcpOptions> = {}
+): ReadResourceResult {
+  const staleTraces = getStaleTraceCandidatesData(projectDb, { limit: 25 }, options);
+  return jsonResource(staleTracesUri, {
+    ...staleTraces,
+    readableText: formatStaleTraceCandidatesText(staleTraces)
+  });
+}
+
+export function readTestReadinessReviewBriefResource(
+  projectDb: ProjectDb,
+  options: Partial<DoorframeMcpOptions> = {}
+): ReadResourceResult {
+  const brief = getReviewBriefData(projectDb, { reviewType: "test_readiness_review", limit: 10 }, options);
+  return jsonResource(testReadinessReviewBriefUri, {
+    ...brief,
+    readableText: formatReviewBriefText(brief)
+  });
+}
+
+export function readRequirementsReviewBriefResource(
+  projectDb: ProjectDb,
+  options: Partial<DoorframeMcpOptions> = {}
+): ReadResourceResult {
+  const brief = getReviewBriefData(projectDb, { reviewType: "requirements_review", limit: 10 }, options);
+  return jsonResource(requirementsReviewBriefUri, {
+    ...brief,
+    readableText: formatReviewBriefText(brief)
+  });
+}
+
+export function registerDoorframeResources(
+  server: McpServer,
+  projectDb: ProjectDb,
+  options: Partial<DoorframeMcpOptions> = {}
+): void {
   server.registerResource(
     "doorframe_project_summary",
     projectSummaryUri,
@@ -103,5 +163,49 @@ export function registerDoorframeResources(server: McpServer, projectDb: Project
       mimeType: "application/json"
     },
     () => readReviewPrepResource(projectDb)
+  );
+
+  server.registerResource(
+    "doorframe_baseline_diff",
+    baselineDiffUri,
+    {
+      title: "Doorframe baseline diff",
+      description: "Baseline diff summary with added, deleted, changed, unchanged, and concern counts.",
+      mimeType: "application/json"
+    },
+    () => readBaselineDiffResource(projectDb, options)
+  );
+
+  server.registerResource(
+    "doorframe_stale_traces",
+    staleTracesUri,
+    {
+      title: "Doorframe stale trace candidates",
+      description: "Requirements whose trace links may be stale after baseline changes.",
+      mimeType: "application/json"
+    },
+    () => readStaleTracesResource(projectDb, options)
+  );
+
+  server.registerResource(
+    "doorframe_test_readiness_review_brief",
+    testReadinessReviewBriefUri,
+    {
+      title: "Doorframe test readiness review brief",
+      description: "Structured Doorframe facts for test readiness review preparation.",
+      mimeType: "application/json"
+    },
+    () => readTestReadinessReviewBriefResource(projectDb, options)
+  );
+
+  server.registerResource(
+    "doorframe_requirements_review_brief",
+    requirementsReviewBriefUri,
+    {
+      title: "Doorframe requirements review brief",
+      description: "Structured Doorframe facts for requirements review preparation.",
+      mimeType: "application/json"
+    },
+    () => readRequirementsReviewBriefResource(projectDb, options)
   );
 }

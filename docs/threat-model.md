@@ -10,6 +10,8 @@ Requirements, work items, tests, findings, and reports may contain sensitive pro
 
 Doorframe does not phone home or require accounts, but users can still move reports or databases outside their environment. Treat generated reports as project artifacts.
 
+Uploading a whole requirements export into an AI chat window can overshare data and bypass Doorframe's scoped traceability graph, deterministic checks, baseline history, and report pipeline. Doorframe MCP is intended to return narrower read-only project facts, but those facts may still enter the connected AI client's context.
+
 ## Malicious Imported File Content
 
 Imported CSV, ReqIF, ReqIFZ, and JUnit content is untrusted. Reports must HTML-escape imported values. Import parsers should fail with warnings instead of crashing.
@@ -21,6 +23,10 @@ The report generator escapes imported strings and uses local CSS only. Tests cov
 ## MCP Data Exposure
 
 The MCP server is read-only, but returned data may become part of an AI client's context. Use MCP only with approved data and approved clients.
+
+Doorframe MCP does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.
+
+Use `--mode summary`, `--hide-raw-text`, and `--max-results` where a narrower context is appropriate. If `--audit-log` is enabled, protect the local JSONL log as a project artifact.
 
 ## Arbitrary File Access
 
