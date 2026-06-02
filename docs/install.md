@@ -51,7 +51,7 @@ Global install is useful for running the web app, local scripts, or repeated rep
 ## Run The Web App With Docker
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.3
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.4
 ```
 
 Open `http://localhost:3000`. The mounted Docker volume stores the local SQLite database.
