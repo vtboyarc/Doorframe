@@ -5,7 +5,7 @@ Doorframe is not SaaS-first. The normal workflow runs on a local machine, in Doc
 ## What Local-First Means
 
 - Imported files stay in the local environment running Doorframe.
-- The MVP uses SQLite for local project storage.
+- Doorframe uses SQLite for local project storage.
 - There is no telemetry.
 - There are no external API calls by default.
 - No cloud account is required.

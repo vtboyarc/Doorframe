@@ -132,6 +132,10 @@ function databasePath(): string {
   return path.join(dataDir, "doorframe.sqlite");
 }
 
+export function getDoorframeDatabasePath(): string {
+  return databasePath();
+}
+
 export function getDb(): Db {
   if (!globalForDb.doorframeDb) {
     const db = new Database(databasePath());

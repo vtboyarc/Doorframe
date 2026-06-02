@@ -1,6 +1,6 @@
 # Roadmap
 
-Doorframe's roadmap keeps the MVP local-first and rule-based. AI is optional later and off by default.
+Doorframe's roadmap keeps the product local-first and rule-based. AI is optional later and off by default.
 
 ## Shipped
 
@@ -56,7 +56,7 @@ Later MCP:
 
 Write actions should remain disabled until the read-only MCP server is stable.
 
-Possible future write tools, not for MVP:
+Possible future write tools, not for the current read-only MCP scope:
 
 - create_review_note
 - export_review_brief

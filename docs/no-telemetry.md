@@ -1,6 +1,6 @@
 # No Telemetry
 
-Doorframe does not collect usage analytics in the MVP.
+Doorframe does not collect usage analytics.
 
 - Doorframe does not phone home.
 - Doorframe does not require accounts.

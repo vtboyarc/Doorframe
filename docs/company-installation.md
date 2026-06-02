@@ -1,6 +1,8 @@
 # Company Installation
 
-Doorframe is designed for local or internal use. Companies should be able to mirror npm packages and Docker images, pin versions, scan dependencies, and run Doorframe with approved data only.
+Doorframe is designed for local or internal use. Companies should be able to mirror npm packages and Docker images, pin versions, scan dependencies, and run Doorframe with organization-approved data only.
+
+Companies and restricted environments can use Doorframe by mirroring the npm package or Docker image into an internal registry, scanning it, pinning a version, and running it inside an approved environment. Doorframe can operate without internet access once dependencies/images are available internally. MCP can also run locally/internal, but any connected AI client and model must be separately approved for the project data.
 
 ## Individual Technical Users
 
@@ -28,15 +30,15 @@ npx doorframe analyze \
 Use the Docker image from GHCR, then mirror it internally if required:
 
 ```bash
-docker pull ghcr.io/vtboyarc/doorframe:0.1.4
-docker tag ghcr.io/vtboyarc/doorframe:0.1.4 internal-registry.example.com/tools/doorframe:0.1.4
-docker push internal-registry.example.com/tools/doorframe:0.1.4
+docker pull ghcr.io/vtboyarc/doorframe:0.1.5
+docker tag ghcr.io/vtboyarc/doorframe:0.1.5 internal-registry.example.com/tools/doorframe:0.1.5
+docker push internal-registry.example.com/tools/doorframe:0.1.5
 ```
 
 Run the mirrored image inside the approved environment:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.4
+docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.5
 ```
 
 ## Locked-Down Environments

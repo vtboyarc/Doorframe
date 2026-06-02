@@ -11,6 +11,7 @@ const navItems = [
   ["Trace Graph", "trace-graph"],
   ["Baselines", "baselines"],
   ["Reports", "reports"],
+  ["MCP Setup", "mcp"],
   ["Settings", "settings"],
   ["Audit", "audit"]
 ] as const;

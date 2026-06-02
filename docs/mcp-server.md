@@ -12,6 +12,8 @@ Doorframe MCP exposes a local Doorframe project database to MCP-compatible clien
 
 Doorframe MCP does not include an AI model and does not call OpenAI, Anthropic, or any other AI provider directly. It exposes read-only Doorframe project context to an MCP-compatible client. The connected client is responsible for model access, chat UI, authentication, and AI-provider data handling.
 
+Doorframe MCP is optional. It gives an approved MCP-compatible AI client read-only access to scoped Doorframe project context. Doorframe MCP does not include an AI model, does not call AI providers, and does not change project data.
+
 Doorframe can run without AI. The local web app, CLI, analyzers, and report generator do not require an AI provider. MCP is optional and only useful when connected to an MCP-compatible AI client.
 
 Doorframe MCP is not another chatbot for requirements. Doorframe builds a local traceability graph from requirements exports, work items, and test results. It runs repeatable checks before the review. The optional MCP server lets an approved AI assistant query that graph through narrow, read-only tools instead of asking users to upload entire exports into a chat window.
@@ -57,7 +59,24 @@ Only connect Doorframe MCP to project data if your organization has approved tha
 
 Any information returned by Doorframe MCP may be included in the context of the AI client you connect it to. Do not connect Doorframe MCP to project data unless your organization has approved that use.
 
-## Flow
+## Standard Setup Flow
+
+Doorframe is primarily used as a web app.
+
+1. Run Doorframe with npm, Docker, or Docker Compose.
+2. Open Doorframe in a web browser.
+3. Import or open a Doorframe project.
+4. Go to **MCP Setup**.
+5. Pick the approved AI client.
+6. Pick data mode.
+7. Copy the generated config.
+8. Paste it into the AI client.
+9. Restart or reload the AI client.
+10. Run the MCP health check from Doorframe and ask a starter question.
+
+The MCP Setup page generates the exact command your AI client needs to launch the local Doorframe MCP server.
+
+## How The AI Client Uses MCP
 
 User asks an MCP-compatible AI client:
 
@@ -78,30 +97,55 @@ The AI client uses that returned data to answer the user.
 
 Doorframe MCP itself does not generate the AI answer and does not send data to an AI provider directly.
 
-## Install And Run
+## Run Doorframe
 
-Normal users should run MCP through the `doorframe` package:
+With npm:
+
+```bash
+npx doorframe serve
+```
+
+Open the printed URL, normally `http://localhost:3000`.
+
+With Docker:
+
+```bash
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.5
+```
+
+With Docker Compose from this repository:
+
+```bash
+docker compose up
+```
+
+Then open `http://localhost:3000`.
+
+## Advanced Local MCP Command
+
+Normal users should copy the generated command from the MCP Setup page. Advanced users can run the same command manually:
 
 ```bash
 npx doorframe mcp --project ./doorframe.sqlite --mode standard --max-results 25
 ```
 
-From the repo:
-
-```bash
-npm install
-npm run --silent doorframe -- mcp --project ./.doorframe/doorframe.sqlite --mode standard --max-results 25
-```
-
-For a global install:
-
-```bash
-doorframe mcp --project ./doorframe.sqlite --mode standard --max-results 25
-```
-
 The server uses stdio transport only. stdout is reserved for MCP protocol messages; diagnostics and startup errors go to stderr.
 
 The project path must point to an existing Doorframe SQLite database. In the local web app, Doorframe stores its database under the configured `DOORFRAME_DATA_DIR` or under `.doorframe/doorframe.sqlite` relative to the web app process working directory.
+
+## Using MCP When Doorframe Is Running In Docker
+
+Doorframe web app can run in Docker.
+
+Local stdio MCP usually requires the AI client to launch a local process. A browser page alone cannot make a desktop AI client launch MCP.
+
+If Doorframe is running only inside Docker, the MCP server path and database path must be available to the AI client. A container path such as `/data/doorframe.sqlite` is not usually readable by a desktop AI client on the host.
+
+For individual users, the easiest path may be running the Doorframe MCP server locally alongside the web app.
+
+For teams, the future path is remote/internal MCP over HTTP with authentication and organization approval controls. That is not part of the first local stdio MCP setup.
+
+Do not overpromise Docker-based MCP unless it has been implemented and tested in the target environment.
 
 ## Generic MCP Client Configuration
 
@@ -118,7 +162,7 @@ Exact configuration format varies by client. A generic MCP server entry looks li
 }
 ```
 
-Use `npx doorframe` as the command if the client supports launching through `npx`. Avoid claiming support for a specific client until you have verified that client's current MCP configuration format.
+Use `npx doorframe` as the command if the client supports launching through `npx`. For client-specific setup, use the generated config from the MCP Setup page or see [MCP client setup](./mcp-clients/README.md).
 
 ## Data Minimization Flags
 
@@ -139,6 +183,12 @@ npx doorframe mcp --project ./doorframe.sqlite --audit-log ./doorframe-mcp-audit
 ```
 
 The audit log records timestamp, project ID/name when available, tool name, sanitized high-level parameters, result count when easy to infer, mode, success/failure, and duration. It does not log full requirement text, full work item descriptions, full test failure messages, raw imported file contents, environment variables, or secrets.
+
+## Health Check
+
+The MCP Setup page includes a health check for the current project. It verifies that the project exists, the database path is readable, requirements exist, findings or analyzers are available, the MCP data adapters work, summary mode hides raw requirement text, baseline data is available when baseline tools are relevant, and any configured audit log path is writable.
+
+If something fails, use the fix shown on the page or see [MCP troubleshooting](./mcp-troubleshooting.md).
 
 ## Resources
 

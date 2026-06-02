@@ -13,7 +13,7 @@ Publishing runs from the `main` branch after a PR merge. Because npm package ver
 - `doorframe analyze`
 - `doorframe diff`
 - `doorframe report` alias for report generation
-- `doorframe mcp` read-only MCP launcher
+- `doorframe mcp` optional read-only MCP server
 - Docker image for the local web app
 - Offline HTML traceability report
 - Baseline diff report
@@ -39,14 +39,14 @@ Publishing runs from the `main` branch after a PR merge. Because npm package ver
 10. Run an npx smoke test:
 
    ```bash
-   npx doorframe@0.1.4 demo
-   npx doorframe@0.1.4 serve
+   npx doorframe@0.1.5 demo
+   npx doorframe@0.1.5 serve
    ```
 
 11. Run a Docker smoke test:
 
     ```bash
-    docker run --rm -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.4
+    docker run --rm -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.5
     ```
 
 ## Version Bumping

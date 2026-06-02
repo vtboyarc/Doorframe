@@ -1,7 +1,7 @@
 {
   "name": "doorframe",
-  "version": "0.1.4",
-  "description": "Local-first Doorframe web app launcher, traceability report generator, demo runner, and read-only MCP launcher.",
+  "version": "0.1.5",
+  "description": "Turn requirements exports, work items, and test results into local traceability reports with optional read-only MCP support.",
   "license": "MIT",
   "repository": {
     "type": "git",

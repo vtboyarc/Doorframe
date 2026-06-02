@@ -38,7 +38,7 @@ Doorframe MCP must not expose a generic SQL query tool. Tools should return boun
 
 ## Dependency Risk
 
-Dependencies should be reviewed before release. Run `npm audit` and decide whether findings affect the local MVP threat model.
+Dependencies should be reviewed before release. Run `npm audit` and decide whether findings affect Doorframe's local-first threat model.
 
 ## Docker Deployment Risk
 

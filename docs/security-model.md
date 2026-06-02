@@ -7,7 +7,7 @@ Doorframe is a local-first traceability review tool. The default workflow is imp
 - Project data is stored in local SQLite storage for the web app.
 - CLI analysis reads local files and writes local reports.
 - Docker deployment stores data in the mounted local Docker volume.
-- No account is required for the MVP.
+- No account is required to run Doorframe locally.
 
 ## External Calls
 
@@ -17,7 +17,7 @@ Connector commands may call Jira, GitHub, GitLab, or Jenkins only when the user 
 
 ## Telemetry
 
-Doorframe has no telemetry in the MVP. See `docs/no-telemetry.md`.
+Doorframe has no telemetry. See `docs/no-telemetry.md`.
 
 ## MCP
 
@@ -34,3 +34,7 @@ MCP supports `--mode summary`, `--mode standard`, `--mode detailed`, `--max-resu
 ## Docker
 
 Docker is a local deployment convenience. Treat the mounted data directory as project data. Protect it with your normal workstation or internal environment controls.
+
+## Approval Boundary
+
+Doorframe does not claim to be DoD-approved, FedRAMP-approved, CMMC-compliant, NIST-compliant, IL4/IL5 approved, or approved for classified or CUI data. It is a local-first traceability and review tool. Approval decisions belong to your organization.
