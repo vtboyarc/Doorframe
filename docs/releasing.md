@@ -2,7 +2,7 @@
 
 Doorframe uses semantic versioning. The first public preview is `v0.1.0`.
 
-Do not publish a release until the package contents, Docker image, release notes, and GitHub Actions workflow have been reviewed.
+Publishing runs from the `main` branch after a PR merge. Because npm package versions are immutable, any PR intended to publish a new npm package must bump `apps/cli/package.json` to an unpublished version before it merges.
 
 ## v0.1.0 Scope
 
@@ -21,28 +21,29 @@ Do not publish a release until the package contents, Docker image, release notes
 
 ## Release Process
 
-1. Update versions in `package.json`, `apps/cli/package.json`, app packages, and shared packages if needed.
+1. Update `apps/cli/package.json` to the next unpublished semantic version. Keep `package.json`, app packages, and shared packages aligned when their versions are release-significant.
 2. Update `CHANGELOG.md`.
 3. Run the release checklist in `docs/release-checklist.md`.
-4. Create and push the version tag:
+4. Merge the PR to `main`.
+5. GitHub Actions runs checks, builds packages, runs `npm pack --dry-run`, publishes the `doorframe` npm package with the configured npm auth path when the version is unpublished, and pushes the Docker image to GHCR.
+6. Verify the npm package.
+7. Verify the Docker image in GHCR.
+8. Optional: create and push the version tag to create the GitHub Release and uploaded release artifacts:
 
    ```bash
    git tag v0.1.0
    git push origin v0.1.0
    ```
 
-5. GitHub Actions runs checks, builds packages, builds the Docker image, creates release artifacts, and creates the GitHub Release.
-6. Verify the npm package if publishing was enabled.
-7. Verify the Docker image in GHCR.
-8. Verify GitHub Release notes and uploaded assets.
-9. Run an npx smoke test:
+9. Verify GitHub Release notes and uploaded assets.
+10. Run an npx smoke test:
 
    ```bash
-npx doorframe@0.1.0 demo
-npx doorframe@0.1.0 serve
-```
+   npx doorframe@0.1.0 demo
+   npx doorframe@0.1.0 serve
+   ```
 
-10. Run a Docker smoke test:
+11. Run a Docker smoke test:
 
     ```bash
     docker run --rm -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.0
@@ -60,28 +61,34 @@ For now, version bumping is manual. Keep root, command, app, and package version
 
 ## Release Workflow
 
-`.github/workflows/release.yml` runs on tags matching:
+`.github/workflows/release.yml` runs on:
 
 ```yaml
-v*.*.*
+push:
+  branches:
+    - main
+  tags:
+    - "v*.*.*"
+workflow_dispatch:
 ```
 
-The workflow:
+On `main`, the workflow:
 
 1. Checks out the repo.
 2. Sets up Node.
-3. Installs dependencies.
-4. Runs typecheck.
-5. Runs lint.
-6. Runs tests.
-7. Builds the npm package.
-8. Runs `npm pack --dry-run`.
-9. Builds the web app.
-10. Generates release artifacts.
-11. Publishes npm only when `NPM_PUBLISH_ENABLED=true`.
-12. Builds and pushes the Docker image to GHCR.
-13. Creates a GitHub Release.
-14. Uploads generated HTML reports, checksums, and the npm tarball.
+3. Resolves the publish version from `apps/cli/package.json`.
+4. Checks whether that npm version is unpublished.
+5. Installs dependencies.
+6. Runs typecheck.
+7. Runs lint.
+8. Runs tests.
+9. Builds the npm package.
+10. Builds the web app.
+11. Runs `npm pack --dry-run`.
+12. Publishes npm through the `NPM_TOKEN` repository secret when present, otherwise through Trusted Publishing. If the npm version already exists from a different commit on `main`, npm publishing is skipped because npm versions are immutable.
+13. Builds and pushes the Docker image to GHCR with `main`, `main-<sha>`, and `latest` tags. It also pushes `<version>` when that npm version is unpublished or already belongs to the same commit. Prerelease versions do not move `latest`.
+
+On a `v*.*.*` tag, the workflow also validates that the tag matches `apps/cli/package.json`, generates release artifacts, creates the GitHub Release, and uploads generated HTML reports, checksums, and the npm tarball. If the npm version was already published from the same commit, the tag run skips npm publishing and continues.
 
 ## GitHub Release Contents
 
@@ -110,6 +117,5 @@ Do not upload local SQLite databases. Prefer sample CSV/XML files and generated 
 
 - Create or verify npm access for the `doorframe` package.
 - Publish or reserve `doorframe`.
-- Configure npm Trusted Publishing for `.github/workflows/release.yml`.
-- Set GitHub repository variable `NPM_PUBLISH_ENABLED=true` only after the workflow is reviewed.
+- Configure npm Trusted Publishing for `.github/workflows/release.yml`, or add a temporary GitHub Actions repository secret named `NPM_TOKEN`.
 - Confirm GHCR package visibility and permissions after the first image push.

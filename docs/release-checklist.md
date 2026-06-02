@@ -1,6 +1,6 @@
 # Release Checklist
 
-Use this before tagging `v0.1.0`.
+Use this before merging a PR that should publish a new Doorframe npm package and Docker image. Run the GitHub Release checks before tagging `v0.1.0`.
 
 - Install dependencies: `npm install`
 - Run typecheck: `npm run typecheck`
@@ -14,6 +14,7 @@ Use this before tagging `v0.1.0`.
   `npm run doorframe -- diff --baseline-a ./examples/falcon-telemetry-gateway/sample-requirements-baseline-a.csv --baseline-b ./examples/falcon-telemetry-gateway/sample-requirements-baseline-b.csv --out ./doorframe-baseline-diff.html`
 - Run binary smoke test: `npm run test:bin -w apps/cli`
 - Review npm package dry run: `npm pack --dry-run -w apps/cli`
+- Verify `apps/cli/package.json` has an unpublished npm version.
 - Install the packed tarball in a clean temp project and run `npx doorframe serve`.
 - Verify `http://127.0.0.1:3000/api/health` returns OK.
 - Run web app: `npm run dev`
@@ -34,7 +35,9 @@ Use this before tagging `v0.1.0`.
 ### npm
 
 - Package name is `doorframe`.
-- Version matches the release tag.
+- Version is unpublished on npm before merging to `main`.
+- Version matches the release tag when creating a GitHub Release.
+- npm publishing auth is configured through Trusted Publishing or the GitHub Actions repository secret `NPM_TOKEN`.
 - `bin.doorframe` points to the built command entrypoint.
 - `doorframe --help` works from the built package.
 - `doorframe demo --help` works from the built package.
@@ -50,7 +53,9 @@ Use this before tagging `v0.1.0`.
 - Image builds.
 - Image runs.
 - Healthcheck passes if practical.
-- Image is tagged with `0.1.0`, `0.1`, and `latest` for stable releases.
+- Main branch images are tagged with `main`, `main-<short-sha>`, and `latest` for non-prerelease versions.
+- Main branch images are tagged with `<version>` when the npm version is unpublished or already belongs to the same commit.
+- Tagged stable releases are also tagged with the minor version such as `0.1`.
 - Image is pushed to GHCR.
 - No secrets or `.env` files are included.
 - Runtime uses `/data` for local storage.
@@ -64,4 +69,4 @@ Use this before tagging `v0.1.0`.
 - Release notes include security/privacy warning.
 - `checksums.txt` is included if assets are uploaded.
 
-- Tag `v0.1.0`.
+- Optional after the main publish succeeds: tag `v0.1.0` to create the GitHub Release.
