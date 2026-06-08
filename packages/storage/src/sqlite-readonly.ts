@@ -17,7 +17,11 @@ import {
 
 type Db = Database.Database;
 
-export type ReadOnlyProjectLoadErrorCode = "MISSING_PROJECT_PATH" | "BAD_DATABASE" | "EMPTY_PROJECT";
+export type ReadOnlyProjectLoadErrorCode =
+  | "MISSING_PROJECT_PATH"
+  | "BAD_DATABASE"
+  | "EMPTY_PROJECT"
+  | "PROJECT_NOT_FOUND";
 
 export class ReadOnlyProjectLoadError extends Error {
   constructor(
@@ -31,6 +35,7 @@ export class ReadOnlyProjectLoadError extends Error {
 
 export interface ReadOnlyProjectDatabase {
   readonly path: string;
+  readonly projectId?: string;
   loadProjectData(): ProjectData;
   listBaselines(): Baseline[];
 }
@@ -294,23 +299,42 @@ function hasTable(db: Db, tableName: string): boolean {
   return Boolean(row);
 }
 
-export function loadProjectDataFromSqlite(projectPath: string): ProjectData {
+function getProjectRow(db: Db, projectId: string | undefined): ProjectRow | undefined {
+  const selectedProjectId = projectId?.trim();
+  if (selectedProjectId) {
+    return db.prepare("SELECT * FROM projects WHERE id = ?").get(selectedProjectId) as ProjectRow | undefined;
+  }
+
+  return db.prepare("SELECT * FROM projects ORDER BY updated_at DESC LIMIT 1").get() as ProjectRow | undefined;
+}
+
+function requireProjectRow(db: Db, projectId: string | undefined): ProjectRow {
+  const selectedProjectId = projectId?.trim();
+  const projectRow = getProjectRow(db, projectId);
+
+  if (projectRow) {
+    return projectRow;
+  }
+
+  if (selectedProjectId) {
+    throw new ReadOnlyProjectLoadError(
+      "PROJECT_NOT_FOUND",
+      `Doorframe project was not found in the database: ${selectedProjectId}`
+    );
+  }
+
+  throw new ReadOnlyProjectLoadError(
+    "EMPTY_PROJECT",
+    "The Doorframe project database appears empty. Create or import a project before starting Doorframe MCP."
+  );
+}
+
+export function loadProjectDataFromSqlite(projectPath: string, projectId?: string): ProjectData {
   const resolvedPath = validateProjectPath(projectPath);
   const db = openReadOnlyDb(resolvedPath);
 
   try {
-    const projectRow = db
-      .prepare("SELECT * FROM projects ORDER BY updated_at DESC LIMIT 1")
-      .get() as ProjectRow | undefined;
-
-    if (!projectRow) {
-      throw new ReadOnlyProjectLoadError(
-        "EMPTY_PROJECT",
-        "The Doorframe project database appears empty. Create or import a project before starting Doorframe MCP."
-      );
-    }
-
-    const project = projectFromRow(projectRow);
+    const project = projectFromRow(requireProjectRow(db, projectId));
     const requirements = allByProject<RequirementRow>(db, "requirements", project.id, "external_id").map(
       requirementFromRow
     );
@@ -345,14 +369,20 @@ export function loadProjectDataFromSqlite(projectPath: string): ProjectData {
   }
 }
 
-export function loadProjectBaselinesFromSqlite(projectPath: string): Baseline[] {
+export function loadProjectBaselinesFromSqlite(projectPath: string, projectId?: string): Baseline[] {
   const resolvedPath = validateProjectPath(projectPath);
+  const selectedProjectId = projectId?.trim();
   const db = openReadOnlyDb(resolvedPath);
 
   try {
-    const projectRow = db
-      .prepare("SELECT * FROM projects ORDER BY updated_at DESC LIMIT 1")
-      .get() as ProjectRow | undefined;
+    const projectRow = getProjectRow(db, selectedProjectId);
+
+    if (!projectRow && selectedProjectId) {
+      throw new ReadOnlyProjectLoadError(
+        "PROJECT_NOT_FOUND",
+        `Doorframe project was not found in the database: ${selectedProjectId}`
+      );
+    }
 
     if (!projectRow || !hasTable(db, "baselines")) {
       return [];
@@ -372,16 +402,18 @@ export function loadProjectBaselinesFromSqlite(projectPath: string): Baseline[] 
   }
 }
 
-export function openReadOnlyProjectDatabase(projectPath: string): ReadOnlyProjectDatabase {
+export function openReadOnlyProjectDatabase(projectPath: string, projectId?: string): ReadOnlyProjectDatabase {
   const resolvedPath = validateProjectPath(projectPath);
+  const selectedProjectId = projectId?.trim() || undefined;
 
   return {
     path: resolvedPath,
+    projectId: selectedProjectId,
     loadProjectData() {
-      return loadProjectDataFromSqlite(resolvedPath);
+      return loadProjectDataFromSqlite(resolvedPath, selectedProjectId);
     },
     listBaselines() {
-      return loadProjectBaselinesFromSqlite(resolvedPath);
+      return loadProjectBaselinesFromSqlite(resolvedPath, selectedProjectId);
     }
   };
 }

@@ -62,13 +62,14 @@ export function McpSetupPanel({
     () => ({
       clientId,
       projectPath,
+      projectId,
       mode,
       maxResults,
       hideRawText,
       auditLogEnabled,
       auditLogPath
     }),
-    [auditLogEnabled, auditLogPath, clientId, hideRawText, maxResults, mode, projectPath]
+    [auditLogEnabled, auditLogPath, clientId, hideRawText, maxResults, mode, projectId, projectPath]
   );
   const generated = useMemo(() => generateMcpConfig(settings), [settings]);
   const selectedClient = mcpClientOptions.find((client) => client.id === clientId) ?? mcpClientOptions[0];

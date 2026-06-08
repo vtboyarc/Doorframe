@@ -45,6 +45,7 @@ export default async function McpSetupPage({
   const initialSettings: McpSetupSettings = {
     clientId: parseClientId(firstParam(resolvedSearchParams, "client")),
     projectPath,
+    projectId,
     mode: parseMode(firstParam(resolvedSearchParams, "mode")),
     maxResults: parseMaxResults(firstParam(resolvedSearchParams, "maxResults")),
     hideRawText: firstParam(resolvedSearchParams, "hideRawText") === "true",

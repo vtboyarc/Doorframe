@@ -31,7 +31,7 @@ RUN npm run build:web
 FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
-ARG VERSION=0.1.5
+ARG VERSION=0.1.6
 ARG SOURCE_REPOSITORY=https://github.com/vtboyarc/Doorframe
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

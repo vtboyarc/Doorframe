@@ -1,6 +1,12 @@
 # Changelog
 
-## v0.1.5 - Draft
+## v0.1.6 - Draft
+
+- Keep generated MCP connections scoped to the project selected in the web app.
+- Resolve relative `doorframe serve --data-dir` paths before launching the packaged web server.
+- Preserve the MCP audit-log filename in CLI help output.
+
+## v0.1.5
 
 - Add a browser-first MCP Setup page with generated client configs, data-minimization controls, health checks, starter questions, and setup docs.
 - Clarify Docker and local stdio MCP limitations.

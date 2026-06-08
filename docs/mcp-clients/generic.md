@@ -26,6 +26,8 @@ Example shape:
         "mcp",
         "--project",
         "/absolute/path/to/doorframe.sqlite",
+        "--project-id",
+        "project_123",
         "--mode",
         "standard",
         "--max-results",
@@ -36,6 +38,6 @@ Example shape:
 }
 ```
 
-Use the MCP Setup page instead of hand-building this when possible. It includes the current project path, mode, result cap, hide-raw-text flag, and optional audit log flag.
+Use the MCP Setup page instead of hand-building this when possible. It includes the current project path and project ID, mode, result cap, hide-raw-text flag, and optional audit log flag.
 
 Doorframe MCP is local stdio in this release. The AI client must be able to launch the local `npx doorframe mcp ...` process.

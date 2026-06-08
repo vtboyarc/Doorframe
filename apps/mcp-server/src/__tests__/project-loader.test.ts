@@ -65,4 +65,42 @@ describe("Doorframe MCP project loader", () => {
     expect(data.requirements.map((requirement) => requirement.externalId)).toEqual(["REQ-001", "REQ-002", "REQ-003"]);
     expect(data.findings).toHaveLength(4);
   });
+
+  it("loads the explicitly selected project from a multi-project database", () => {
+    const dbPath = createDemoProjectDb();
+    const db = new Database(dbPath);
+    db.prepare("INSERT INTO projects VALUES (?, ?, ?, ?)").run(
+      "project_2",
+      "Newer Project",
+      "2026-02-01T00:00:00.000Z",
+      "2026-02-01T00:00:00.000Z"
+    );
+    db.close();
+
+    const newestProjectDb = loadProjectDb(dbPath);
+    const selectedProjectDb = loadProjectDb(dbPath, "project_1");
+    const newestProject = newestProjectDb.loadProjectData();
+    const selectedProject = selectedProjectDb.loadProjectData();
+
+    expect(newestProject.project.name).toBe("Newer Project");
+    expect(newestProjectDb.listBaselines()).toHaveLength(0);
+    expect(selectedProject.project.name).toBe("Demo Doorframe Project");
+    expect(selectedProject.requirements).toHaveLength(3);
+    expect(selectedProjectDb.listBaselines()).toHaveLength(2);
+  });
+
+  it("fails clearly when the selected project does not exist", () => {
+    const dbPath = createDemoProjectDb();
+
+    try {
+      loadProjectDb(dbPath, "project_missing");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ReadOnlyProjectLoadError);
+      expect((error as ReadOnlyProjectLoadError).code).toBe("PROJECT_NOT_FOUND");
+      expect((error as Error).message).toContain("project_missing");
+      return;
+    }
+
+    throw new Error("expected missing selected project error");
+  });
 });

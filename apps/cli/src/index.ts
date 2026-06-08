@@ -48,6 +48,7 @@ import {
 import { loadProjectDb, usageText as mcpUsageText } from "../../mcp-server/src/project-loader";
 import { normalizeMcpMode } from "../../mcp-server/src/options";
 import { runStdioServer } from "../../mcp-server/src/server";
+import { resolveDoorframeDataDir } from "./paths";
 
 type ReportFormat = "html" | "md" | "json" | "csv";
 
@@ -66,7 +67,7 @@ Usage:
   doorframe report --requirements req.csv [--jira jira.csv] [--junit tests.xml] [--format html|md|json|csv] [--out report.ext]
   doorframe diff --baseline-a req-a.csv --baseline-b req-b.csv [--jira jira.csv] [--junit tests.xml] [--out diff.html]
   doorframe diff --base baseline-a.json --against baseline-b.json
-  doorframe mcp --project ./doorframe.sqlite [--mode summary|standard|detailed] [--max-results 25] [--hide-raw-text] [--audit-log ./doorframe-mcp-audit.jsonl]
+  doorframe mcp --project ./doorframe.sqlite [--project-id project_123] [--mode summary|standard|detailed] [--max-results 25] [--hide-raw-text] [--audit-log ./doorframe-mcp-audit.jsonl]
   doorframe import-jira --requirements req.csv [--jql "project=FG"] [--format ...] [--out ...]
   doorframe import-github --requirements req.csv [--junit-xml file.xml] [--owner o --repo r] [...]
   doorframe import-gitlab --requirements req.csv [--project-id N --job-id N] [...]
@@ -506,7 +507,7 @@ async function serve(args: string[]): Promise<void> {
   const serverPath = await resolveWebServer();
   const port = options.port ?? process.env.PORT ?? "3000";
   const host = options.host ?? process.env.HOSTNAME ?? "127.0.0.1";
-  const dataDir = options["data-dir"] ?? process.env.DOORFRAME_DATA_DIR ?? path.resolve(process.cwd(), ".doorframe");
+  const dataDir = resolveDoorframeDataDir(options["data-dir"] ?? process.env.DOORFRAME_DATA_DIR);
   const displayHost = host === "0.0.0.0" ? "localhost" : host;
 
   console.log(`Starting Doorframe web app at http://${displayHost}:${port}`);
@@ -610,12 +611,12 @@ async function importConnector(kind: "jira" | "github" | "gitlab" | "jenkins", a
 
 async function runMcp(args: string[]): Promise<void> {
   if (isHelp(args)) {
-    console.error(mcpUsageText.replaceAll("doorframe-mcp", "doorframe mcp"));
+    console.error(mcpUsageText.replace("doorframe-mcp --project", "doorframe mcp --project"));
     return;
   }
 
   const options = parseOptions(args);
-  const projectDb = loadProjectDb(options.project);
+  const projectDb = loadProjectDb(options.project, options["project-id"]);
   await runStdioServer(projectDb, {
     mode: normalizeMcpMode(options.mode),
     maxResults: options["max-results"] ? Number(options["max-results"]) : undefined,

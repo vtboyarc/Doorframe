@@ -4,6 +4,7 @@ import { dockerMcpLimitationText, generateMcpConfig, type McpSetupSettings } fro
 const baseSettings: McpSetupSettings = {
   clientId: "generic",
   projectPath: "/Users/alice/.doorframe/doorframe.sqlite",
+  projectId: "project_alpha",
   mode: "standard",
   maxResults: 25,
   hideRawText: false,
@@ -24,6 +25,8 @@ describe("MCP setup config generation", () => {
       "mcp",
       "--project",
       "/Users/alice/.doorframe/doorframe.sqlite",
+      "--project-id",
+      "project_alpha",
       "--mode",
       "standard",
       "--max-results",

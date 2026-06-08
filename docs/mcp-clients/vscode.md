@@ -27,6 +27,8 @@ Example shape:
         "mcp",
         "--project",
         "/absolute/path/to/doorframe.sqlite",
+        "--project-id",
+        "project_123",
         "--mode",
         "standard",
         "--max-results",

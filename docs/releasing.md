@@ -39,14 +39,14 @@ Publishing runs from the `main` branch after a PR merge. Because npm package ver
 10. Run an npx smoke test:
 
    ```bash
-   npx doorframe@0.1.5 demo
-   npx doorframe@0.1.5 serve
+   npx doorframe@0.1.6 demo
+   npx doorframe@0.1.6 serve
    ```
 
 11. Run a Docker smoke test:
 
     ```bash
-    docker run --rm -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.5
+    docker run --rm -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.6
     ```
 
 ## Version Bumping

@@ -51,5 +51,7 @@ describe("doorframe binary", () => {
 
     expect(stderr).toContain("Doorframe MCP server");
     expect(stderr).toContain("doorframe mcp --project");
+    expect(stderr).toContain("doorframe-mcp-audit.jsonl");
+    expect(stderr).not.toContain("doorframe mcp-audit.jsonl");
   });
 });

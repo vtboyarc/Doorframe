@@ -6,6 +6,7 @@ import { normalizeMcpMode, type DoorframeMcpOptions } from "./options";
 
 interface CliArgs {
   project?: string;
+  projectId?: string;
   help?: boolean;
   mode?: DoorframeMcpOptions["mode"];
   maxResults?: number;
@@ -26,6 +27,11 @@ function parseArgs(args: string[]): CliArgs {
 
     if (arg === "--project") {
       parsed.project = args[index + 1];
+      index += 1;
+    }
+
+    if (arg === "--project-id") {
+      parsed.projectId = args[index + 1];
       index += 1;
     }
 
@@ -60,7 +66,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const projectDb = loadProjectDb(args.project);
+  const projectDb = loadProjectDb(args.project, args.projectId);
   await runStdioServer(projectDb, {
     mode: args.mode,
     maxResults: args.maxResults,
