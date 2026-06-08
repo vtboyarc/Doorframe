@@ -7,6 +7,7 @@ Doorframe MCP supports result minimization so a connected AI client can receive 
 ```bash
 npx doorframe mcp \
   --project ./doorframe.sqlite \
+  --project-id project_123 \
   --mode standard \
   --max-results 25 \
   --hide-raw-text

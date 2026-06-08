@@ -110,7 +110,7 @@ Open the printed URL, normally `http://localhost:3000`.
 With Docker:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.5
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.6
 ```
 
 With Docker Compose from this repository:
@@ -126,12 +126,16 @@ Then open `http://localhost:3000`.
 Normal users should copy the generated command from the MCP Setup page. Advanced users can run the same command manually:
 
 ```bash
-npx doorframe mcp --project ./doorframe.sqlite --mode standard --max-results 25
+npx doorframe mcp \
+  --project /absolute/path/to/doorframe.sqlite \
+  --project-id project_123 \
+  --mode standard \
+  --max-results 25
 ```
 
 The server uses stdio transport only. stdout is reserved for MCP protocol messages; diagnostics and startup errors go to stderr.
 
-The project path must point to an existing Doorframe SQLite database. In the local web app, Doorframe stores its database under the configured `DOORFRAME_DATA_DIR` or under `.doorframe/doorframe.sqlite` relative to the web app process working directory.
+The project path must point to an existing Doorframe SQLite database. Use `--project-id` to select the intended project when that database contains more than one project. The MCP Setup page supplies both values. In the local web app, Doorframe stores its database under the configured `DOORFRAME_DATA_DIR` or under `.doorframe/doorframe.sqlite`.
 
 ## Using MCP When Doorframe Is Running In Docker
 
@@ -156,7 +160,7 @@ Exact configuration format varies by client. A generic MCP server entry looks li
   "mcpServers": {
     "doorframe": {
       "command": "doorframe",
-      "args": ["mcp", "--project", "/absolute/path/to/doorframe.sqlite", "--mode", "standard", "--max-results", "25"]
+      "args": ["mcp", "--project", "/absolute/path/to/doorframe.sqlite", "--project-id", "project_123", "--mode", "standard", "--max-results", "25"]
     }
   }
 }
@@ -179,7 +183,7 @@ Data minimization applies to `search_requirements`, `get_requirement_detail`, `l
 MCP audit logging is off by default. To enable a local JSONL log:
 
 ```bash
-npx doorframe mcp --project ./doorframe.sqlite --audit-log ./doorframe-mcp-audit.jsonl
+npx doorframe mcp --project ./doorframe.sqlite --project-id project_123 --audit-log ./doorframe-mcp-audit.jsonl
 ```
 
 The audit log records timestamp, project ID/name when available, tool name, sanitized high-level parameters, result count when easy to infer, mode, success/failure, and duration. It does not log full requirement text, full work item descriptions, full test failure messages, raw imported file contents, environment variables, or secrets.

@@ -19,6 +19,7 @@ export interface McpClientOption {
 export interface McpSetupSettings {
   clientId: McpClientId;
   projectPath: string;
+  projectId: string;
   mode: McpDataMode;
   maxResults: number;
   hideRawText: boolean;
@@ -134,6 +135,7 @@ export const starterQuestions = [
 export function normalizeMcpSettings(settings: McpSetupSettings): McpSetupSettings {
   return {
     ...settings,
+    projectId: settings.projectId.trim(),
     maxResults: Math.max(1, Math.min(Math.floor(settings.maxResults || 25), 500)),
     auditLogPath: settings.auditLogEnabled ? settings.auditLogPath?.trim() : undefined
   };
@@ -147,6 +149,8 @@ export function buildMcpCommand(settings: McpSetupSettings): { command: string; 
     "mcp",
     "--project",
     normalized.projectPath,
+    "--project-id",
+    normalized.projectId,
     "--mode",
     normalized.mode,
     "--max-results",

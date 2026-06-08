@@ -18,6 +18,7 @@ Example shape:
 ```bash
 claude mcp add --transport stdio doorframe -- npx -y doorframe mcp \
   --project /absolute/path/to/doorframe.sqlite \
+  --project-id project_123 \
   --mode standard \
   --max-results 25
 ```

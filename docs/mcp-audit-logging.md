@@ -5,6 +5,7 @@ Doorframe MCP can write an optional local JSONL audit log for MCP tool calls.
 ```bash
 npx doorframe mcp \
   --project ./doorframe.sqlite \
+  --project-id project_123 \
   --audit-log ./doorframe-mcp-audit.jsonl
 ```
 

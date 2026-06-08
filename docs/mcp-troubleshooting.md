@@ -26,7 +26,7 @@ Fix:
 Run the generated command manually in a terminal:
 
 ```bash
-npx -y doorframe mcp --project /absolute/path/to/doorframe.sqlite --mode standard --max-results 25
+npx -y doorframe mcp --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25
 ```
 
 Common fixes:
@@ -34,6 +34,7 @@ Common fixes:
 - Install Node.js 20 or newer.
 - Confirm `npx` is available.
 - Use an absolute project path.
+- Confirm `--project-id` matches the project shown on the MCP Setup page.
 - Confirm the SQLite file exists and is readable.
 - Check the client log for stderr output.
 
@@ -57,6 +58,10 @@ If `DOORFRAME_DATA_DIR` is not set, it stores data under:
 
 Use the absolute path shown on the MCP Setup page.
 
+## MCP Opens The Wrong Project
+
+A Doorframe SQLite database can contain multiple projects. Use the generated `--project-id` value to select the project shown on the MCP Setup page. Without `--project-id`, MCP falls back to the most recently updated project for backward compatibility.
+
 ## AI Client Cannot Launch The MCP Server Process
 
 Local stdio MCP requires the AI client to launch a local process. A browser page cannot make a desktop AI client launch MCP by itself.
@@ -73,6 +78,7 @@ Likely causes:
 
 - The project has no imported requirements.
 - The wrong database path was configured.
+- The project ID is missing or points to another project in the same database.
 - Doorframe is pointed at a different local data directory.
 - Baseline tools are being used before two baselines exist.
 
