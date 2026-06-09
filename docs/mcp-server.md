@@ -110,7 +110,7 @@ Open the printed URL, normally `http://localhost:3000`.
 With Docker:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.6
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.7
 ```
 
 With Docker Compose from this repository:

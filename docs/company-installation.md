@@ -30,15 +30,15 @@ npx doorframe analyze \
 Use the Docker image from GHCR, then mirror it internally if required:
 
 ```bash
-docker pull ghcr.io/vtboyarc/doorframe:0.1.6
-docker tag ghcr.io/vtboyarc/doorframe:0.1.6 internal-registry.example.com/tools/doorframe:0.1.6
-docker push internal-registry.example.com/tools/doorframe:0.1.6
+docker pull ghcr.io/vtboyarc/doorframe:0.1.7
+docker tag ghcr.io/vtboyarc/doorframe:0.1.7 internal-registry.example.com/tools/doorframe:0.1.7
+docker push internal-registry.example.com/tools/doorframe:0.1.7
 ```
 
 Run the mirrored image inside the approved environment:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.6
+docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.7
 ```
 
 ## Locked-Down Environments
