@@ -159,14 +159,14 @@ Exact configuration format varies by client. A generic MCP server entry looks li
 {
   "mcpServers": {
     "doorframe": {
-      "command": "doorframe",
-      "args": ["mcp", "--project", "/absolute/path/to/doorframe.sqlite", "--project-id", "project_123", "--mode", "standard", "--max-results", "25"]
+      "command": "npx",
+      "args": ["-y", "doorframe", "mcp", "--project", "/absolute/path/to/doorframe.sqlite", "--project-id", "project_123", "--mode", "standard", "--max-results", "25"]
     }
   }
 }
 ```
 
-Use `npx doorframe` as the command if the client supports launching through `npx`. For client-specific setup, use the generated config from the MCP Setup page or see [MCP client setup](./mcp-clients/README.md).
+This matches what the MCP Setup page generates. If Doorframe is installed globally, you can use `doorframe` as the command with args beginning at `mcp`. On Windows, launch npx through `cmd` (`"command": "cmd"`, args starting with `"/c", "npx"`) — see [MCP troubleshooting](./mcp-troubleshooting.md). For client-specific setup, use the generated config from the MCP Setup page or see [MCP client setup](./mcp-clients/README.md).
 
 ## Data Minimization Flags
 

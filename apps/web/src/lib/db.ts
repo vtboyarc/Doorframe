@@ -127,7 +127,9 @@ interface ImportBatchRow {
 const globalForDb = globalThis as unknown as { doorframeDb?: Db };
 
 function databasePath(): string {
-  const dataDir = process.env.DOORFRAME_DATA_DIR ?? path.join(process.cwd(), ".doorframe");
+  // Resolve so a relative DOORFRAME_DATA_DIR never leaks a relative path into
+  // generated MCP configs, where the AI client's working directory differs.
+  const dataDir = path.resolve(process.env.DOORFRAME_DATA_DIR ?? path.join(process.cwd(), ".doorframe"));
   fs.mkdirSync(dataDir, { recursive: true });
   return path.join(dataDir, "doorframe.sqlite");
 }

@@ -23,6 +23,8 @@ claude mcp add --transport stdio doorframe -- npx -y doorframe mcp \
   --max-results 25
 ```
 
+On Windows, the MCP Setup page generates the command with npx launched through `cmd /c` so the spawned server starts correctly. See [Windows: spawn npx ENOENT](../mcp-troubleshooting.md#windows-spawn-npx-enoent).
+
 Claude Code also supports JSON-based MCP setup. Use the MCP Setup page to avoid path and option mistakes.
 
 Reference: [Claude Code MCP docs](https://code.claude.com/docs/en/mcp).

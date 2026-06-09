@@ -50,7 +50,8 @@ export default async function McpSetupPage({
     maxResults: parseMaxResults(firstParam(resolvedSearchParams, "maxResults")),
     hideRawText: firstParam(resolvedSearchParams, "hideRawText") === "true",
     auditLogEnabled: firstParam(resolvedSearchParams, "auditLogEnabled") === "true",
-    auditLogPath: firstParam(resolvedSearchParams, "auditLogPath")
+    auditLogPath: firstParam(resolvedSearchParams, "auditLogPath"),
+    platform: process.platform === "win32" ? "windows" : "posix"
   };
   const healthCheck = runMcpHealthCheck({
     projectPath,

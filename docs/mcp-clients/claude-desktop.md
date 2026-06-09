@@ -38,6 +38,6 @@ Example shape:
 }
 ```
 
-Use absolute paths. On Windows, escape backslashes or use forward slashes in JSON paths.
+Use absolute paths. On Windows, escape backslashes or use forward slashes in JSON paths, and launch npx through `cmd` (`"command": "cmd"`, args starting with `"/c", "npx"`) — the MCP Setup page generates this automatically on Windows. See [Windows: spawn npx ENOENT](../mcp-troubleshooting.md#windows-spawn-npx-enoent).
 
 Reference: [MCP local server quickstart](https://modelcontextprotocol.io/quickstart/user).

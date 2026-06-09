@@ -58,6 +58,7 @@ export function McpSetupPanel({
   const [auditLogEnabled, setAuditLogEnabled] = useState(initialSettings.auditLogEnabled);
   const [auditLogPath, setAuditLogPath] = useState(initialSettings.auditLogPath ?? "");
 
+  const platform = initialSettings.platform ?? "posix";
   const settings = useMemo<McpSetupSettings>(
     () => ({
       clientId,
@@ -67,9 +68,10 @@ export function McpSetupPanel({
       maxResults,
       hideRawText,
       auditLogEnabled,
-      auditLogPath
+      auditLogPath,
+      platform
     }),
-    [auditLogEnabled, auditLogPath, clientId, hideRawText, maxResults, mode, projectId, projectPath]
+    [auditLogEnabled, auditLogPath, clientId, hideRawText, maxResults, mode, platform, projectId, projectPath]
   );
   const generated = useMemo(() => generateMcpConfig(settings), [settings]);
   const selectedClient = mcpClientOptions.find((client) => client.id === clientId) ?? mcpClientOptions[0];
@@ -207,6 +209,11 @@ export function McpSetupPanel({
             {generated.configText}
           </pre>
           <p className="mt-3 text-sm text-[var(--muted)]">{generated.note}</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {platform === "windows"
+              ? "Generated for Windows (launches npx through cmd /c). Use it on the machine running Doorframe."
+              : "Generated for macOS/Linux. Use it on the machine running Doorframe."}
+          </p>
         </div>
 
         <div className="border border-[var(--line)] bg-white p-5">

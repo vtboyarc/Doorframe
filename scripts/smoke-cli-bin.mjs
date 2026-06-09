@@ -69,6 +69,108 @@ async function waitForJson(url, options = {}) {
   throw lastError instanceof Error ? lastError : new Error(`Timed out waiting for ${url}`);
 }
 
+async function smokeMcpStdioServer(dbPath, projectId) {
+  const child = spawn(process.execPath, [
+    cliBin,
+    "mcp",
+    "--project",
+    dbPath,
+    "--project-id",
+    projectId,
+    "--mode",
+    "summary",
+    "--max-results",
+    "5"
+  ], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      NO_COLOR: "1"
+    },
+    stdio: ["pipe", "pipe", "pipe"]
+  });
+
+  const stderrLogs = [];
+  child.stderr.on("data", (chunk) => stderrLogs.push(chunk.toString()));
+  const exitPromise = new Promise((resolve) => child.once("exit", resolve));
+
+  const responses = new Map();
+  let pendingStdout = "";
+  let notifyResponse = () => {};
+  child.stdout.on("data", (chunk) => {
+    pendingStdout += chunk.toString();
+    let newlineIndex = pendingStdout.indexOf("\n");
+    while (newlineIndex !== -1) {
+      const line = pendingStdout.slice(0, newlineIndex).trim();
+      pendingStdout = pendingStdout.slice(newlineIndex + 1);
+      if (line) {
+        try {
+          const message = JSON.parse(line);
+          if (message.id !== undefined) {
+            responses.set(message.id, message);
+            notifyResponse();
+          }
+        } catch {
+          // Ignore non-JSON stdout noise; protocol violations surface as a timeout below.
+        }
+      }
+      newlineIndex = pendingStdout.indexOf("\n");
+    }
+  });
+
+  function send(message) {
+    child.stdin.write(`${JSON.stringify(message)}\n`);
+  }
+
+  async function waitForResponse(id) {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      if (responses.has(id)) {
+        return responses.get(id);
+      }
+      if (child.exitCode !== null) {
+        throw new Error(`MCP server exited early with code ${child.exitCode}.`);
+      }
+      await new Promise((resolve) => {
+        notifyResponse = resolve;
+        setTimeout(resolve, 250);
+      });
+    }
+    throw new Error(`Timed out waiting for MCP response id ${id}.`);
+  }
+
+  try {
+    send({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "doorframe-smoke", version: "0.0.0" }
+      }
+    });
+    const initialized = await waitForResponse(1);
+    if (!initialized.result?.serverInfo?.name) {
+      throw new Error(`Expected an MCP initialize result, received ${JSON.stringify(initialized)}.`);
+    }
+
+    send({ jsonrpc: "2.0", method: "notifications/initialized" });
+    send({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
+    const toolsResponse = await waitForResponse(2);
+    const toolNames = (toolsResponse.result?.tools ?? []).map((tool) => tool.name);
+    if (!toolNames.includes("get_project_summary")) {
+      throw new Error(`Expected get_project_summary in MCP tools, received: ${toolNames.join(", ") || "none"}.`);
+    }
+  } catch (error) {
+    throw new Error(`MCP stdio smoke test failed: ${error instanceof Error ? error.message : String(error)}\n${stderrLogs.join("")}`);
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGTERM");
+    }
+    await exitPromise;
+  }
+}
+
 async function smokePackagedWebApp() {
   await access(packagedServer);
   const port = await findOpenPort();
@@ -108,6 +210,8 @@ async function smokePackagedWebApp() {
     if (!created.project?.id) {
       throw new Error(`Expected a created project, received ${JSON.stringify(created)}.`);
     }
+
+    await smokeMcpStdioServer(path.join(dataDir, "doorframe.sqlite"), created.project.id);
   } catch (error) {
     throw new Error(`Packaged web smoke test failed: ${error instanceof Error ? error.message : String(error)}\n${logs.join("")}`);
   } finally {
