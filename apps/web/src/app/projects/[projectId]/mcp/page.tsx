@@ -3,7 +3,13 @@ import { McpSetupPanel } from "@/components/McpSetupPanel";
 import { PageShell } from "@/components/PageShell";
 import { getDoorframeDatabasePath, getProjectData, listBaselines } from "@/lib/db";
 import { runMcpHealthCheck } from "@/lib/mcp-health";
-import { mcpClientOptions, type McpClientId, type McpDataMode, type McpSetupSettings } from "@/lib/mcp-setup";
+import {
+  mcpClientOptions,
+  type McpClientId,
+  type McpDataMode,
+  type McpHostPlatform,
+  type McpSetupSettings
+} from "@/lib/mcp-setup";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -25,6 +31,10 @@ function parseMaxResults(value: string | undefined): number {
   return Number.isFinite(parsed) ? Math.max(1, Math.min(Math.floor(parsed), 500)) : 25;
 }
 
+function parsePlatform(value: string | undefined): McpHostPlatform | undefined {
+  return value === "windows" || value === "posix" ? value : undefined;
+}
+
 export default async function McpSetupPage({
   params,
   searchParams
@@ -42,6 +52,7 @@ export default async function McpSetupPage({
 
   const projectPath = getDoorframeDatabasePath();
   const baselines = listBaselines(projectId);
+  const platformParam = parsePlatform(firstParam(resolvedSearchParams, "platform"));
   const initialSettings: McpSetupSettings = {
     clientId: parseClientId(firstParam(resolvedSearchParams, "client")),
     projectPath,
@@ -51,7 +62,7 @@ export default async function McpSetupPage({
     hideRawText: firstParam(resolvedSearchParams, "hideRawText") === "true",
     auditLogEnabled: firstParam(resolvedSearchParams, "auditLogEnabled") === "true",
     auditLogPath: firstParam(resolvedSearchParams, "auditLogPath"),
-    platform: process.platform === "win32" ? "windows" : "posix"
+    platform: platformParam ?? (process.platform === "win32" ? "windows" : "posix")
   };
   const healthCheck = runMcpHealthCheck({
     projectPath,
@@ -71,6 +82,7 @@ export default async function McpSetupPage({
         projectId={data.project.id}
         projectPath={projectPath}
         initialSettings={initialSettings}
+        platformPinned={platformParam !== undefined}
         healthCheck={healthCheck}
       />
     </PageShell>
