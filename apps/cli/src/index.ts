@@ -517,6 +517,7 @@ async function serve(args: string[]): Promise<void> {
   const child = spawn(process.execPath, [serverPath], {
     env: {
       ...process.env,
+      DOORFRAME_CLI_ENTRYPOINT: fileURLToPath(import.meta.url),
       DOORFRAME_DATA_DIR: dataDir,
       HOSTNAME: host,
       NEXT_TELEMETRY_DISABLED: "1",

@@ -52,11 +52,20 @@ function check(
 
 function defaultEntrypointCandidates(): string[] {
   const cwd = process.cwd();
-  return [
+  const candidates = [
     path.join(cwd, "apps", "mcp-server", "src", "index.ts"),
     path.join(cwd, "apps", "mcp-server", "bin", "doorframe-mcp.mjs"),
     path.join(cwd, "apps", "cli", "dist", "index.js")
   ];
+
+  // Set by `doorframe serve` so packaged installs (npx/global) pass this
+  // check even though no source checkout exists relative to the cwd.
+  const packagedEntrypoint = process.env.DOORFRAME_CLI_ENTRYPOINT;
+  if (packagedEntrypoint) {
+    candidates.unshift(packagedEntrypoint);
+  }
+
+  return candidates;
 }
 
 function readableFile(filePath: string): boolean {
@@ -319,6 +328,16 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
           "fail",
           "Audit logging is enabled but no audit log path is configured.",
           "Choose a local JSONL path visible to the MCP server process."
+        )
+      );
+    } else if (!path.isAbsolute(auditPath)) {
+      checks.push(
+        check(
+          "audit-log-writable",
+          "audit log path writable",
+          "warn",
+          `Audit log path is relative: ${auditPath}. The MCP server may run from a different working directory than this web app.`,
+          "Use an absolute local path for the audit log."
         )
       );
     } else if (writableParent(auditPath)) {

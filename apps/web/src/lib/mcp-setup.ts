@@ -1,5 +1,7 @@
 export type McpDataMode = "summary" | "standard" | "detailed";
 
+export type McpHostPlatform = "windows" | "posix";
+
 export type McpClientId =
   | "generic"
   | "cursor"
@@ -25,6 +27,7 @@ export interface McpSetupSettings {
   hideRawText: boolean;
   auditLogEnabled: boolean;
   auditLogPath?: string;
+  platform?: McpHostPlatform;
 }
 
 export interface GeneratedMcpConfig {
@@ -165,13 +168,22 @@ export function buildMcpCommand(settings: McpSetupSettings): { command: string; 
     args.push("--audit-log", normalized.auditLogPath);
   }
 
+  if (normalized.platform === "windows") {
+    // Windows MCP clients spawn the command without a shell, so npx's .cmd
+    // shim is not resolved directly; route through cmd /c.
+    return {
+      command: "cmd",
+      args: ["/c", "npx", ...args]
+    };
+  }
+
   return {
     command: "npx",
     args
   };
 }
 
-function quoteShellArg(value: string): string {
+function quotePosixShellArg(value: string): string {
   if (/^[A-Za-z0-9_./:=@-]+$/.test(value)) {
     return value;
   }
@@ -179,8 +191,17 @@ function quoteShellArg(value: string): string {
   return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
-function commandToText(command: string, args: string[]): string {
-  return [command, ...args].map(quoteShellArg).join(" ");
+function quoteWindowsShellArg(value: string): string {
+  if (/^[A-Za-z0-9_.\\/:=@-]+$/.test(value)) {
+    return value;
+  }
+
+  return `"${value.replaceAll('"', '\\"')}"`;
+}
+
+function commandToText(command: string, args: string[], platform: McpHostPlatform): string {
+  const quote = platform === "windows" ? quoteWindowsShellArg : quotePosixShellArg;
+  return [command, ...args].map(quote).join(" ");
 }
 
 function serverConfig(command: string, args: string[], includeType: boolean) {
@@ -200,7 +221,7 @@ function json(value: unknown): string {
 export function generateMcpConfig(settings: McpSetupSettings): GeneratedMcpConfig {
   const normalized = normalizeMcpSettings(settings);
   const { command, args } = buildMcpCommand(normalized);
-  const commandText = commandToText(command, args);
+  const commandText = commandToText(command, args, normalized.platform ?? "posix");
 
   if (normalized.clientId === "chatgpt") {
     return {

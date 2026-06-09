@@ -90,6 +90,57 @@ describe("MCP health check", () => {
     expect(result.checks.find((item) => item.id === "summary-hides-raw-text")?.status).toBe("pass");
   });
 
+  it("warns when the audit log path is relative", () => {
+    const data = buildFalconProjectData();
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "doorframe-mcp-health-"));
+    const dbPath = path.join(tempDir, "doorframe.sqlite");
+    fs.writeFileSync(dbPath, "readable test database placeholder");
+
+    const result = runMcpHealthCheck({
+      projectPath: dbPath,
+      projectData: data,
+      baselines: buildFalconBaselines(data.project.id),
+      auditLogEnabled: true,
+      auditLogPath: "./doorframe-mcp-audit.jsonl",
+      mcpEntrypointCandidates: [dbPath]
+    });
+
+    expect(result.checks.find((item) => item.id === "audit-log-writable")).toMatchObject({
+      status: "warn",
+      fix: "Use an absolute local path for the audit log."
+    });
+  });
+
+  it("accepts the packaged CLI entrypoint from DOORFRAME_CLI_ENTRYPOINT", () => {
+    const data = buildFalconProjectData();
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "doorframe-mcp-health-"));
+    const dbPath = path.join(tempDir, "doorframe.sqlite");
+    const cliEntrypoint = path.join(tempDir, "index.js");
+    fs.writeFileSync(dbPath, "readable test database placeholder");
+    fs.writeFileSync(cliEntrypoint, "#!/usr/bin/env node\n");
+
+    const previous = process.env.DOORFRAME_CLI_ENTRYPOINT;
+    process.env.DOORFRAME_CLI_ENTRYPOINT = cliEntrypoint;
+    try {
+      const result = runMcpHealthCheck({
+        projectPath: dbPath,
+        projectData: data,
+        baselines: buildFalconBaselines(data.project.id)
+      });
+
+      expect(result.checks.find((item) => item.id === "mcp-entrypoint")).toMatchObject({
+        status: "pass",
+        detail: cliEntrypoint
+      });
+    } finally {
+      if (previous === undefined) {
+        delete process.env.DOORFRAME_CLI_ENTRYPOINT;
+      } else {
+        process.env.DOORFRAME_CLI_ENTRYPOINT = previous;
+      }
+    }
+  });
+
   it("fails clearly when no project exists", () => {
     const result = runMcpHealthCheck({
       projectPath: "",

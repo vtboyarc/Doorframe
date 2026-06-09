@@ -89,4 +89,51 @@ describe("MCP setup config generation", () => {
   it("warns when Docker container paths are not host-visible", () => {
     expect(dockerMcpLimitationText("/data/doorframe.sqlite")).toContain("Docker data path");
   });
+
+  it("wraps npx in cmd /c for Windows clients", () => {
+    const generated = generateMcpConfig({
+      ...baseSettings,
+      projectPath: "C:\\Users\\alice\\.doorframe\\doorframe.sqlite",
+      platform: "windows"
+    });
+    const parsed = JSON.parse(generated.configText) as {
+      mcpServers: { doorframe: { command: string; args: string[] } };
+    };
+
+    expect(parsed.mcpServers.doorframe.command).toBe("cmd");
+    expect(parsed.mcpServers.doorframe.args.slice(0, 4)).toEqual(["/c", "npx", "-y", "doorframe"]);
+    expect(parsed.mcpServers.doorframe.args).toContain("C:\\Users\\alice\\.doorframe\\doorframe.sqlite");
+  });
+
+  it("wraps npx in cmd /c for Windows in client-specific configs", () => {
+    const generated = generateMcpConfig({ ...baseSettings, clientId: "vscode", platform: "windows" });
+    const parsed = JSON.parse(generated.configText) as {
+      servers: { doorframe: { command: string; args: string[] } };
+    };
+
+    expect(parsed.servers.doorframe.command).toBe("cmd");
+    expect(parsed.servers.doorframe.args[0]).toBe("/c");
+  });
+
+  it("quotes Windows command text without POSIX single quotes", () => {
+    const generated = generateMcpConfig({
+      ...baseSettings,
+      projectPath: "C:\\Users\\Alice Smith\\.doorframe\\doorframe.sqlite",
+      platform: "windows"
+    });
+
+    expect(generated.commandText.startsWith("cmd /c npx -y doorframe mcp")).toBe(true);
+    expect(generated.commandText).toContain('"C:\\Users\\Alice Smith\\.doorframe\\doorframe.sqlite"');
+    expect(generated.commandText).not.toContain("'");
+  });
+
+  it("keeps POSIX quoting and plain npx by default", () => {
+    const generated = generateMcpConfig({
+      ...baseSettings,
+      projectPath: "/Users/Alice Smith/.doorframe/doorframe.sqlite"
+    });
+
+    expect(generated.command).toBe("npx");
+    expect(generated.commandText).toContain("'/Users/Alice Smith/.doorframe/doorframe.sqlite'");
+  });
 });

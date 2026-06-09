@@ -1,7 +1,7 @@
 "use client";
 
 import { Clipboard, ClipboardCheck, RefreshCw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { McpHealthCheckResult, McpHealthStatus } from "@/lib/mcp-health";
 import {
   dockerMcpLimitationText,
@@ -10,6 +10,7 @@ import {
   starterQuestions,
   type McpClientId,
   type McpDataMode,
+  type McpHostPlatform,
   type McpSetupSettings
 } from "@/lib/mcp-setup";
 
@@ -38,17 +39,23 @@ function CopyButton({ text, label }: { text: string; label: string }) {
   );
 }
 
+function detectBrowserPlatform(): McpHostPlatform {
+  return /windows/i.test(navigator.userAgent) ? "windows" : "posix";
+}
+
 export function McpSetupPanel({
   projectName,
   projectId,
   projectPath,
   initialSettings,
+  platformPinned,
   healthCheck
 }: {
   projectName: string;
   projectId: string;
   projectPath: string;
   initialSettings: McpSetupSettings;
+  platformPinned: boolean;
   healthCheck: McpHealthCheckResult;
 }) {
   const [clientId, setClientId] = useState<McpClientId>(initialSettings.clientId);
@@ -57,7 +64,16 @@ export function McpSetupPanel({
   const [hideRawText, setHideRawText] = useState(initialSettings.hideRawText);
   const [auditLogEnabled, setAuditLogEnabled] = useState(initialSettings.auditLogEnabled);
   const [auditLogPath, setAuditLogPath] = useState(initialSettings.auditLogPath ?? "");
+  const [platform, setPlatform] = useState<McpHostPlatform>(initialSettings.platform ?? "posix");
 
+  // The browser usually runs on the machine that will launch the MCP server,
+  // unlike the web server (which may be in Docker/WSL). Prefer the browser's
+  // OS unless the user already chose one explicitly.
+  useEffect(() => {
+    if (!platformPinned) {
+      setPlatform(detectBrowserPlatform());
+    }
+  }, [platformPinned]);
   const settings = useMemo<McpSetupSettings>(
     () => ({
       clientId,
@@ -67,9 +83,10 @@ export function McpSetupPanel({
       maxResults,
       hideRawText,
       auditLogEnabled,
-      auditLogPath
+      auditLogPath,
+      platform
     }),
-    [auditLogEnabled, auditLogPath, clientId, hideRawText, maxResults, mode, projectId, projectPath]
+    [auditLogEnabled, auditLogPath, clientId, hideRawText, maxResults, mode, platform, projectId, projectPath]
   );
   const generated = useMemo(() => generateMcpConfig(settings), [settings]);
   const selectedClient = mcpClientOptions.find((client) => client.id === clientId) ?? mcpClientOptions[0];
@@ -129,6 +146,35 @@ export function McpSetupPanel({
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium">AI client operating system</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(
+                  [
+                    { id: "windows", label: "Windows" },
+                    { id: "posix", label: "macOS / Linux" }
+                  ] as const
+                ).map((candidate) => (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    className={`min-h-10 border px-4 text-sm font-medium ${
+                      platform === candidate.id
+                        ? "border-[var(--accent-strong)] bg-[var(--accent)] text-white"
+                        : "border-[var(--line)] bg-white hover:border-[var(--accent)]"
+                    }`}
+                    onClick={() => setPlatform(candidate.id)}
+                  >
+                    {candidate.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                The operating system of the machine where the AI client launches the MCP server. Windows configs launch
+                npx through cmd /c.
+              </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -207,6 +253,11 @@ export function McpSetupPanel({
             {generated.configText}
           </pre>
           <p className="mt-3 text-sm text-[var(--muted)]">{generated.note}</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {platform === "windows"
+              ? "Generated for a Windows AI client (launches npx through cmd /c)."
+              : "Generated for a macOS/Linux AI client."}
+          </p>
         </div>
 
         <div className="border border-[var(--line)] bg-white p-5">
@@ -230,6 +281,7 @@ export function McpSetupPanel({
           <form method="GET">
             <input type="hidden" name="client" value={clientId} />
             <input type="hidden" name="mode" value={mode} />
+            <input type="hidden" name="platform" value={platform} />
             <input type="hidden" name="maxResults" value={String(maxResults)} />
             <input type="hidden" name="hideRawText" value={hideRawText ? "true" : "false"} />
             <input type="hidden" name="auditLogEnabled" value={auditLogEnabled ? "true" : "false"} />

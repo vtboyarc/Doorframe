@@ -39,4 +39,6 @@ Example shape:
 }
 ```
 
+On Windows, launch npx through `cmd` (`"command": "cmd"`, args starting with `"/c", "npx"`) — the MCP Setup page generates this automatically on Windows. See [Windows: spawn npx ENOENT](../mcp-troubleshooting.md#windows-spawn-npx-enoent).
+
 Reference: [Cursor MCP docs](https://docs.cursor.com/context/model-context-protocol).

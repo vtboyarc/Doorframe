@@ -109,7 +109,7 @@ Doorframe does not claim to be DoD-approved, FedRAMP-approved, CMMC-compliant, N
 ## Pinned Docker Version
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.6
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.7
 ```
 
 ## What Doorframe Is
@@ -155,7 +155,7 @@ This detects `REQ-014` changing from a 5 second processing threshold to a 2 seco
 With Docker:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.6
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.7
 ```
 
 From source:

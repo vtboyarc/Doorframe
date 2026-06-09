@@ -39,6 +39,8 @@ Example shape:
 }
 ```
 
+On Windows, launch npx through `cmd` (`"command": "cmd"`, args starting with `"/c", "npx"`) — the MCP Setup page generates this automatically on Windows. See [Windows: spawn npx ENOENT](../mcp-troubleshooting.md#windows-spawn-npx-enoent).
+
 Your organization may disable or restrict MCP servers in VS Code. Confirm local policy before connecting project data.
 
 Reference: [VS Code MCP configuration reference](https://code.visualstudio.com/docs/copilot/reference/mcp-configuration).
