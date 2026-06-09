@@ -129,7 +129,11 @@ const globalForDb = globalThis as unknown as { doorframeDb?: Db };
 function databasePath(): string {
   // Resolve so a relative DOORFRAME_DATA_DIR never leaks a relative path into
   // generated MCP configs, where the AI client's working directory differs.
-  const dataDir = path.resolve(process.env.DOORFRAME_DATA_DIR ?? path.join(process.cwd(), ".doorframe"));
+  // Keep the resolve on its own branch: combining it with the path.join
+  // fallback in one expression makes Next's file tracing glob the whole
+  // source tree into the standalone build output.
+  const configuredDataDir = process.env.DOORFRAME_DATA_DIR;
+  const dataDir = configuredDataDir ? path.resolve(configuredDataDir) : path.join(process.cwd(), ".doorframe");
   fs.mkdirSync(dataDir, { recursive: true });
   return path.join(dataDir, "doorframe.sqlite");
 }
