@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Redesign the MCP Setup page as a guided three-step flow: pick a client from labeled cards, follow per-client numbered instructions with exact config file locations and docs links, then verify the connection.
+- Explain ChatGPT/OpenAI remote-MCP limitations in plain language with supported alternatives instead of a raw text block.
+- Move data mode, max results, hide-raw-text, and audit log into a collapsible "Data & privacy options" section with descriptions of each data mode.
+- Default the MCP Setup page to Claude Desktop and show a project-data readiness badge in the header.
+
 ## v0.1.7 - Draft
 
 - Generate Windows-compatible MCP configs that launch npx through `cmd /c`, with Windows-safe command quoting and an OS note on the MCP Setup page.

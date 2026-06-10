@@ -19,7 +19,7 @@ function firstParam(searchParams: SearchParams, key: string): string | undefined
 }
 
 function parseClientId(value: string | undefined): McpClientId {
-  return mcpClientOptions.some((client) => client.id === value) ? (value as McpClientId) : "generic";
+  return mcpClientOptions.some((client) => client.id === value) ? (value as McpClientId) : "claude-desktop";
 }
 
 function parseMode(value: string | undefined): McpDataMode {

@@ -7,7 +7,7 @@ Claude Desktop local MCP setup uses `claude_desktop_config.json` with an `mcpSer
 3. Open or create a project.
 4. Go to MCP Setup.
 5. Pick Claude Desktop.
-6. Pick data mode.
+6. Optionally adjust data & privacy options (data mode, max results, audit log).
 7. Copy the generated config.
 8. Paste it into `claude_desktop_config.json`.
 9. Restart Claude Desktop.

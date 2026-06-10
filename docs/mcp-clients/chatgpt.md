@@ -7,7 +7,7 @@ Doorframe's first MCP server is local stdio. Some ChatGPT and OpenAI workflows u
 3. Open or create a project.
 4. Go to MCP Setup.
 5. Pick ChatGPT / remote MCP note.
-6. Pick data mode.
+6. Optionally adjust data & privacy options (data mode, max results, audit log).
 7. Read the generated note.
 8. Do not paste a local stdio command into ChatGPT as a remote MCP server URL.
 9. Use Doorframe reports directly or use a local stdio MCP-capable client.

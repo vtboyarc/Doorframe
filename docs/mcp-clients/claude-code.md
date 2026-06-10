@@ -7,7 +7,7 @@ Claude Code can add local stdio MCP servers with `claude mcp add --transport std
 3. Open or create a project.
 4. Go to MCP Setup.
 5. Pick Claude Code.
-6. Pick data mode.
+6. Optionally adjust data & privacy options (data mode, max results, audit log).
 7. Copy the generated command.
 8. Run it in the Claude Code project where Doorframe MCP should be available.
 9. Restart or reload Claude Code if needed.

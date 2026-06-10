@@ -7,7 +7,7 @@ VS Code uses `mcp.json` with a top-level `servers` object. Workspace configurati
 3. Open or create a project.
 4. Go to MCP Setup.
 5. Pick VS Code.
-6. Pick data mode.
+6. Optionally adjust data & privacy options (data mode, max results, audit log).
 7. Copy the generated config.
 8. Paste it into `.vscode/mcp.json` or your user MCP config.
 9. Restart or reload the MCP server in VS Code.
