@@ -7,7 +7,7 @@ Cursor documents custom MCP servers with `.cursor/mcp.json` for project configur
 3. Open or create a project.
 4. Go to MCP Setup.
 5. Pick Cursor.
-6. Pick data mode.
+6. Optionally adjust data & privacy options (data mode, max results, audit log).
 7. Copy the generated config.
 8. Paste it into `.cursor/mcp.json` or your global Cursor MCP config.
 9. Restart or reload Cursor.

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dockerMcpLimitationText, generateMcpConfig, type McpSetupSettings } from "./mcp-setup";
+import {
+  dockerMcpLimitationText,
+  generateMcpConfig,
+  getMcpClientGuide,
+  mcpClientOptions,
+  type McpSetupSettings
+} from "./mcp-setup";
 
 const baseSettings: McpSetupSettings = {
   clientId: "generic",
@@ -135,5 +141,44 @@ describe("MCP setup config generation", () => {
 
     expect(generated.command).toBe("npx");
     expect(generated.commandText).toContain("'/Users/Alice Smith/.doorframe/doorframe.sqlite'");
+  });
+});
+
+describe("MCP client setup guides", () => {
+  it("provides a guide with steps for every client option", () => {
+    for (const client of mcpClientOptions) {
+      const guide = getMcpClientGuide(client.id, "posix");
+      expect(guide.steps.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("points Claude Desktop users at the right config file per OS", () => {
+    expect(getMcpClientGuide("claude-desktop", "posix").configFile?.path).toBe(
+      "~/Library/Application Support/Claude/claude_desktop_config.json"
+    );
+    expect(getMcpClientGuide("claude-desktop", "windows").configFile?.path).toBe(
+      "%APPDATA%\\Claude\\claude_desktop_config.json"
+    );
+  });
+
+  it("marks ChatGPT as unsupported with alternatives instead of a config file", () => {
+    const guide = getMcpClientGuide("chatgpt", "posix");
+
+    expect(guide.kind).toBe("unsupported");
+    expect(guide.configFile).toBeUndefined();
+    expect(guide.steps.join(" ")).toContain("stdio");
+  });
+
+  it("gives Claude Code a command-based guide without a config file", () => {
+    const guide = getMcpClientGuide("claude-code", "posix");
+
+    expect(guide.kind).toBe("command");
+    expect(guide.configFile).toBeUndefined();
+    expect(guide.steps.join(" ")).toContain("claude mcp list");
+  });
+
+  it("names workspace config files for Cursor and VS Code", () => {
+    expect(getMcpClientGuide("cursor", "posix").configFile?.path).toBe(".cursor/mcp.json");
+    expect(getMcpClientGuide("vscode", "posix").configFile?.path).toBe(".vscode/mcp.json");
   });
 });

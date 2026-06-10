@@ -9,7 +9,7 @@ Standard flow:
 3. Open or create a project.
 4. Go to MCP Setup.
 5. Pick your AI client.
-6. Pick data mode.
+6. Optionally adjust data & privacy options (data mode, max results, audit log).
 7. Copy the generated config.
 8. Paste it into the AI client.
 9. Restart or reload the AI client.
