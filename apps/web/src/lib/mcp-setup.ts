@@ -214,7 +214,7 @@ export function getMcpClientGuide(clientId: McpClientId, platform: McpHostPlatfo
         kind: "manual",
         steps: [
           'Register the generated JSON with your internal MCP-compatible client as a local stdio server. Some clients call this "custom tools" or "local servers".',
-          "Make sure the machine that launches the client has Node.js 18+ available, since the entry runs npx doorframe mcp.",
+          "Make sure the machine that launches the client has Node.js 20 or newer available, since the entry runs npx doorframe mcp.",
           "Make sure the database path in the config is readable from that machine.",
           "Restart or reload the client, then ask a starter question to test the connection."
         ]
