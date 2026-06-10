@@ -1,11 +1,11 @@
 services:
   doorframe:
-    image: ghcr.io/vtboyarc/doorframe:0.1.7
+    image: ghcr.io/vtboyarc/doorframe:0.1.8
     build:
       context: .
       dockerfile: docker/Dockerfile
       args:
-        VERSION: 0.1.7
+        VERSION: 0.1.8
         SOURCE_REPOSITORY: https://github.com/vtboyarc/Doorframe
     ports:
       - "3000:3000"

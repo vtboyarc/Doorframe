@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.8 - Draft
 
 - Redesign the MCP Setup page as a guided three-step flow: pick a client from labeled cards, follow per-client numbered instructions with exact config file locations and docs links, then verify the connection.
 - Explain ChatGPT/OpenAI remote-MCP limitations in plain language with supported alternatives instead of a raw text block.
