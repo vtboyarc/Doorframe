@@ -31,7 +31,7 @@ docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:lates
 ## Run Pinned Version
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.8
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.9
 ```
 
 Open `http://localhost:3000`.
@@ -69,7 +69,7 @@ Do not assume Docker-based MCP works unless the AI client can launch the MCP ser
 ```bash
 docker build \
   -f docker/Dockerfile \
-  --build-arg VERSION=0.1.8 \
+  --build-arg VERSION=0.1.9 \
   --build-arg SOURCE_REPOSITORY=https://github.com/vtboyarc/Doorframe \
   -t doorframe:local .
 ```
@@ -79,15 +79,15 @@ docker build \
 Companies and contractors should typically scan and mirror the pinned image into an internal registry before use.
 
 ```bash
-docker pull ghcr.io/vtboyarc/doorframe:0.1.8
-docker tag ghcr.io/vtboyarc/doorframe:0.1.8 internal-registry.example.com/tools/doorframe:0.1.8
-docker push internal-registry.example.com/tools/doorframe:0.1.8
+docker pull ghcr.io/vtboyarc/doorframe:0.1.9
+docker tag ghcr.io/vtboyarc/doorframe:0.1.9 internal-registry.example.com/tools/doorframe:0.1.9
+docker push internal-registry.example.com/tools/doorframe:0.1.9
 ```
 
 Then deploy the mirrored image:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.8
+docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.9
 ```
 
 ## Image Notes
@@ -98,6 +98,6 @@ docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/to
 - The image has a healthcheck at `/api/health`.
 - OCI labels include source repository, version, license, title, and description.
 - Main branch publishes get `main`, `main-<short-sha>`, and `latest` tags for non-prerelease versions.
-- Main branch publishes also include version tags such as `0.1.8` when that version is unpublished or already belongs to the same commit.
+- Main branch publishes also include version tags such as `0.1.9` when that version is unpublished or already belongs to the same commit.
 - Tagged stable releases also get minor tags such as `0.1`.
 - Prereleases should not receive the `latest` tag.

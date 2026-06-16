@@ -51,6 +51,9 @@ import { runStdioServer } from "../../mcp-server/src/server";
 import { resolveDoorframeDataDir } from "./paths";
 
 type ReportFormat = "html" | "md" | "json" | "csv";
+type JsonRpcId = number | string;
+
+declare const DOORFRAME_CLI_VERSION: string | undefined;
 
 interface CliOptions {
   [key: string]: string | undefined;
@@ -60,6 +63,7 @@ function usage(): string {
   return `Doorframe CLI
 
 Usage:
+  doorframe --version
   doorframe demo [--out report.html] [--diff-out diff.html] [--skip-diff]
   doorframe serve [--port 3000] [--host 127.0.0.1] [--data-dir ./.doorframe]
   doorframe server [--port 3000] [--host 127.0.0.1] [--data-dir ./.doorframe]
@@ -68,6 +72,7 @@ Usage:
   doorframe diff --baseline-a req-a.csv --baseline-b req-b.csv [--jira jira.csv] [--junit tests.xml] [--out diff.html]
   doorframe diff --base baseline-a.json --against baseline-b.json
   doorframe mcp --project ./doorframe.sqlite [--project-id project_123] [--mode summary|standard|detailed] [--max-results 25] [--hide-raw-text] [--audit-log ./doorframe-mcp-audit.jsonl]
+  doorframe mcp doctor --project ./doorframe.sqlite [--project-id project_123] [--mode summary|standard|detailed] [--max-results 25] [--hide-raw-text]
   doorframe import-jira --requirements req.csv [--jql "project=FG"] [--format ...] [--out ...]
   doorframe import-github --requirements req.csv [--junit-xml file.xml] [--owner o --repo r] [...]
   doorframe import-gitlab --requirements req.csv [--project-id N --job-id N] [...]
@@ -120,6 +125,23 @@ Compares requirement baselines or two JSON snapshots from analyze --format json.
 `;
 }
 
+function mcpDoctorUsage(): string {
+  return `Doorframe MCP doctor
+
+Usage:
+  doorframe mcp doctor --project ./doorframe.sqlite [--project-id project_123] [--mode summary|standard|detailed] [--max-results 25] [--hide-raw-text]
+
+Starts the local Doorframe MCP server over stdio, performs an MCP initialize handshake,
+lists tools, and calls read-only summary and traceability-gap tools.
+`;
+}
+
+function cliVersion(): string {
+  return typeof DOORFRAME_CLI_VERSION === "string" && DOORFRAME_CLI_VERSION.trim()
+    ? DOORFRAME_CLI_VERSION.trim()
+    : "0.0.0-dev";
+}
+
 function parseOptions(args: string[]): CliOptions {
   const options: CliOptions = {};
   for (let i = 0; i < args.length; i += 1) {
@@ -147,6 +169,37 @@ function requireOption(value: string | undefined, name: string): string {
     throw new Error(`Missing required option --${name}.`);
   }
   return value;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function buildMcpServerArgs(options: CliOptions): string[] {
+  const projectPath = requireOption(options.project, "project");
+  const args = ["mcp", "--project", projectPath];
+
+  if (options["project-id"]) {
+    args.push("--project-id", options["project-id"]);
+  }
+
+  if (options.mode) {
+    args.push("--mode", options.mode);
+  }
+
+  if (options["max-results"]) {
+    args.push("--max-results", options["max-results"]);
+  }
+
+  if (options["hide-raw-text"] === "true") {
+    args.push("--hide-raw-text");
+  }
+
+  if (options["audit-log"]) {
+    args.push("--audit-log", options["audit-log"]);
+  }
+
+  return args;
 }
 
 async function readUtf8(filePath: string): Promise<string> {
@@ -518,6 +571,7 @@ async function serve(args: string[]): Promise<void> {
     env: {
       ...process.env,
       DOORFRAME_CLI_ENTRYPOINT: fileURLToPath(import.meta.url),
+      DOORFRAME_CLI_VERSION: cliVersion(),
       DOORFRAME_DATA_DIR: dataDir,
       HOSTNAME: host,
       NEXT_TELEMETRY_DISABLED: "1",
@@ -611,6 +665,11 @@ async function importConnector(kind: "jira" | "github" | "gitlab" | "jenkins", a
 }
 
 async function runMcp(args: string[]): Promise<void> {
+  if (args[0] === "doctor") {
+    await runMcpDoctor(args.slice(1));
+    return;
+  }
+
   if (isHelp(args)) {
     console.error(mcpUsageText.replace("doorframe-mcp --project", "doorframe mcp --project"));
     return;
@@ -626,6 +685,141 @@ async function runMcp(args: string[]): Promise<void> {
   });
 }
 
+async function runMcpDoctor(args: string[]): Promise<void> {
+  if (isHelp(args)) {
+    console.log(mcpDoctorUsage());
+    return;
+  }
+
+  const serverArgs = buildMcpServerArgs(parseOptions(args));
+  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...serverArgs], {
+    env: {
+      ...process.env,
+      NO_COLOR: "1"
+    },
+    stdio: ["pipe", "pipe", "pipe"]
+  });
+
+  const stderrLogs: string[] = [];
+  const responses = new Map<JsonRpcId, Record<string, unknown>>();
+  let pendingStdout = "";
+  let notifyResponse: () => void = () => {};
+  const exitPromise = new Promise<void>((resolve) => {
+    child.once("exit", () => resolve());
+  });
+
+  child.stderr.on("data", (chunk: Buffer) => {
+    stderrLogs.push(chunk.toString());
+  });
+
+  child.stdout.on("data", (chunk: Buffer) => {
+    pendingStdout += chunk.toString();
+    let newlineIndex = pendingStdout.indexOf("\n");
+    while (newlineIndex !== -1) {
+      const line = pendingStdout.slice(0, newlineIndex).trim();
+      pendingStdout = pendingStdout.slice(newlineIndex + 1);
+      if (line) {
+        try {
+          const message = JSON.parse(line) as { id?: JsonRpcId };
+          if (message.id !== undefined) {
+            responses.set(message.id, asRecord(message));
+            notifyResponse();
+          }
+        } catch {
+          // Protocol violations surface as a timeout with stderr context.
+        }
+      }
+      newlineIndex = pendingStdout.indexOf("\n");
+    }
+  });
+
+  function send(message: Record<string, unknown>): void {
+    child.stdin.write(`${JSON.stringify(message)}\n`);
+  }
+
+  async function waitForResponse(id: JsonRpcId): Promise<Record<string, unknown>> {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      const response = responses.get(id);
+      if (response) {
+        const error = asRecord(response.error);
+        if (typeof error.message === "string") {
+          throw new Error(error.message);
+        }
+        return response;
+      }
+      if (child.exitCode !== null || child.signalCode !== null) {
+        throw new Error(`MCP server exited early with code ${child.exitCode ?? child.signalCode ?? "unknown"}.`);
+      }
+      await new Promise<void>((resolve) => {
+        notifyResponse = resolve;
+        setTimeout(resolve, 250);
+      });
+    }
+    throw new Error(`Timed out waiting for MCP response id ${id}.`);
+  }
+
+  try {
+    send({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {},
+        clientInfo: { name: "doorframe-mcp-doctor", version: cliVersion() }
+      }
+    });
+    const initialized = await waitForResponse(1);
+    const serverInfo = asRecord(asRecord(initialized.result).serverInfo);
+    if (typeof serverInfo.name !== "string") {
+      throw new Error(`Expected an MCP initialize result, received ${JSON.stringify(initialized)}.`);
+    }
+
+    send({ jsonrpc: "2.0", method: "notifications/initialized" });
+    send({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
+    const toolsResponse = await waitForResponse(2);
+    const tools = asRecord(toolsResponse.result).tools;
+    const toolNames = Array.isArray(tools)
+      ? tools.map((tool) => asRecord(tool).name).filter((name): name is string => typeof name === "string")
+      : [];
+    if (!toolNames.includes("get_project_summary")) {
+      throw new Error(`Expected get_project_summary in MCP tools, received: ${toolNames.join(", ") || "none"}.`);
+    }
+
+    send({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "get_project_summary", arguments: {} } });
+    const summaryResponse = await waitForResponse(3);
+    if (asRecord(summaryResponse.result).isError === true) {
+      throw new Error("get_project_summary returned an MCP tool error.");
+    }
+
+    send({
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: { name: "get_traceability_gaps", arguments: { limit: 1 } }
+    });
+    const gapsResponse = await waitForResponse(4);
+    if (asRecord(gapsResponse.result).isError === true) {
+      throw new Error("get_traceability_gaps returned an MCP tool error.");
+    }
+
+    console.log("Doorframe MCP doctor");
+    console.log(`PASS server initialized: ${String(serverInfo.name)}`);
+    console.log(`PASS tools listed: ${toolNames.length} tool(s)`);
+    console.log("PASS get_project_summary returned data");
+    console.log("PASS get_traceability_gaps returned data");
+  } catch (error) {
+    const stderr = stderrLogs.join("").trim();
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`MCP doctor failed: ${detail}${stderr ? `\n\nMCP stderr:\n${stderr}` : ""}`);
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGTERM");
+    }
+    await exitPromise;
+  }
+}
+
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
 
@@ -635,6 +829,11 @@ async function main(): Promise<void> {
   }
 
   switch (command) {
+    case "--version":
+    case "-v":
+    case "version":
+      console.log(cliVersion());
+      return;
     case "demo":
       await demo(args);
       return;

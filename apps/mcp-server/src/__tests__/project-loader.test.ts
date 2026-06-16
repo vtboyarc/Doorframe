@@ -98,6 +98,7 @@ describe("Doorframe MCP project loader", () => {
       expect(error).toBeInstanceOf(ReadOnlyProjectLoadError);
       expect((error as ReadOnlyProjectLoadError).code).toBe("PROJECT_NOT_FOUND");
       expect((error as Error).message).toContain("project_missing");
+      expect((error as Error).message).toContain("re-copy the MCP config");
       return;
     }
 

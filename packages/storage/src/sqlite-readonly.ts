@@ -319,7 +319,7 @@ function requireProjectRow(db: Db, projectId: string | undefined): ProjectRow {
   if (selectedProjectId) {
     throw new ReadOnlyProjectLoadError(
       "PROJECT_NOT_FOUND",
-      `Doorframe project was not found in the database: ${selectedProjectId}`
+      `Doorframe project was not found in the database: ${selectedProjectId}. The --project-id value may be stale or from another database; re-copy the MCP config from the Doorframe MCP Setup page for the project you want to use.`
     );
   }
 
@@ -380,7 +380,7 @@ export function loadProjectBaselinesFromSqlite(projectPath: string, projectId?: 
     if (!projectRow && selectedProjectId) {
       throw new ReadOnlyProjectLoadError(
         "PROJECT_NOT_FOUND",
-        `Doorframe project was not found in the database: ${selectedProjectId}`
+        `Doorframe project was not found in the database: ${selectedProjectId}. The --project-id value may be stale or from another database; re-copy the MCP config from the Doorframe MCP Setup page for the project you want to use.`
       );
     }
 

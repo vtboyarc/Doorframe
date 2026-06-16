@@ -52,11 +52,12 @@ function check(
 
 function defaultEntrypointCandidates(): string[] {
   const cwd = process.cwd();
-  const candidates = [
-    path.join(cwd, "apps", "mcp-server", "src", "index.ts"),
-    path.join(cwd, "apps", "mcp-server", "bin", "doorframe-mcp.mjs"),
-    path.join(cwd, "apps", "cli", "dist", "index.js")
-  ];
+  const roots = Array.from(new Set([cwd, path.resolve(cwd, "..", "..")]));
+  const candidates = roots.flatMap((root) => [
+    path.join(root, "apps", "mcp-server", "src", "index.ts"),
+    path.join(root, "apps", "mcp-server", "bin", "doorframe-mcp.mjs"),
+    path.join(root, "apps", "cli", "dist", "index.js")
+  ]);
 
   // Set by `doorframe serve` so packaged installs (npx/global) pass this
   // check even though no source checkout exists relative to the cwd.
@@ -199,8 +200,8 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
         "baseline-data",
         "baseline data available",
         "warn",
-        "Baseline MCP tools will be limited until at least two baselines exist.",
-        "Create two baselines before asking baseline-diff or stale-trace questions."
+        "Baseline-specific MCP tools will be limited until at least two baselines exist. Project summary, findings, and traceability-gap tools can still work.",
+        "Create two baselines before asking baseline-diff or stale-trace questions, or ignore this warning for projects that do not use baseline review yet."
       )
     );
   }
