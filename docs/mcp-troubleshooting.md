@@ -26,8 +26,16 @@ Fix:
 Run the generated command manually in a terminal:
 
 ```bash
-npx -y doorframe mcp --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25
+npx -y doorframe@0.1.9 mcp --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25
 ```
+
+Or run the built-in doctor with the same values from the MCP Setup page:
+
+```bash
+npx -y doorframe@0.1.9 mcp doctor --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25
+```
+
+`mcp doctor` starts the same local stdio server that an AI client launches, performs an MCP initialize handshake, lists tools, and calls read-only project summary and traceability-gap tools.
 
 Common fixes:
 
@@ -39,6 +47,8 @@ Common fixes:
 - Check the client log for stderr output.
 
 Doorframe MCP uses stdout for protocol messages. Startup errors and diagnostics go to stderr.
+
+If your AI client only reports "Connection closed", run `mcp doctor` in a terminal with the exact generated `--project` and `--project-id`. A `PROJECT_NOT_FOUND` error usually means the project was deleted, duplicated, or re-created and the client still has a stale `--project-id`; re-copy the config from the MCP Setup page.
 
 ## Project Path Is Wrong
 
@@ -62,6 +72,8 @@ Use the absolute path shown on the MCP Setup page.
 
 A Doorframe SQLite database can contain multiple projects. Use the generated `--project-id` value to select the project shown on the MCP Setup page. Without `--project-id`, MCP falls back to the most recently updated project for backward compatibility.
 
+If the client suddenly closes the connection after a project rename, deletion, or import reset, re-copy the MCP config. The stored `--project-id` may no longer exist in that database.
+
 ## AI Client Cannot Launch The MCP Server Process
 
 Local stdio MCP requires the AI client to launch a local process. A browser page cannot make a desktop AI client launch MCP by itself.
@@ -69,7 +81,7 @@ Local stdio MCP requires the AI client to launch a local process. A browser page
 Fix:
 
 - Install or make available the `doorframe` npm package where the AI client runs.
-- Use the generated `npx -y doorframe mcp ...` command.
+- Use the generated `npx -y doorframe@0.1.9 mcp ...` command.
 - If the client cannot run `npx`, install Doorframe globally and change the command to `doorframe` with args beginning at `mcp`.
 
 ## Tools Appear But Return Empty Results
@@ -124,7 +136,7 @@ Fix:
   "mcpServers": {
     "doorframe": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "doorframe", "mcp", "--project", "C:\\Users\\alice\\.doorframe\\doorframe.sqlite", "--project-id", "project_123", "--mode", "standard", "--max-results", "25"]
+      "args": ["/c", "npx", "-y", "doorframe@0.1.9", "mcp", "--project", "C:\\Users\\alice\\.doorframe\\doorframe.sqlite", "--project-id", "project_123", "--mode", "standard", "--max-results", "25"]
     }
   }
 }

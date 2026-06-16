@@ -111,6 +111,26 @@ describe("MCP health check", () => {
     });
   });
 
+  it("clarifies that baseline warnings do not block general MCP tools", () => {
+    const data = buildFalconProjectData();
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "doorframe-mcp-health-"));
+    const dbPath = path.join(tempDir, "doorframe.sqlite");
+    fs.writeFileSync(dbPath, "readable test database placeholder");
+
+    const result = runMcpHealthCheck({
+      projectPath: dbPath,
+      projectData: data,
+      baselines: [],
+      mcpEntrypointCandidates: [dbPath]
+    });
+
+    expect(result.checks.find((item) => item.id === "baseline-data")).toMatchObject({
+      status: "warn",
+      detail: expect.stringContaining("Project summary")
+    });
+    expect(result.ready).toBe(true);
+  });
+
   it("accepts the packaged CLI entrypoint from DOORFRAME_CLI_ENTRYPOINT", () => {
     const data = buildFalconProjectData();
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "doorframe-mcp-health-"));
@@ -138,6 +158,27 @@ describe("MCP health check", () => {
       } else {
         process.env.DOORFRAME_CLI_ENTRYPOINT = previous;
       }
+    }
+  });
+
+  it("finds source checkout entrypoints when Next runs from apps/web", () => {
+    const data = buildFalconProjectData();
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "doorframe-mcp-health-"));
+    const dbPath = path.join(tempDir, "doorframe.sqlite");
+    fs.writeFileSync(dbPath, "readable test database placeholder");
+
+    const previousCwd = process.cwd();
+    try {
+      process.chdir(path.join(repoRoot, "apps", "web"));
+      const result = runMcpHealthCheck({
+        projectPath: dbPath,
+        projectData: data,
+        baselines: buildFalconBaselines(data.project.id)
+      });
+
+      expect(result.checks.find((item) => item.id === "mcp-entrypoint")?.status).toBe("pass");
+    } finally {
+      process.chdir(previousCwd);
     }
   });
 

@@ -105,9 +105,21 @@ export function McpSetupPanel({
       hideRawText,
       auditLogEnabled,
       auditLogPath,
-      platform
+      platform,
+      packageVersion: initialSettings.packageVersion
     }),
-    [auditLogEnabled, auditLogPath, clientId, hideRawText, maxResults, mode, platform, projectId, projectPath]
+    [
+      auditLogEnabled,
+      auditLogPath,
+      clientId,
+      hideRawText,
+      initialSettings.packageVersion,
+      maxResults,
+      mode,
+      platform,
+      projectId,
+      projectPath
+    ]
   );
   const generated = useMemo(() => generateMcpConfig(settings), [settings]);
   const selectedClient = mcpClientOptions.find((client) => client.id === clientId) ?? mcpClientOptions[0];
@@ -463,6 +475,10 @@ export function McpSetupPanel({
           <div className="flex flex-wrap gap-2">
             <dt className="font-medium text-[var(--foreground)]">Project database:</dt>
             <dd className="break-all">{projectPath}</dd>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <dt className="font-medium text-[var(--foreground)]">MCP package:</dt>
+            <dd className="break-all">{generated.packageSpec}</dd>
           </div>
         </dl>
       </section>

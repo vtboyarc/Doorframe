@@ -25,6 +25,7 @@ describe("MCP setup config generation", () => {
     };
 
     expect(parsed.mcpServers.doorframe.command).toBe("npx");
+    expect(generated.packageSpec).toBe("doorframe");
     expect(parsed.mcpServers.doorframe.args).toEqual([
       "-y",
       "doorframe",
@@ -38,6 +39,18 @@ describe("MCP setup config generation", () => {
       "--max-results",
       "25"
     ]);
+  });
+
+  it("pins the resolved npm package version when Doorframe serves the setup page", () => {
+    const generated = generateMcpConfig({ ...baseSettings, packageVersion: "0.1.9" });
+    const parsed = JSON.parse(generated.configText) as {
+      mcpServers: { doorframe: { args: string[] } };
+    };
+
+    expect(generated.packageSpec).toBe("doorframe@0.1.9");
+    expect(parsed.mcpServers.doorframe.args[1]).toBe("doorframe@0.1.9");
+    expect(generated.commandText).toContain("doorframe@0.1.9");
+    expect(generated.note).toContain("pins doorframe@0.1.9");
   });
 
   it("generates Cursor config with stdio type", () => {
@@ -111,6 +124,20 @@ describe("MCP setup config generation", () => {
     expect(parsed.mcpServers.doorframe.args).toContain("C:\\Users\\alice\\.doorframe\\doorframe.sqlite");
   });
 
+  it("pins the package version inside Windows cmd args", () => {
+    const generated = generateMcpConfig({
+      ...baseSettings,
+      packageVersion: "0.1.9",
+      platform: "windows"
+    });
+    const parsed = JSON.parse(generated.configText) as {
+      mcpServers: { doorframe: { command: string; args: string[] } };
+    };
+
+    expect(parsed.mcpServers.doorframe.command).toBe("cmd");
+    expect(parsed.mcpServers.doorframe.args.slice(0, 4)).toEqual(["/c", "npx", "-y", "doorframe@0.1.9"]);
+  });
+
   it("wraps npx in cmd /c for Windows in client-specific configs", () => {
     const generated = generateMcpConfig({ ...baseSettings, clientId: "vscode", platform: "windows" });
     const parsed = JSON.parse(generated.configText) as {
@@ -159,6 +186,12 @@ describe("MCP client setup guides", () => {
     expect(getMcpClientGuide("claude-desktop", "windows").configFile?.path).toBe(
       "%APPDATA%\\Claude\\claude_desktop_config.json"
     );
+  });
+
+  it("documents Claude Desktop's first-use tool permission prompt", () => {
+    const guide = getMcpClientGuide("claude-desktop", "posix");
+
+    expect(guide.steps.join(" ")).toContain("Allow once");
   });
 
   it("marks ChatGPT as unsupported with alternatives instead of a config file", () => {

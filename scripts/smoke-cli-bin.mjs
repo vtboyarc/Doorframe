@@ -19,7 +19,8 @@ const checks = [
   ["demo", "--help"],
   ["serve", "--help"],
   ["server", "--help"],
-  ["mcp", "--help"]
+  ["mcp", "--help"],
+  ["mcp", "doctor", "--help"]
 ];
 
 for (const args of checks) {
@@ -34,6 +35,17 @@ for (const args of checks) {
   if (!output.includes("Doorframe")) {
     throw new Error(`Expected Doorframe help output for \`doorframe ${args.join(" ")}\`.`);
   }
+}
+
+const { stdout: versionStdout } = await execFileAsync(process.execPath, [cliBin, "--version"], {
+  cwd: repoRoot,
+  env: {
+    ...process.env,
+    NO_COLOR: "1"
+  }
+});
+if (!/^\d+\.\d+\.\d+/.test(versionStdout.trim())) {
+  throw new Error(`Expected semantic version output from \`doorframe --version\`, received ${JSON.stringify(versionStdout)}.`);
 }
 
 async function findOpenPort() {
@@ -209,6 +221,34 @@ async function smokePackagedWebApp() {
     });
     if (!created.project?.id) {
       throw new Error(`Expected a created project, received ${JSON.stringify(created)}.`);
+    }
+
+    const { stdout: doctorStdout } = await execFileAsync(
+      process.execPath,
+      [
+        cliBin,
+        "mcp",
+        "doctor",
+        "--project",
+        path.join(dataDir, "doorframe.sqlite"),
+        "--project-id",
+        created.project.id,
+        "--mode",
+        "summary",
+        "--max-results",
+        "5"
+      ],
+      {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          NO_COLOR: "1"
+        },
+        timeout: 15000
+      }
+    );
+    if (!doctorStdout.includes("PASS get_traceability_gaps")) {
+      throw new Error(`Expected MCP doctor success output, received ${doctorStdout}.`);
     }
 
     await smokeMcpStdioServer(path.join(dataDir, "doorframe.sqlite"), created.project.id);

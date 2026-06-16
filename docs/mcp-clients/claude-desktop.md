@@ -12,6 +12,7 @@ Claude Desktop local MCP setup uses `claude_desktop_config.json` with an `mcpSer
 8. Paste it into `claude_desktop_config.json`.
 9. Restart Claude Desktop.
 10. Ask a starter question.
+11. When Claude asks whether to use each Doorframe tool, choose "Allow once" during setup testing. Use persistent permission only after your organization approves that workflow.
 
 Example shape:
 
@@ -22,7 +23,7 @@ Example shape:
       "command": "npx",
       "args": [
         "-y",
-        "doorframe",
+        "doorframe@0.1.9",
         "mcp",
         "--project",
         "/absolute/path/to/doorframe.sqlite",

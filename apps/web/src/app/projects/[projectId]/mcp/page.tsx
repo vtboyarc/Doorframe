@@ -62,7 +62,8 @@ export default async function McpSetupPage({
     hideRawText: firstParam(resolvedSearchParams, "hideRawText") === "true",
     auditLogEnabled: firstParam(resolvedSearchParams, "auditLogEnabled") === "true",
     auditLogPath: firstParam(resolvedSearchParams, "auditLogPath"),
-    platform: platformParam ?? (process.platform === "win32" ? "windows" : "posix")
+    platform: platformParam ?? (process.platform === "win32" ? "windows" : "posix"),
+    packageVersion: process.env.DOORFRAME_CLI_VERSION?.trim() || undefined
   };
   const healthCheck = runMcpHealthCheck({
     projectPath,

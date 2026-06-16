@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.9 - Draft
+
+- Add `doorframe --version` and a `doorframe mcp doctor` stdio smoke check for validating MCP setup outside an AI client.
+- Pin generated MCP configs to the serving Doorframe npm package version when available.
+- Document Claude Desktop's first-use tool permission prompt and improve MCP troubleshooting for stale `--project-id` failures.
+- Clarify that missing baseline history only limits baseline-specific MCP tools.
+
 ## v0.1.8 - Draft
 
 - Redesign the MCP Setup page as a guided three-step flow: pick a client from labeled cards, follow per-client numbered instructions with exact config file locations and docs links, then verify the connection.

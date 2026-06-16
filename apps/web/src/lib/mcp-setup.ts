@@ -29,6 +29,7 @@ export interface McpSetupSettings {
   auditLogEnabled: boolean;
   auditLogPath?: string;
   platform?: McpHostPlatform;
+  packageVersion?: string;
 }
 
 export interface GeneratedMcpConfig {
@@ -38,6 +39,7 @@ export interface GeneratedMcpConfig {
   commandText: string;
   configText: string;
   note: string;
+  packageSpec: string;
 }
 
 export const mcpClientOptions: McpClientOption[] = [
@@ -146,7 +148,8 @@ export function getMcpClientGuide(clientId: McpClientId, platform: McpHostPlatfo
             ? "Save the file, then fully quit Claude Desktop from the system tray and reopen it. Closing the window is not enough."
             : "Save the file, then fully quit Claude Desktop (Cmd+Q) and reopen it. Closing the window is not enough.",
           'In a new chat, open the search-and-tools menu and confirm "doorframe" is listed.',
-          "Paste a starter question from below to test the connection."
+          "Paste a starter question from below to test the connection.",
+          'When Claude asks whether to use a Doorframe tool, choose "Allow once" during setup testing. Use persistent permission only after your organization approves that workflow.'
         ],
         docsUrl: "https://modelcontextprotocol.io/quickstart/user",
         docsLabel: "MCP quickstart for Claude Desktop"
@@ -214,7 +217,7 @@ export function getMcpClientGuide(clientId: McpClientId, platform: McpHostPlatfo
         kind: "manual",
         steps: [
           'Register the generated JSON with your internal MCP-compatible client as a local stdio server. Some clients call this "custom tools" or "local servers".',
-          "Make sure the machine that launches the client has Node.js 20 or newer available, since the entry runs npx doorframe mcp.",
+          "Make sure the machine that launches the client has Node.js 20 or newer available, since the generated entry runs Doorframe through npx.",
           "Make sure the database path in the config is readable from that machine.",
           "Restart or reload the client, then ask a starter question to test the connection."
         ]
@@ -290,15 +293,22 @@ export function normalizeMcpSettings(settings: McpSetupSettings): McpSetupSettin
     ...settings,
     projectId: settings.projectId.trim(),
     maxResults: Math.max(1, Math.min(Math.floor(settings.maxResults || 25), 500)),
-    auditLogPath: settings.auditLogEnabled ? settings.auditLogPath?.trim() : undefined
+    auditLogPath: settings.auditLogEnabled ? settings.auditLogPath?.trim() : undefined,
+    packageVersion: settings.packageVersion?.trim() || undefined
   };
+}
+
+export function resolveMcpPackageSpec(settings: Pick<McpSetupSettings, "packageVersion">): string {
+  const version = settings.packageVersion?.trim();
+  return version ? `doorframe@${version}` : "doorframe";
 }
 
 export function buildMcpCommand(settings: McpSetupSettings): { command: string; args: string[] } {
   const normalized = normalizeMcpSettings(settings);
+  const packageSpec = resolveMcpPackageSpec(normalized);
   const args = [
     "-y",
-    "doorframe",
+    packageSpec,
     "mcp",
     "--project",
     normalized.projectPath,
@@ -372,6 +382,8 @@ export function generateMcpConfig(settings: McpSetupSettings): GeneratedMcpConfi
   const normalized = normalizeMcpSettings(settings);
   const { command, args } = buildMcpCommand(normalized);
   const commandText = commandToText(command, args, normalized.platform ?? "posix");
+  const packageSpec = resolveMcpPackageSpec(normalized);
+  const packageNote = normalized.packageVersion ? ` This config pins ${packageSpec}.` : "";
 
   if (normalized.clientId === "chatgpt") {
     return {
@@ -387,7 +399,8 @@ export function generateMcpConfig(settings: McpSetupSettings): GeneratedMcpConfi
         "",
         "Use Doorframe reports directly, use a local stdio MCP-capable client, or wait for a future approved internal remote MCP deployment."
       ].join("\n"),
-      note: "ChatGPT remote MCP is not the same as a desktop client launching a local stdio process."
+      note: "ChatGPT remote MCP is not the same as a desktop client launching a local stdio process.",
+      packageSpec
     };
   }
 
@@ -400,7 +413,8 @@ export function generateMcpConfig(settings: McpSetupSettings): GeneratedMcpConfi
       configText: json({
         servers: serverConfig(command, args, true)
       }),
-      note: "Add this to a workspace or user VS Code mcp.json file."
+      note: `Add this to a workspace or user VS Code mcp.json file.${packageNote}`,
+      packageSpec
     };
   }
 
@@ -411,7 +425,8 @@ export function generateMcpConfig(settings: McpSetupSettings): GeneratedMcpConfi
       args,
       commandText,
       configText: `claude mcp add --transport stdio doorframe -- ${commandText}`,
-      note: "Run this in the project where Claude Code should use Doorframe MCP."
+      note: `Run this in the project where Claude Code should use Doorframe MCP.${packageNote}`,
+      packageSpec
     };
   }
 
@@ -424,7 +439,8 @@ export function generateMcpConfig(settings: McpSetupSettings): GeneratedMcpConfi
       configText: json({
         mcpServers: serverConfig(command, args, true)
       }),
-      note: "Add this to Cursor's project or user MCP configuration."
+      note: `Add this to Cursor's project or user MCP configuration.${packageNote}`,
+      packageSpec
     };
   }
 
@@ -440,8 +456,9 @@ export function generateMcpConfig(settings: McpSetupSettings): GeneratedMcpConfi
     }),
     note:
       normalized.clientId === "claude-desktop"
-        ? "Add this to Claude Desktop's local MCP configuration and restart the client."
-        : "Use this as a standard local stdio MCP server configuration."
+        ? `Add this to Claude Desktop's local MCP configuration and restart the client.${packageNote}`
+        : `Use this as a standard local stdio MCP server configuration.${packageNote}`,
+    packageSpec
   };
 }
 
