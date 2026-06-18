@@ -1,6 +1,6 @@
 {
   "name": "doorframe-monorepo",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "description": "Turn requirements exports, work items, and test results into local traceability reports with optional read-only MCP support.",
   "workspaces": [

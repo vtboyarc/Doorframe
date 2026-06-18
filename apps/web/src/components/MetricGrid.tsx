@@ -35,7 +35,7 @@ const metrics: Metric[] = [
   },
   {
     key: "failedTestsLinkedToRequirements",
-    label: "Failed tests linked to requirements",
+    label: "Requirements with failed or errored tests",
     href: (id) => `/projects/${id}/requirements?view=failed-tests`,
     gap: "error"
   }

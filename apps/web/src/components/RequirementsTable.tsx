@@ -43,8 +43,8 @@ export function RequirementsTable({
         cell: (info) => (
           <span>
             {info.getValue()}
-            {info.row.original.failedTestCount > 0 ? (
-              <span className="ml-1 text-[var(--danger)]">({info.row.original.failedTestCount} failed)</span>
+            {info.row.original.failingTestCount > 0 ? (
+              <span className="ml-1 text-[var(--danger)]">({info.row.original.failingTestCount} failing)</span>
             ) : null}
           </span>
         )

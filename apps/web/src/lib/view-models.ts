@@ -3,6 +3,7 @@ import type {
   EntityType,
   Finding,
   ProjectData,
+  ProjectSummary,
   Requirement,
   TestCase,
   TraceLink,
@@ -12,7 +13,7 @@ import type {
 export interface RequirementTableRow extends Requirement {
   linkedWorkCount: number;
   linkedTestCount: number;
-  failedTestCount: number;
+  failingTestCount: number;
   findingCount: number;
 }
 
@@ -92,14 +93,62 @@ export function requirementRows(data: ProjectData): RequirementTableRow[] {
       ...requirement,
       linkedWorkCount: linkedIds(requirement, data.traceLinks, "workItem").length,
       linkedTestCount: testIds.length,
-      failedTestCount: data.testCases.filter(
+      failingTestCount: data.testCases.filter(
         (testCase) => testIds.includes(testCase.id) && (testCase.status === "failed" || testCase.status === "errored")
       ).length,
-      findingCount: data.findings.filter(
-        (finding) => finding.entityType === "requirement" && finding.entityId === requirement.id
-      ).length
+      findingCount: requirementFindings(requirement, data).length
     };
   });
+}
+
+export function projectSummary(data: ProjectData): ProjectSummary {
+  const requirementIds = new Set(data.requirements.map((requirement) => requirement.id));
+  const failingTestIds = new Set(
+    data.testCases
+      .filter((testCase) => testCase.status === "failed" || testCase.status === "errored")
+      .map((testCase) => testCase.id)
+  );
+  const requirementsWithWork = new Set<string>();
+  const requirementsWithTests = new Set<string>();
+  const requirementsWithFailingTests = new Set<string>();
+
+  data.traceLinks.forEach((link) => {
+    const requirementId =
+      link.sourceType === "requirement" && requirementIds.has(link.sourceId)
+        ? link.sourceId
+        : link.targetType === "requirement" && requirementIds.has(link.targetId)
+          ? link.targetId
+          : null;
+
+    if (!requirementId) {
+      return;
+    }
+
+    if (link.sourceType === "workItem" || link.targetType === "workItem") {
+      requirementsWithWork.add(requirementId);
+    }
+
+    if (link.sourceType === "testCase" || link.targetType === "testCase") {
+      requirementsWithTests.add(requirementId);
+      const testId = link.sourceType === "testCase" ? link.sourceId : link.targetId;
+
+      if (failingTestIds.has(testId)) {
+        requirementsWithFailingTests.add(requirementId);
+      }
+    }
+  });
+
+  return {
+    totalRequirements: data.requirements.length,
+    totalWorkItems: data.workItems.length,
+    totalTests: data.testCases.length,
+    totalTraceLinks: data.traceLinks.length,
+    totalFindings: data.findings.length,
+    requirementsWithoutWork: data.requirements.length - requirementsWithWork.size,
+    requirementsWithoutTests: data.requirements.length - requirementsWithTests.size,
+    weakRequirements: data.findings.filter((finding) => finding.category === "weak_wording").length,
+    failedTestsLinkedToRequirements: requirementsWithFailingTests.size
+  };
 }
 
 export function filterRequirementRows(
@@ -115,7 +164,7 @@ export function filterRequirementRows(
   }
 
   if (view === "failed-tests") {
-    return rows.filter((row) => row.failedTestCount > 0);
+    return rows.filter((row) => row.failingTestCount > 0);
   }
 
   return rows;
@@ -131,8 +180,14 @@ export function linkedTestCases(requirement: Requirement, data: ProjectData): Te
   return data.testCases.filter((testCase) => ids.includes(testCase.id));
 }
 
-export function requirementFindings(requirement: Requirement, findings: Finding[]): Finding[] {
-  return findings.filter((finding) => finding.entityType === "requirement" && finding.entityId === requirement.id);
+export function requirementFindings(requirement: Requirement, data: ProjectData): Finding[] {
+  const relatedEntityIds = new Set([
+    requirement.id,
+    ...linkedIds(requirement, data.traceLinks, "workItem"),
+    ...linkedIds(requirement, data.traceLinks, "testCase")
+  ]);
+
+  return data.findings.filter((finding) => relatedEntityIds.has(finding.entityId));
 }
 
 function relatedRequirementIds(
