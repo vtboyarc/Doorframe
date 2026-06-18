@@ -38,8 +38,31 @@ export function RequirementsTable({
       column.accessor("status", { header: "Status" }),
       column.accessor("verificationMethod", { header: "Verification method" }),
       column.accessor("linkedWorkCount", { header: "Work" }),
-      column.accessor("linkedTestCount", { header: "Tests" }),
-      column.accessor("findingCount", { header: "Findings" })
+      column.accessor("linkedTestCount", {
+        header: "Tests",
+        cell: (info) => (
+          <span>
+            {info.getValue()}
+            {info.row.original.failedTestCount > 0 ? (
+              <span className="ml-1 text-[var(--danger)]">({info.row.original.failedTestCount} failed)</span>
+            ) : null}
+          </span>
+        )
+      }),
+      column.accessor("findingCount", {
+        header: "Findings",
+        cell: (info) =>
+          info.getValue() > 0 ? (
+            <Link
+              href={`/projects/${projectId}/requirements/${encodeURIComponent(info.row.original.externalId)}#findings`}
+              className="font-medium text-[var(--accent-strong)] hover:underline"
+            >
+              {info.getValue()}
+            </Link>
+          ) : (
+            0
+          )
+      })
     ],
     [projectId]
   );
@@ -93,7 +116,16 @@ export function RequirementsTable({
               <tr key={row.id} className="hover:bg-[#eef7f2]">
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className="border-b border-[var(--line)] p-3 align-top">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {cell.column.id === "title" ? (
+                      <Link
+                        href={`/projects/${projectId}/requirements/${encodeURIComponent(row.original.externalId)}`}
+                        className="hover:text-[var(--accent-strong)] hover:underline"
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </Link>
+                    ) : (
+                      flexRender(cell.column.columnDef.cell, cell.getContext())
+                    )}
                   </td>
                 ))}
               </tr>

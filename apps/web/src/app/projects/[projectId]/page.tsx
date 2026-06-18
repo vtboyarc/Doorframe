@@ -5,6 +5,7 @@ import { MetricGrid } from "@/components/MetricGrid";
 import { PageShell } from "@/components/PageShell";
 import { getProjectData, getProjectSummary } from "@/lib/db";
 import { humanize, severityBadgeClass } from "@/lib/severity";
+import { findingsByPriority } from "@/lib/view-models";
 
 export default async function ProjectDashboardPage({
   params
@@ -25,6 +26,7 @@ export default async function ProjectDashboardPage({
     summary.totalTests > 0 ||
     summary.totalTraceLinks > 0 ||
     summary.totalFindings > 0;
+  const priorityFindings = findingsByPriority(data.findings).slice(0, 5);
 
   return (
     <PageShell project={data.project}>
@@ -47,11 +49,16 @@ export default async function ProjectDashboardPage({
           </div>
         </section>
 
-        <MetricGrid summary={summary} />
+        <MetricGrid projectId={projectId} summary={summary} />
 
         <section className="grid gap-4 lg:grid-cols-2">
           <div className="border border-[var(--line)] bg-white p-4">
-            <h2 className="text-lg font-semibold">Recent imports</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Recent imports</h2>
+              <Link href={`/projects/${projectId}/imports`} className="text-sm text-[var(--accent-strong)] hover:underline">
+                View imports →
+              </Link>
+            </div>
             <div className="mt-3 divide-y divide-[var(--line)]">
               {data.importBatches.slice(0, 5).map((batch) => (
                 <div key={batch.id} className="py-3 text-sm">
@@ -68,18 +75,30 @@ export default async function ProjectDashboardPage({
           </div>
 
           <div className="border border-[var(--line)] bg-white p-4">
-            <h2 className="text-lg font-semibold">Highest priority findings</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Highest priority findings</h2>
+              <Link href={`/projects/${projectId}/findings`} className="text-sm text-[var(--accent-strong)] hover:underline">
+                View all →
+              </Link>
+            </div>
             <div className="mt-3 divide-y divide-[var(--line)]">
-              {data.findings.slice(0, 5).map((finding) => (
-                <div key={finding.id} className="py-3 text-sm">
-                  <div className="font-medium">{finding.title}</div>
+              {priorityFindings.map((finding) => (
+                <Link
+                  key={finding.id}
+                  href={`/projects/${projectId}/findings/${finding.id}`}
+                  className="group block py-3 text-sm hover:bg-[var(--background)]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="font-medium group-hover:text-[var(--accent-strong)]">{finding.title}</div>
+                    <span aria-hidden="true" className="text-[var(--muted)] group-hover:text-[var(--accent-strong)]">→</span>
+                  </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className={`border px-1.5 py-0.5 text-xs font-medium uppercase ${severityBadgeClass[finding.severity]}`}>
                       {finding.severity}
                     </span>
                     <span className="text-[var(--muted)]">{humanize(finding.category)}</span>
                   </div>
-                </div>
+                </Link>
               ))}
               {data.findings.length === 0 ? (
                 <div className="py-3 text-sm text-[var(--muted)]">No findings yet.</div>

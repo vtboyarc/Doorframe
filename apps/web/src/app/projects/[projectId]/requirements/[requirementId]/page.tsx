@@ -24,9 +24,14 @@ export default async function RequirementDetailPage({
 
   return (
     <PageShell project={data.project}>
-      <Link href={`/projects/${projectId}/requirements`} className="text-sm text-[var(--accent-strong)]">
-        Back to requirements
-      </Link>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <Link href={`/projects/${projectId}/requirements`} className="text-[var(--accent-strong)] hover:underline">
+          ← Back to requirements
+        </Link>
+        <Link href={`/projects/${projectId}/findings`} className="text-[var(--accent-strong)] hover:underline">
+          View all findings
+        </Link>
+      </div>
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_360px]">
         <section className="border border-[var(--line)] bg-white p-5">
           <div className="text-sm text-[var(--muted)]">{requirement.externalId}</div>
@@ -60,7 +65,7 @@ export default async function RequirementDetailPage({
         </section>
 
         <aside className="space-y-4">
-          <div className="border border-[var(--line)] bg-white p-4">
+          <div id="work-items" className="scroll-mt-4 border border-[var(--line)] bg-white p-4">
             <h2 className="font-semibold">Linked work items</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {workItems.map((workItem) => (
@@ -74,7 +79,7 @@ export default async function RequirementDetailPage({
             </div>
           </div>
 
-          <div className="border border-[var(--line)] bg-white p-4">
+          <div id="tests" className="scroll-mt-4 border border-[var(--line)] bg-white p-4">
             <h2 className="font-semibold">Linked tests</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {testCases.map((testCase) => (
@@ -91,12 +96,19 @@ export default async function RequirementDetailPage({
             </div>
           </div>
 
-          <div className="border border-[var(--line)] bg-white p-4">
+          <div id="findings" className="scroll-mt-4 border border-[var(--line)] bg-white p-4">
             <h2 className="font-semibold">Findings</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {findings.map((finding) => (
-                <div key={finding.id} className="py-2">
-                  <div className="font-medium">{finding.title}</div>
+                <Link
+                  key={finding.id}
+                  href={`/projects/${projectId}/findings/${finding.id}`}
+                  className="group block py-2 hover:bg-[var(--background)]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="font-medium group-hover:text-[var(--accent-strong)]">{finding.title}</div>
+                    <span aria-hidden="true" className="text-[var(--muted)] group-hover:text-[var(--accent-strong)]">→</span>
+                  </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className={`border px-1.5 py-0.5 text-xs font-medium uppercase ${severityBadgeClass[finding.severity]}`}>
                       {finding.severity}
@@ -104,7 +116,7 @@ export default async function RequirementDetailPage({
                     <span className="text-[var(--muted)]">{humanize(finding.category)}</span>
                   </div>
                   {finding.recommendation ? <div className="mt-1">{finding.recommendation}</div> : null}
-                </div>
+                </Link>
               ))}
               {findings.length === 0 ? <div className="py-2 text-[var(--muted)]">No findings for this requirement.</div> : null}
             </div>
