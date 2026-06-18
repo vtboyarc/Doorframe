@@ -16,7 +16,7 @@ Claude Code can add local stdio MCP servers with `claude mcp add --transport std
 Example shape:
 
 ```bash
-claude mcp add --transport stdio doorframe -- npx -y doorframe@0.1.9 mcp \
+claude mcp add --transport stdio doorframe -- npx -y doorframe@0.1.10 mcp \
   --project /absolute/path/to/doorframe.sqlite \
   --project-id project_123 \
   --mode standard \
