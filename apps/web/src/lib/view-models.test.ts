@@ -208,6 +208,32 @@ describe("projectSummary", () => {
     expect(projectSummary(data).failedTestsLinkedToRequirements).toBe(2);
     expect(filterRequirementRows(requirementRows(data), "failed-tests")).toHaveLength(2);
   });
+
+  it("ignores links that do not connect a known requirement", () => {
+    const data = projectData();
+    data.traceLinks = [
+      ...traceLinks,
+      {
+        ...traceLinks[0],
+        id: "link-unrelated",
+        sourceType: "workItem",
+        sourceId: workItem.id,
+        targetType: "testCase",
+        targetId: testCase.id
+      },
+      {
+        ...traceLinks[1],
+        id: "link-missing-requirement",
+        sourceId: "missing-requirement"
+      }
+    ];
+
+    expect(projectSummary(data)).toMatchObject({
+      requirementsWithoutWork: 0,
+      requirementsWithoutTests: 0,
+      failedTestsLinkedToRequirements: 1
+    });
+  });
 });
 
 describe("auditEventTarget", () => {

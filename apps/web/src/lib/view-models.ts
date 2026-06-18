@@ -102,7 +102,41 @@ export function requirementRows(data: ProjectData): RequirementTableRow[] {
 }
 
 export function projectSummary(data: ProjectData): ProjectSummary {
-  const rows = requirementRows(data);
+  const requirementIds = new Set(data.requirements.map((requirement) => requirement.id));
+  const failingTestIds = new Set(
+    data.testCases
+      .filter((testCase) => testCase.status === "failed" || testCase.status === "errored")
+      .map((testCase) => testCase.id)
+  );
+  const requirementsWithWork = new Set<string>();
+  const requirementsWithTests = new Set<string>();
+  const requirementsWithFailingTests = new Set<string>();
+
+  data.traceLinks.forEach((link) => {
+    const requirementId =
+      link.sourceType === "requirement" && requirementIds.has(link.sourceId)
+        ? link.sourceId
+        : link.targetType === "requirement" && requirementIds.has(link.targetId)
+          ? link.targetId
+          : null;
+
+    if (!requirementId) {
+      return;
+    }
+
+    if (link.sourceType === "workItem" || link.targetType === "workItem") {
+      requirementsWithWork.add(requirementId);
+    }
+
+    if (link.sourceType === "testCase" || link.targetType === "testCase") {
+      requirementsWithTests.add(requirementId);
+      const testId = link.sourceType === "testCase" ? link.sourceId : link.targetId;
+
+      if (failingTestIds.has(testId)) {
+        requirementsWithFailingTests.add(requirementId);
+      }
+    }
+  });
 
   return {
     totalRequirements: data.requirements.length,
@@ -110,10 +144,10 @@ export function projectSummary(data: ProjectData): ProjectSummary {
     totalTests: data.testCases.length,
     totalTraceLinks: data.traceLinks.length,
     totalFindings: data.findings.length,
-    requirementsWithoutWork: rows.filter((row) => row.linkedWorkCount === 0).length,
-    requirementsWithoutTests: rows.filter((row) => row.linkedTestCount === 0).length,
+    requirementsWithoutWork: data.requirements.length - requirementsWithWork.size,
+    requirementsWithoutTests: data.requirements.length - requirementsWithTests.size,
     weakRequirements: data.findings.filter((finding) => finding.category === "weak_wording").length,
-    failedTestsLinkedToRequirements: rows.filter((row) => row.failingTestCount > 0).length
+    failedTestsLinkedToRequirements: requirementsWithFailingTests.size
   };
 }
 
