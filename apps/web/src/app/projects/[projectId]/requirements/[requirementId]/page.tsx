@@ -20,7 +20,7 @@ export default async function RequirementDetailPage({
 
   const workItems = linkedWorkItems(requirement, data);
   const testCases = linkedTestCases(requirement, data);
-  const findings = requirementFindings(requirement, data.findings);
+  const findings = requirementFindings(requirement, data);
 
   return (
     <PageShell project={data.project}>

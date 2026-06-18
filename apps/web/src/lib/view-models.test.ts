@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { matrixRows } from "@doorframe/reporting";
 import type {
   Finding,
   ProjectData,
@@ -12,6 +13,8 @@ import {
   filterRequirementRows,
   findingContext,
   findingsByPriority,
+  projectSummary,
+  requirementFindings,
   requirementRows
 } from "./view-models";
 
@@ -140,9 +143,70 @@ describe("requirementRows", () => {
   it("counts failed linked tests and supports dashboard gap views", () => {
     const rows = requirementRows(projectData());
 
-    expect(rows[0].failedTestCount).toBe(1);
+    expect(rows[0].failingTestCount).toBe(1);
     expect(filterRequirementRows(rows, "failed-tests")).toHaveLength(1);
     expect(filterRequirementRows(rows, "without-work")).toHaveLength(0);
+  });
+});
+
+describe("requirementFindings", () => {
+  it("includes findings attached to linked work items and tests", () => {
+    const findings = [
+      { ...finding("requirement", requirement.id), id: "requirement-finding" },
+      { ...finding("workItem", workItem.id), id: "work-finding" },
+      { ...finding("testCase", testCase.id), id: "test-finding" },
+      { ...finding("workItem", "unrelated-work"), id: "unrelated-finding" }
+    ];
+    const data = projectData(findings);
+
+    expect(requirementFindings(requirement, data).map((item) => item.id)).toEqual([
+      "requirement-finding",
+      "work-finding",
+      "test-finding"
+    ]);
+    expect(requirementFindings(requirement, data)).toEqual(matrixRows(data)[0].findings);
+    expect(requirementRows(data)[0].findingCount).toBe(3);
+  });
+});
+
+describe("projectSummary", () => {
+  it("counts each requirement once and includes requirements with only errored tests", () => {
+    const secondRequirement: Requirement = {
+      ...requirement,
+      id: "req-2",
+      externalId: "REQ-002",
+      title: "Record status errors"
+    };
+    const secondFailedTest: TestCase = {
+      ...testCase,
+      id: "test-2",
+      externalId: "TEST-002",
+      name: "backup status transmission"
+    };
+    const erroredTest: TestCase = {
+      ...testCase,
+      id: "test-3",
+      externalId: "TEST-003",
+      name: "status error path",
+      status: "errored"
+    };
+    const data = projectData();
+    data.requirements = [requirement, secondRequirement];
+    data.testCases = [testCase, secondFailedTest, erroredTest];
+    data.traceLinks = [
+      ...traceLinks,
+      { ...traceLinks[1], id: "link-3", targetId: secondFailedTest.id },
+      {
+        ...traceLinks[1],
+        id: "link-4",
+        sourceId: secondRequirement.id,
+        targetId: erroredTest.id
+      }
+    ];
+
+    expect(requirementRows(data).map((row) => row.failingTestCount)).toEqual([2, 1]);
+    expect(projectSummary(data).failedTestsLinkedToRequirements).toBe(2);
+    expect(filterRequirementRows(requirementRows(data), "failed-tests")).toHaveLength(2);
   });
 });
 

@@ -3,6 +3,7 @@ import type {
   EntityType,
   Finding,
   ProjectData,
+  ProjectSummary,
   Requirement,
   TestCase,
   TraceLink,
@@ -12,7 +13,7 @@ import type {
 export interface RequirementTableRow extends Requirement {
   linkedWorkCount: number;
   linkedTestCount: number;
-  failedTestCount: number;
+  failingTestCount: number;
   findingCount: number;
 }
 
@@ -92,14 +93,28 @@ export function requirementRows(data: ProjectData): RequirementTableRow[] {
       ...requirement,
       linkedWorkCount: linkedIds(requirement, data.traceLinks, "workItem").length,
       linkedTestCount: testIds.length,
-      failedTestCount: data.testCases.filter(
+      failingTestCount: data.testCases.filter(
         (testCase) => testIds.includes(testCase.id) && (testCase.status === "failed" || testCase.status === "errored")
       ).length,
-      findingCount: data.findings.filter(
-        (finding) => finding.entityType === "requirement" && finding.entityId === requirement.id
-      ).length
+      findingCount: requirementFindings(requirement, data).length
     };
   });
+}
+
+export function projectSummary(data: ProjectData): ProjectSummary {
+  const rows = requirementRows(data);
+
+  return {
+    totalRequirements: data.requirements.length,
+    totalWorkItems: data.workItems.length,
+    totalTests: data.testCases.length,
+    totalTraceLinks: data.traceLinks.length,
+    totalFindings: data.findings.length,
+    requirementsWithoutWork: rows.filter((row) => row.linkedWorkCount === 0).length,
+    requirementsWithoutTests: rows.filter((row) => row.linkedTestCount === 0).length,
+    weakRequirements: data.findings.filter((finding) => finding.category === "weak_wording").length,
+    failedTestsLinkedToRequirements: rows.filter((row) => row.failingTestCount > 0).length
+  };
 }
 
 export function filterRequirementRows(
@@ -115,7 +130,7 @@ export function filterRequirementRows(
   }
 
   if (view === "failed-tests") {
-    return rows.filter((row) => row.failedTestCount > 0);
+    return rows.filter((row) => row.failingTestCount > 0);
   }
 
   return rows;
@@ -131,8 +146,14 @@ export function linkedTestCases(requirement: Requirement, data: ProjectData): Te
   return data.testCases.filter((testCase) => ids.includes(testCase.id));
 }
 
-export function requirementFindings(requirement: Requirement, findings: Finding[]): Finding[] {
-  return findings.filter((finding) => finding.entityType === "requirement" && finding.entityId === requirement.id);
+export function requirementFindings(requirement: Requirement, data: ProjectData): Finding[] {
+  const relatedEntityIds = new Set([
+    requirement.id,
+    ...linkedIds(requirement, data.traceLinks, "workItem"),
+    ...linkedIds(requirement, data.traceLinks, "testCase")
+  ]);
+
+  return data.findings.filter((finding) => relatedEntityIds.has(finding.entityId));
 }
 
 function relatedRequirementIds(

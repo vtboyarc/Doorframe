@@ -29,6 +29,7 @@ import {
   type WorkItem,
   type WorkItemInput
 } from "@doorframe/core";
+import { projectSummary } from "./view-models";
 
 type Db = Database.Database;
 
@@ -780,46 +781,7 @@ export function getProjectSummary(projectId: string): ProjectSummary | null {
     return null;
   }
 
-  const requirementWorkCounts = new Map(data.requirements.map((requirement) => [requirement.id, 0]));
-  const requirementTestCounts = new Map(data.requirements.map((requirement) => [requirement.id, 0]));
-  const failedTests = new Set(data.testCases.filter((test) => test.status === "failed").map((test) => test.id));
-  let failedTestsLinkedToRequirements = 0;
-
-  data.traceLinks.forEach((link) => {
-    if (link.sourceType === "requirement" && link.targetType === "workItem") {
-      requirementWorkCounts.set(link.sourceId, (requirementWorkCounts.get(link.sourceId) ?? 0) + 1);
-    }
-
-    if (link.targetType === "requirement" && link.sourceType === "workItem") {
-      requirementWorkCounts.set(link.targetId, (requirementWorkCounts.get(link.targetId) ?? 0) + 1);
-    }
-
-    if (link.sourceType === "requirement" && link.targetType === "testCase") {
-      requirementTestCounts.set(link.sourceId, (requirementTestCounts.get(link.sourceId) ?? 0) + 1);
-      if (failedTests.has(link.targetId)) {
-        failedTestsLinkedToRequirements += 1;
-      }
-    }
-
-    if (link.targetType === "requirement" && link.sourceType === "testCase") {
-      requirementTestCounts.set(link.targetId, (requirementTestCounts.get(link.targetId) ?? 0) + 1);
-      if (failedTests.has(link.sourceId)) {
-        failedTestsLinkedToRequirements += 1;
-      }
-    }
-  });
-
-  return {
-    totalRequirements: data.requirements.length,
-    totalWorkItems: data.workItems.length,
-    totalTests: data.testCases.length,
-    totalTraceLinks: data.traceLinks.length,
-    totalFindings: data.findings.length,
-    requirementsWithoutWork: Array.from(requirementWorkCounts.values()).filter((count) => count === 0).length,
-    requirementsWithoutTests: Array.from(requirementTestCounts.values()).filter((count) => count === 0).length,
-    weakRequirements: data.findings.filter((finding) => finding.category === "weak_wording").length,
-    failedTestsLinkedToRequirements
-  };
+  return projectSummary(data);
 }
 
 interface RulesetRow {
