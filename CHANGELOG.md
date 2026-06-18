@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.11 - Draft
+
+- Keep matrix finding counts aligned with the related findings shown on requirement detail pages.
+- Count unique requirements with failed or errored linked tests in both the dashboard metric and its drilldown.
+
 ## v0.1.10 - Draft
 
 - Add finding detail pages with affected-entity context, recommendations, and related requirement links.

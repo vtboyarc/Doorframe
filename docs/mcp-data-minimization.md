@@ -5,7 +5,7 @@ Doorframe MCP supports result minimization so a connected AI client can receive 
 ## Startup Flags
 
 ```bash
-npx -y doorframe@0.1.10 mcp \
+npx -y doorframe@0.1.11 mcp \
   --project ./doorframe.sqlite \
   --project-id project_123 \
   --mode standard \
