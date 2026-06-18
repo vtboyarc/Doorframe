@@ -1,9 +1,66 @@
-import type { Finding, ProjectData, Requirement, TestCase, TraceLink, WorkItem } from "@doorframe/core";
+import type {
+  AuditAction,
+  EntityType,
+  Finding,
+  ProjectData,
+  Requirement,
+  TestCase,
+  TraceLink,
+  WorkItem
+} from "@doorframe/core";
 
 export interface RequirementTableRow extends Requirement {
   linkedWorkCount: number;
   linkedTestCount: number;
+  failedTestCount: number;
   findingCount: number;
+}
+
+export type RequirementView = "without-work" | "without-tests" | "failed-tests";
+
+export type FindingContext =
+  | {
+      entityType: "requirement";
+      entity: Requirement;
+      relatedRequirements: Requirement[];
+    }
+  | {
+      entityType: "workItem";
+      entity: WorkItem;
+      relatedRequirements: Requirement[];
+    }
+  | {
+      entityType: "testCase";
+      entity: TestCase;
+      relatedRequirements: Requirement[];
+    }
+  | {
+      entityType: EntityType;
+      entity: null;
+      relatedRequirements: Requirement[];
+    };
+
+export interface AuditEventTarget {
+  href: string;
+  label: string;
+}
+
+const severityRank: Record<Finding["severity"], number> = {
+  error: 0,
+  warning: 1,
+  info: 2
+};
+
+export function findingsByPriority(findings: Finding[]): Finding[] {
+  return [...findings].sort((left, right) => {
+    const severityDifference = severityRank[left.severity] - severityRank[right.severity];
+
+    if (severityDifference !== 0) {
+      return severityDifference;
+    }
+
+    return left.title.localeCompare(right.title);
+  });
 }
 
 export function linkedIds(
@@ -28,14 +85,40 @@ export function linkedIds(
 }
 
 export function requirementRows(data: ProjectData): RequirementTableRow[] {
-  return data.requirements.map((requirement) => ({
-    ...requirement,
-    linkedWorkCount: linkedIds(requirement, data.traceLinks, "workItem").length,
-    linkedTestCount: linkedIds(requirement, data.traceLinks, "testCase").length,
-    findingCount: data.findings.filter(
-      (finding) => finding.entityType === "requirement" && finding.entityId === requirement.id
-    ).length
-  }));
+  return data.requirements.map((requirement) => {
+    const testIds = linkedIds(requirement, data.traceLinks, "testCase");
+
+    return {
+      ...requirement,
+      linkedWorkCount: linkedIds(requirement, data.traceLinks, "workItem").length,
+      linkedTestCount: testIds.length,
+      failedTestCount: data.testCases.filter(
+        (testCase) => testIds.includes(testCase.id) && (testCase.status === "failed" || testCase.status === "errored")
+      ).length,
+      findingCount: data.findings.filter(
+        (finding) => finding.entityType === "requirement" && finding.entityId === requirement.id
+      ).length
+    };
+  });
+}
+
+export function filterRequirementRows(
+  rows: RequirementTableRow[],
+  view?: string
+): RequirementTableRow[] {
+  if (view === "without-work") {
+    return rows.filter((row) => row.linkedWorkCount === 0);
+  }
+
+  if (view === "without-tests") {
+    return rows.filter((row) => row.linkedTestCount === 0);
+  }
+
+  if (view === "failed-tests") {
+    return rows.filter((row) => row.failedTestCount > 0);
+  }
+
+  return rows;
 }
 
 export function linkedWorkItems(requirement: Requirement, data: ProjectData): WorkItem[] {
@@ -50,4 +133,83 @@ export function linkedTestCases(requirement: Requirement, data: ProjectData): Te
 
 export function requirementFindings(requirement: Requirement, findings: Finding[]): Finding[] {
   return findings.filter((finding) => finding.entityType === "requirement" && finding.entityId === requirement.id);
+}
+
+function relatedRequirementIds(
+  entityType: EntityType,
+  entityId: string,
+  traceLinks: TraceLink[]
+): string[] {
+  if (entityType === "requirement") {
+    return [entityId];
+  }
+
+  return traceLinks.flatMap((link) => {
+    if (
+      link.sourceType === entityType &&
+      link.sourceId === entityId &&
+      link.targetType === "requirement"
+    ) {
+      return [link.targetId];
+    }
+
+    if (
+      link.targetType === entityType &&
+      link.targetId === entityId &&
+      link.sourceType === "requirement"
+    ) {
+      return [link.sourceId];
+    }
+
+    return [];
+  });
+}
+
+export function findingContext(finding: Finding, data: ProjectData): FindingContext {
+  const requirementIds = relatedRequirementIds(finding.entityType, finding.entityId, data.traceLinks);
+  const relatedRequirements = data.requirements.filter((requirement) => requirementIds.includes(requirement.id));
+
+  if (finding.entityType === "requirement") {
+    return {
+      entityType: finding.entityType,
+      entity: data.requirements.find((requirement) => requirement.id === finding.entityId) ?? null,
+      relatedRequirements
+    };
+  }
+
+  if (finding.entityType === "workItem") {
+    return {
+      entityType: finding.entityType,
+      entity: data.workItems.find((workItem) => workItem.id === finding.entityId) ?? null,
+      relatedRequirements
+    };
+  }
+
+  return {
+    entityType: finding.entityType,
+    entity: data.testCases.find((testCase) => testCase.id === finding.entityId) ?? null,
+    relatedRequirements
+  };
+}
+
+export function auditEventTarget(
+  projectId: string,
+  action: AuditAction
+): AuditEventTarget {
+  const base = `/projects/${projectId}`;
+
+  switch (action) {
+    case "import.completed":
+      return { href: `${base}/imports`, label: "Review imports" };
+    case "analysis.rerun":
+      return { href: `${base}/findings`, label: "Review findings" };
+    case "baseline.created":
+      return { href: `${base}/baselines`, label: "Review baselines" };
+    case "ruleset.updated":
+      return { href: `${base}/settings`, label: "Review ruleset" };
+    case "report.generated":
+      return { href: `${base}/reports`, label: "Review reports" };
+    case "project.created":
+      return { href: base, label: "Open dashboard" };
+  }
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.10 - Draft
+
+- Add finding detail pages with affected-entity context, recommendations, and related requirement links.
+- Make dashboard metrics, priority findings, audit events, matrix rows, and requirement finding counts actionable.
+- Add filtered requirement views for missing work, missing tests, and failed linked tests.
+- Highlight the active project section and order findings by severity.
+
 ## v0.1.9 - Draft
 
 - Add `doorframe --version` and a `doorframe mcp doctor` stdio smoke check for validating MCP setup outside an AI client.

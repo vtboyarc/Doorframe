@@ -127,6 +127,6 @@ Environment variables:
 - The CLI does not write to the database used by the web app.
 - Use the web app to store projects, baselines, findings, and audit history over time.
 - Run `doorframe --version` to confirm the installed CLI version.
-- Configure MCP from the web app's project MCP Setup page. Advanced users can run the generated `npx -y doorframe@0.1.9 mcp --project ...` command manually.
+- Configure MCP from the web app's project MCP Setup page. Advanced users can run the generated `npx -y doorframe@0.1.10 mcp --project ...` command manually.
 - Run `doorframe mcp doctor --project ... --project-id ...` to validate the same local stdio MCP path before configuring an AI client.
 - MCP is optional and read-only.

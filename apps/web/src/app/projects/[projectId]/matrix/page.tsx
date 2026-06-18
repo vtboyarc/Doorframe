@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { getProject, getProjectData } from "@/lib/db";
@@ -40,14 +41,37 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
           <tbody>
             {rows.map((row) => (
               <tr key={row.requirement.id}>
-                <td style={cell}>{row.requirement.externalId}</td>
-                <td style={cell}>{row.requirement.title}</td>
+                <td style={cell}>
+                  <Link
+                    href={`/projects/${projectId}/requirements/${encodeURIComponent(row.requirement.externalId)}`}
+                    className="font-medium text-[var(--accent-strong)] hover:underline"
+                  >
+                    {row.requirement.externalId}
+                  </Link>
+                </td>
+                <td style={cell}>
+                  <Link
+                    href={`/projects/${projectId}/requirements/${encodeURIComponent(row.requirement.externalId)}`}
+                    className="hover:text-[var(--accent-strong)] hover:underline"
+                  >
+                    {row.requirement.title}
+                  </Link>
+                </td>
                 <td style={cell}>{row.requirement.status ?? "—"}</td>
                 <td style={cell}>{row.workItems.map((w) => w.externalId).join(", ") || "—"}</td>
                 <td style={cell}>
                   {row.testCases.map((t) => `${t.name} (${t.status})`).join(", ") || "—"}
                 </td>
-                <td style={cell}>{row.findings.length || "—"}</td>
+                <td style={cell}>
+                  {row.findings.length > 0 ? (
+                    <Link
+                      href={`/projects/${projectId}/requirements/${encodeURIComponent(row.requirement.externalId)}#findings`}
+                      className="font-medium text-[var(--accent-strong)] hover:underline"
+                    >
+                      {row.findings.length}
+                    </Link>
+                  ) : "—"}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -1,20 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Project } from "@doorframe/core";
-
-const navItems = [
-  ["Dashboard", ""],
-  ["Imports", "imports"],
-  ["Requirements", "requirements"],
-  ["Matrix", "matrix"],
-  ["Findings", "findings"],
-  ["Trace Graph", "trace-graph"],
-  ["Baselines", "baselines"],
-  ["Reports", "reports"],
-  ["MCP Setup", "mcp"],
-  ["Settings", "settings"],
-  ["Audit", "audit"]
-] as const;
+import { ProjectNav } from "./ProjectNav";
 
 export function PageShell({
   project,
@@ -40,19 +27,7 @@ export function PageShell({
             {project ? project.name : "Local-first traceability"}
           </div>
         </div>
-        {project ? (
-          <nav className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-6 pb-4">
-            {navItems.map(([label, href]) => (
-              <Link
-                key={label}
-                href={`/projects/${project.id}${href ? `/${href}` : ""}`}
-                className="whitespace-nowrap border border-[var(--line)] bg-[var(--background)] px-3 py-2 text-sm hover:border-[var(--accent)]"
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
-        ) : null}
+        {project ? <ProjectNav projectId={project.id} /> : null}
       </header>
       <main className="mx-auto max-w-7xl px-6 py-6">{children}</main>
     </div>
