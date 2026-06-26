@@ -12,10 +12,10 @@ export function PageShell({
 }) {
   return (
     <div className="min-h-screen">
-      <header className="border-b border-[var(--line)] bg-white">
+      <header className="border-b border-[var(--line)] bg-[var(--panel)]">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center border border-[var(--foreground)] bg-[var(--foreground)] text-sm font-bold text-white">
+            <div className="grid h-9 w-9 place-items-center rounded border border-[var(--accent-strong)] bg-[var(--panel-strong)] text-sm font-bold text-[var(--accent-strong)]">
               DF
             </div>
             <div>

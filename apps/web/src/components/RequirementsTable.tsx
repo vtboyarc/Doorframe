@@ -15,6 +15,14 @@ import type { RequirementTableRow } from "@/lib/view-models";
 
 const column = createColumnHelper<RequirementTableRow>();
 
+function statusPill(status: string | undefined) {
+  return (
+    <span className="inline-flex rounded-full border border-[var(--line)] px-3 py-1 text-xs font-semibold uppercase text-[var(--foreground)]">
+      {status || "Unset"}
+    </span>
+  );
+}
+
 export function RequirementsTable({
   projectId,
   rows
@@ -27,7 +35,7 @@ export function RequirementsTable({
   const columns = useMemo(
     () => [
       column.accessor("externalId", {
-        header: "ID",
+        header: "Req",
         cell: (info) => (
           <Link href={`/projects/${projectId}/requirements/${encodeURIComponent(info.row.original.externalId)}`} className="font-medium text-[var(--accent-strong)]">
             {info.getValue()}
@@ -35,7 +43,10 @@ export function RequirementsTable({
         )
       }),
       column.accessor("title", { header: "Title" }),
-      column.accessor("status", { header: "Status" }),
+      column.accessor("status", {
+        header: "Status",
+        cell: (info) => statusPill(info.getValue())
+      }),
       column.accessor("verificationMethod", { header: "Verification method" }),
       column.accessor("linkedWorkCount", { header: "Work" }),
       column.accessor("linkedTestCount", {
@@ -78,13 +89,13 @@ export function RequirementsTable({
   });
 
   return (
-    <div className="border border-[var(--line)] bg-white">
+    <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
       <div className="border-b border-[var(--line)] p-3">
         <input
           value={globalFilter}
           onChange={(event) => setGlobalFilter(event.target.value)}
           placeholder="Filter requirements"
-          className="min-h-10 w-full border border-[var(--line)] px-3"
+          className="min-h-10 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-[var(--foreground)]"
         />
       </div>
       <div className="overflow-auto">
@@ -95,7 +106,7 @@ export function RequirementsTable({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="border-b border-[var(--line)] bg-[var(--background)] p-3 text-left"
+                    className="border-b border-[var(--line)] bg-[var(--panel)] p-3 text-left text-xs uppercase text-[var(--muted)]"
                   >
                     <button
                       type="button"
@@ -113,13 +124,13 @@ export function RequirementsTable({
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="hover:bg-[#eef7f2]">
+              <tr key={row.id} className="hover:bg-[var(--panel-strong)]">
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="border-b border-[var(--line)] p-3 align-top">
+                  <td key={cell.id} className="border-b border-[var(--line)] p-3 align-top text-[var(--muted)]">
                     {cell.column.id === "title" ? (
                       <Link
                         href={`/projects/${projectId}/requirements/${encodeURIComponent(row.original.externalId)}`}
-                        className="hover:text-[var(--accent-strong)] hover:underline"
+                        className="text-[var(--foreground)] hover:text-[var(--accent-strong)] hover:underline"
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </Link>

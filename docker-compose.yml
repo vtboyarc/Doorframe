@@ -1,6 +1,6 @@
 services:
   doorframe:
-    image: ghcr.io/vtboyarc/doorframe:0.1.9
+    image: ghcr.io/vtboyarc/doorframe:0.1.12
     build:
       context: .
       dockerfile: docker/Dockerfile

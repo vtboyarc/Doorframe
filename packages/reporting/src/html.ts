@@ -151,30 +151,38 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Doorframe Traceability Report</title>
 <style>
-  :root { color-scheme: light; }
-  body { margin: 0; color: #172026; background: #fff; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.45; }
+  :root { color-scheme: dark; }
+  body { margin: 0; color: #f4f5f7; background: #08090b; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; line-height: 1.45; }
   main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 56px; }
-  h1, h2, h3 { color: #111827; line-height: 1.2; margin: 0 0 12px; }
+  h1, h2, h3 { color: #f4f5f7; line-height: 1.2; margin: 0 0 12px; }
   h1 { font-size: 30px; }
-  h2 { margin-top: 34px; padding-bottom: 6px; border-bottom: 1px solid #d7dce2; font-size: 20px; }
+  h2 { margin-top: 34px; padding-bottom: 8px; border-bottom: 1px solid #2a2d35; font-size: 20px; }
   p { margin: 0 0 12px; }
   table { border-collapse: collapse; width: 100%; margin: 12px 0 24px; page-break-inside: avoid; }
-  th, td { border: 1px solid #d7dce2; padding: 8px 10px; text-align: left; vertical-align: top; font-size: 13px; }
-  th { background: #f1f3f5; font-weight: 700; }
+  th, td { border: 0; border-bottom: 1px solid #2a2d35; padding: 12px 10px; text-align: left; vertical-align: top; font-size: 13px; }
+  th { color: #a3a5ad; font-weight: 700; text-transform: uppercase; }
   ul { margin-top: 8px; }
-  .meta { color: #4b5563; font-size: 13px; }
-  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 16px 0 24px; }
-  .metric { border: 1px solid #d7dce2; padding: 10px; }
-  .metric strong { display: block; font-size: 22px; color: #111827; }
-  .pill { display: inline-block; border-radius: 999px; border: 1px solid #aeb7c2; padding: 2px 7px; font-size: 12px; font-weight: 700; }
-  .ok { color: #166534; border-color: #bbf7d0; background: #f0fdf4; }
-  .warn { color: #92400e; border-color: #fed7aa; background: #fff7ed; }
-  .bad { color: #9f1239; border-color: #fecdd3; background: #fff1f2; }
-  .small { font-size: 12px; color: #4b5563; }
-  footer { margin-top: 36px; color: #4b5563; font-size: 12px; border-top: 1px solid #d7dce2; padding-top: 12px; }
+  .meta { color: #a3a5ad; font-size: 13px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); overflow: hidden; border: 1px solid #2a2d35; border-radius: 8px; margin: 18px 0 24px; }
+  .metric { border-right: 1px solid #2a2d35; border-bottom: 1px solid #2a2d35; padding: 18px; color: #a3a5ad; text-transform: uppercase; }
+  .metric strong { display: block; margin-bottom: 10px; font-size: 36px; line-height: 1; color: #f4f5f7; }
+  .pill { display: inline-block; border-radius: 999px; border: 1px solid #565a66; padding: 3px 9px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+  .ok { color: #edf0f7; border-color: #565a66; background: rgba(237, 240, 247, 0.1); }
+  .warn { color: #d6a760; border-color: rgba(214, 167, 96, 0.65); background: rgba(214, 167, 96, 0.14); }
+  .bad { color: #8fa2ff; border-color: rgba(143, 162, 255, 0.65); background: rgba(143, 162, 255, 0.14); }
+  .small { font-size: 12px; color: #a3a5ad; }
+  footer { margin-top: 36px; color: #a3a5ad; font-size: 12px; border-top: 1px solid #2a2d35; padding-top: 12px; }
   @media print {
     main { max-width: none; padding: 16mm; }
-    body { background: #fff; }
+    body { background: #fff; color: #172026; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    h1, h2, h3 { color: #111827; }
+    h2 { border-bottom-color: #d7dce2; }
+    th, td { border: 1px solid #d7dce2; color: #172026; padding: 8px 10px; }
+    th { background: #f1f3f5; color: #111827; }
+    .meta, .small, footer { color: #4b5563; }
+    .summary-grid { border-color: #d7dce2; }
+    .metric { border-color: #d7dce2; color: #4b5563; }
+    .metric strong { color: #111827; }
     h2 { page-break-after: avoid; }
     table { page-break-inside: auto; }
     tr { page-break-inside: avoid; page-break-after: auto; }

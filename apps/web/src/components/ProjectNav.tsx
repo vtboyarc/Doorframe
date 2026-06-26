@@ -35,7 +35,7 @@ export function ProjectNav({ projectId }: { projectId: string }) {
             className={`whitespace-nowrap border px-3 py-2 text-sm ${
               active
                 ? "border-[var(--accent-strong)] bg-[var(--accent)] text-white"
-                : "border-[var(--line)] bg-[var(--background)] hover:border-[var(--accent)] hover:bg-white"
+                : "border-[var(--line)] bg-[var(--background)] text-[var(--muted)] hover:border-[var(--accent)] hover:bg-[var(--panel-strong)] hover:text-[var(--foreground)]"
             }`}
           >
             {label}

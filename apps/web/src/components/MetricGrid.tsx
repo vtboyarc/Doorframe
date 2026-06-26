@@ -9,12 +9,16 @@ type Metric = {
   gap?: "warning" | "error";
 };
 
-const metrics: Metric[] = [
+const heroMetrics: Metric[] = [
   { key: "totalRequirements", label: "Requirements", href: (id) => `/projects/${id}/requirements` },
+  { key: "linkedRequirements", label: "Linked", href: (id) => `/projects/${id}/matrix` },
+  { key: "totalFindings", label: "Gaps", href: (id) => `/projects/${id}/findings` }
+];
+
+const supportingMetrics: Metric[] = [
   { key: "totalWorkItems", label: "Work items", href: (id) => `/projects/${id}/matrix` },
   { key: "totalTests", label: "Tests", href: (id) => `/projects/${id}/matrix` },
   { key: "totalTraceLinks", label: "Trace links", href: (id) => `/projects/${id}/matrix` },
-  { key: "totalFindings", label: "Findings", href: (id) => `/projects/${id}/findings` },
   {
     key: "requirementsWithoutWork",
     label: "Requirements without work",
@@ -54,33 +58,56 @@ export function MetricGrid({
   summary: ProjectSummary;
 }) {
   return (
-    <section aria-label="Project metrics" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {metrics.map(({ key, label, href, gap }) => {
-        const value = summary[key];
-        const flagged = gap !== undefined && typeof value === "number" && value > 0;
-        const tone = gap ? tones[gap] : null;
+    <section aria-label="Project metrics" className="grid gap-4">
+      <div className="grid overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] sm:grid-cols-3">
+        {heroMetrics.map(({ key, label, href }) => {
+          const value = summary[key];
+          const highlighted = key === "totalFindings";
 
-        return (
-          <Link
-            key={key}
-            href={href(projectId)}
-            aria-label={`${label}: ${value}. Open details.`}
-            className={`group border border-[var(--line)] bg-white p-4 transition hover:-translate-y-0.5 hover:border-[var(--accent)] hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-              flagged && tone ? tone.bar : ""
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className={`text-3xl font-semibold ${flagged && tone ? tone.num : ""}`}>{value}</div>
-                <div className="mt-1 text-sm text-[var(--muted)]">{label}</div>
+          return (
+            <Link
+              key={key}
+              href={href(projectId)}
+              aria-label={`${label}: ${value}. Open details.`}
+              className="group border-b border-[var(--line)] p-5 transition hover:bg-[var(--panel-strong)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] sm:border-b-0 sm:border-r sm:last:border-r-0"
+            >
+              <div className={`text-5xl font-semibold leading-none ${highlighted ? "text-[var(--accent-strong)]" : ""}`}>
+                {value}
               </div>
-              <span aria-hidden="true" className="text-[var(--muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--accent-strong)]">
-                →
-              </span>
-            </div>
-          </Link>
-        );
-      })}
+              <div className="mt-4 text-sm uppercase text-[var(--muted)]">{label}</div>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {supportingMetrics.map(({ key, label, href, gap }) => {
+          const value = summary[key];
+          const flagged = gap !== undefined && typeof value === "number" && value > 0;
+          const tone = gap ? tones[gap] : null;
+
+          return (
+            <Link
+              key={key}
+              href={href(projectId)}
+              aria-label={`${label}: ${value}. Open details.`}
+              className={`group border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:border-[var(--accent)] hover:bg-[var(--panel-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+                flagged && tone ? tone.bar : ""
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className={`text-3xl font-semibold ${flagged && tone ? tone.num : ""}`}>{value}</div>
+                  <div className="mt-2 text-sm text-[var(--muted)]">{label}</div>
+                </div>
+                <span aria-hidden="true" className="text-[var(--muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--accent-strong)]">
+                  →
+                </span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
     </section>
   );
 }
