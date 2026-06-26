@@ -26,13 +26,13 @@ Fix:
 Run the generated command manually in a terminal:
 
 ```bash
-npx -y doorframe@0.1.11 mcp --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25
+npx -y doorframe@0.1.12 mcp --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25
 ```
 
 Or run the built-in doctor with the same values from the MCP Setup page:
 
 ```bash
-npx -y doorframe@0.1.11 mcp doctor --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25
+npx -y doorframe@0.1.12 mcp doctor --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25
 ```
 
 `mcp doctor` starts the same local stdio server that an AI client launches, performs an MCP initialize handshake, lists tools, and calls read-only project summary and traceability-gap tools.
@@ -81,7 +81,7 @@ Local stdio MCP requires the AI client to launch a local process. A browser page
 Fix:
 
 - Install or make available the `doorframe` npm package where the AI client runs.
-- Use the generated `npx -y doorframe@0.1.11 mcp ...` command.
+- Use the generated `npx -y doorframe@0.1.12 mcp ...` command.
 - If the client cannot run `npx`, install Doorframe globally and change the command to `doorframe` with args beginning at `mcp`.
 
 ## Tools Appear But Return Empty Results
@@ -136,7 +136,7 @@ Fix:
   "mcpServers": {
     "doorframe": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "doorframe@0.1.11", "mcp", "--project", "C:\\Users\\alice\\.doorframe\\doorframe.sqlite", "--project-id", "project_123", "--mode", "standard", "--max-results", "25"]
+      "args": ["/c", "npx", "-y", "doorframe@0.1.12", "mcp", "--project", "C:\\Users\\alice\\.doorframe\\doorframe.sqlite", "--project-id", "project_123", "--mode", "standard", "--max-results", "25"]
     }
   }
 }

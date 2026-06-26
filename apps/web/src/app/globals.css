@@ -1,21 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f8f4;
-  --foreground: #182026;
-  --muted: #62717c;
-  --line: #d8ded4;
-  --panel: #ffffff;
-  --accent: #176c5f;
-  --accent-strong: #0e4e45;
-  --danger: #b42318;
-  --danger-soft: #fdecea;
-  --warning: #a15c07;
-  --warning-soft: #fff5e0;
-  --success: #1a7f37;
-  --success-soft: #e7f4ec;
-  --info: #3b5566;
-  --info-soft: #eef2f4;
+  color-scheme: dark;
+  --background: #08090b;
+  --foreground: #f4f5f7;
+  --muted: #a3a5ad;
+  --line: #2a2d35;
+  --panel: #101114;
+  --panel-strong: #17191f;
+  --accent: #5f74ea;
+  --accent-strong: #8fa2ff;
+  --danger: #ff6675;
+  --danger-soft: rgba(255, 102, 117, 0.14);
+  --warning: #d6a760;
+  --warning-soft: rgba(214, 167, 96, 0.14);
+  --success: #edf0f7;
+  --success-soft: rgba(237, 240, 247, 0.1);
+  --info: #9faeff;
+  --info-soft: rgba(159, 174, 255, 0.12);
 }
 
 * {
@@ -31,7 +33,7 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 button,
@@ -41,6 +43,37 @@ textarea {
   font: inherit;
 }
 
+input,
+select,
+textarea {
+  background: var(--panel);
+  color: var(--foreground);
+}
+
+::placeholder {
+  color: var(--muted);
+}
+
+a {
+  color: inherit;
+}
+
 .react-flow__node {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.bg-white {
+  background-color: var(--panel);
+}
+
+.hover\:bg-white:hover {
+  background-color: var(--panel-strong);
+}
+
+.bg-\[\#fff8e8\] {
+  background-color: var(--warning-soft);
+}
+
+.hover\:bg-\[\#eef7f2\]:hover {
+  background-color: var(--panel-strong);
 }

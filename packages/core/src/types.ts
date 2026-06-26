@@ -152,6 +152,7 @@ export interface ProjectData {
 
 export interface ProjectSummary {
   totalRequirements: number;
+  linkedRequirements: number;
   totalWorkItems: number;
   totalTests: number;
   totalTraceLinks: number;

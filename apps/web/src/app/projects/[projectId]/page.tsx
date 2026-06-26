@@ -31,7 +31,7 @@ export default async function ProjectDashboardPage({
   return (
     <PageShell project={data.project}>
       <div className="flex flex-col gap-6">
-        <section className="grid gap-4 border border-[var(--line)] bg-white p-5 lg:grid-cols-[1fr_auto]">
+        <section className="grid gap-4 border border-[var(--line)] bg-[var(--panel)] p-5 lg:grid-cols-[1fr_auto]">
           <div>
             <h1 className="text-2xl font-semibold">{data.project.name}</h1>
             <p className="mt-1 text-sm text-[var(--muted)]">
@@ -52,7 +52,7 @@ export default async function ProjectDashboardPage({
         <MetricGrid projectId={projectId} summary={summary} />
 
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="border border-[var(--line)] bg-white p-4">
+          <div className="border border-[var(--line)] bg-[var(--panel)] p-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Recent imports</h2>
               <Link href={`/projects/${projectId}/imports`} className="text-sm text-[var(--accent-strong)] hover:underline">
@@ -74,7 +74,7 @@ export default async function ProjectDashboardPage({
             </div>
           </div>
 
-          <div className="border border-[var(--line)] bg-white p-4">
+          <div className="border border-[var(--line)] bg-[var(--panel)] p-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Highest priority findings</h2>
               <Link href={`/projects/${projectId}/findings`} className="text-sm text-[var(--accent-strong)] hover:underline">
@@ -86,7 +86,7 @@ export default async function ProjectDashboardPage({
                 <Link
                   key={finding.id}
                   href={`/projects/${projectId}/findings/${finding.id}`}
-                  className="group block py-3 text-sm hover:bg-[var(--background)]"
+                  className="group block py-3 text-sm hover:bg-[var(--panel-strong)]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="font-medium group-hover:text-[var(--accent-strong)]">{finding.title}</div>

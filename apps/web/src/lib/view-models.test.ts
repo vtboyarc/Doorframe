@@ -205,6 +205,7 @@ describe("projectSummary", () => {
     ];
 
     expect(requirementRows(data).map((row) => row.failingTestCount)).toEqual([2, 1]);
+    expect(projectSummary(data).linkedRequirements).toBe(1);
     expect(projectSummary(data).failedTestsLinkedToRequirements).toBe(2);
     expect(filterRequirementRows(requirementRows(data), "failed-tests")).toHaveLength(2);
   });
@@ -229,6 +230,7 @@ describe("projectSummary", () => {
     ];
 
     expect(projectSummary(data)).toMatchObject({
+      linkedRequirements: 1,
       requirementsWithoutWork: 0,
       requirementsWithoutTests: 0,
       failedTestsLinkedToRequirements: 1

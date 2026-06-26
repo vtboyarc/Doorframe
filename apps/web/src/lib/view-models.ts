@@ -140,6 +140,9 @@ export function projectSummary(data: ProjectData): ProjectSummary {
 
   return {
     totalRequirements: data.requirements.length,
+    linkedRequirements: [...requirementsWithWork].filter((requirementId) =>
+      requirementsWithTests.has(requirementId)
+    ).length,
     totalWorkItems: data.workItems.length,
     totalTests: data.testCases.length,
     totalTraceLinks: data.traceLinks.length,

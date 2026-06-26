@@ -22,7 +22,7 @@ Example shape:
       "command": "npx",
       "args": [
         "-y",
-        "doorframe@0.1.11",
+        "doorframe@0.1.12",
         "mcp",
         "--project",
         "/absolute/path/to/doorframe.sqlite",
@@ -40,6 +40,6 @@ Example shape:
 
 Use the MCP Setup page instead of hand-building this when possible. It includes the current project path and project ID, mode, result cap, hide-raw-text flag, and optional audit log flag.
 
-Doorframe MCP is local stdio in this release. The AI client must be able to launch the local `npx -y doorframe@0.1.11 mcp ...` process.
+Doorframe MCP is local stdio in this release. The AI client must be able to launch the local `npx -y doorframe@0.1.12 mcp ...` process.
 
 On Windows, launch npx through `cmd` (`"command": "cmd"`, args starting with `"/c", "npx"`) — the MCP Setup page generates this automatically on Windows. See [Windows: spawn npx ENOENT](../mcp-troubleshooting.md#windows-spawn-npx-enoent).
