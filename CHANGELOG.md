@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.13 - Draft
+
+- Restore readable print colors for passed (`ok`) status pills so traceability matrix results stay visible when reports are printed or saved to PDF.
+
 ## v0.1.11 - Draft
 
 - Keep matrix finding counts aligned with the related findings shown on requirement detail pages.
