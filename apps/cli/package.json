@@ -1,6 +1,6 @@
 {
   "name": "doorframe",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Turn requirements exports, work items, and test results into local traceability reports with optional read-only MCP support.",
   "license": "MIT",
   "repository": {

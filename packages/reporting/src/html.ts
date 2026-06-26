@@ -183,6 +183,8 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
     .summary-grid { border-color: #d7dce2; }
     .metric { border-color: #d7dce2; color: #4b5563; }
     .metric strong { color: #111827; }
+    .pill { border-color: #c3c8d0; }
+    .ok { color: #1f7a3d; border-color: rgba(31, 122, 61, 0.55); background: rgba(31, 122, 61, 0.12); }
     h2 { page-break-after: avoid; }
     table { page-break-inside: auto; }
     tr { page-break-inside: avoid; page-break-after: auto; }
