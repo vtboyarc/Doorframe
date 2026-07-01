@@ -6,7 +6,7 @@ import { humanize, severityBadgeClass } from "@/lib/severity";
 import { findingsByPriority } from "@/lib/view-models";
 
 const activeFilterClass = "border-[var(--accent-strong)] bg-[var(--accent)] text-white";
-const inactiveFilterClass = "border-[var(--line)] bg-white hover:border-[var(--accent)]";
+const inactiveFilterClass = "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--accent)]";
 
 const categories = [
   "missing_verification",
@@ -69,7 +69,7 @@ export default async function FindingsPage({
 
       <div className="grid gap-3">
         {findings.map((finding) => (
-          <article key={finding.id} className="border border-[var(--line)] bg-white">
+          <article key={finding.id} className="border border-[var(--line)] bg-[var(--panel)]">
             <Link
               href={`/projects/${projectId}/findings/${finding.id}`}
               className="group block p-4 hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
@@ -94,7 +94,7 @@ export default async function FindingsPage({
           </article>
         ))}
         {findings.length === 0 ? (
-          <div className="border border-[var(--line)] bg-white p-4 text-sm text-[var(--muted)]">No findings match this filter.</div>
+          <div className="border border-[var(--line)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">No findings match this filter.</div>
         ) : null}
       </div>
     </PageShell>

@@ -14,8 +14,8 @@
   --danger-soft: rgba(255, 102, 117, 0.14);
   --warning: #d6a760;
   --warning-soft: rgba(214, 167, 96, 0.14);
-  --success: #edf0f7;
-  --success-soft: rgba(237, 240, 247, 0.1);
+  --success: #7ed9a0;
+  --success-soft: rgba(126, 217, 160, 0.12);
   --info: #9faeff;
   --info-soft: rgba(159, 174, 255, 0.12);
 }
@@ -60,20 +60,4 @@ a {
 
 .react-flow__node {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-}
-
-.bg-white {
-  background-color: var(--panel);
-}
-
-.hover\:bg-white:hover {
-  background-color: var(--panel-strong);
-}
-
-.bg-\[\#fff8e8\] {
-  background-color: var(--warning-soft);
-}
-
-.hover\:bg-\[\#eef7f2\]:hover {
-  background-color: var(--panel-strong);
 }

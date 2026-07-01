@@ -69,7 +69,7 @@ export function MetricGrid({
               key={key}
               href={href(projectId)}
               aria-label={`${label}: ${value}. Open details.`}
-              className="group border-b border-[var(--line)] p-5 transition hover:bg-[var(--panel-strong)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] sm:border-b-0 sm:border-r sm:last:border-r-0"
+              className="group border-b border-[var(--line)] p-5 transition last:border-b-0 hover:bg-[var(--panel-strong)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] sm:border-b-0 sm:border-r sm:last:border-r-0"
             >
               <div className={`text-5xl font-semibold leading-none ${highlighted ? "text-[var(--accent-strong)]" : ""}`}>
                 {value}

@@ -172,7 +172,7 @@ export function ImportPanel({ projectId }: { projectId: string }) {
 
   return (
     <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
-      <div className="border border-[var(--line)] bg-white p-4">
+      <div className="border border-[var(--line)] bg-[var(--panel)] p-4">
         <label className="block text-sm font-medium" htmlFor="source-type">
           Import type
         </label>
@@ -183,7 +183,7 @@ export function ImportPanel({ projectId }: { projectId: string }) {
             setSourceType(event.target.value as SourceType);
             void onFileChange(file);
           }}
-          className="mt-2 min-h-10 w-full border border-[var(--line)] bg-white px-3"
+          className="mt-2 min-h-10 w-full border border-[var(--line)] bg-[var(--panel)] px-3"
         >
           {importTypes.map((type) => (
             <option key={type.value} value={type.value}>
@@ -199,7 +199,7 @@ export function ImportPanel({ projectId }: { projectId: string }) {
           id="import-file"
           type="file"
           onChange={(event) => void onFileChange(event.target.files?.[0] ?? null)}
-          className="mt-2 w-full border border-[var(--line)] bg-white p-2"
+          className="mt-2 w-full border border-[var(--line)] bg-[var(--panel)] p-2"
         />
 
         {activeFields.length > 0 && headers.length === 0 ? (
@@ -217,7 +217,7 @@ export function ImportPanel({ projectId }: { projectId: string }) {
                 <select
                   value={mapping[field] ?? ""}
                   onChange={(event) => setMapping((current) => ({ ...current, [field]: event.target.value }))}
-                  className="mt-1 min-h-9 w-full border border-[var(--line)] bg-white px-2"
+                  className="mt-1 min-h-9 w-full border border-[var(--line)] bg-[var(--panel)] px-2"
                 >
                   <option value="">Unmapped</option>
                   {headers.map((header) => (
@@ -243,7 +243,7 @@ export function ImportPanel({ projectId }: { projectId: string }) {
 
         {result ? <p className="mt-3 text-sm text-[var(--accent-strong)]">{result}</p> : null}
         {errors.length > 0 ? (
-          <div className="mt-3 border border-[var(--warning)] bg-[#fff8e8] p-3 text-sm">
+          <div className="mt-3 border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm">
             <div className="font-medium">Import messages</div>
             <ul className="mt-1 list-inside list-disc">
               {errors.slice(0, 8).map((error) => (
@@ -254,7 +254,7 @@ export function ImportPanel({ projectId }: { projectId: string }) {
         ) : null}
       </div>
 
-      <div className="border border-[var(--line)] bg-white p-4">
+      <div className="border border-[var(--line)] bg-[var(--panel)] p-4">
         <h2 className="text-base font-semibold">Preview</h2>
         {previewRows.length > 0 ? (
           <div className="mt-3 overflow-auto">

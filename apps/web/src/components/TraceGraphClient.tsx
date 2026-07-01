@@ -72,7 +72,7 @@ export function TraceGraphClient({ nodes, edges }: { nodes: GraphNode[]; edges: 
   }));
 
   return (
-    <div className="h-[680px] border border-[var(--line)] bg-white">
+    <div className="h-[680px] border border-[var(--line)] bg-[var(--panel)]">
       <ReactFlow nodes={flowNodes} edges={flowEdges} fitView>
         <Background />
         <Controls />

@@ -52,7 +52,7 @@ export default async function TraceGraphPage({
       {nodes.length > 0 ? (
         <TraceGraphClient nodes={nodes} edges={edges} />
       ) : (
-        <div className="border border-[var(--line)] bg-white p-4 text-sm text-[var(--muted)]">Import data to render the trace graph.</div>
+        <div className="border border-[var(--line)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">Import data to render the trace graph.</div>
       )}
     </PageShell>
   );

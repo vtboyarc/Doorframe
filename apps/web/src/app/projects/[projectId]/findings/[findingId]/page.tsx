@@ -42,7 +42,7 @@ export default async function FindingDetailPage({
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="border border-[var(--line)] bg-white p-5">
+        <section className="border border-[var(--line)] bg-[var(--panel)] p-5">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`border px-2 py-1 text-xs font-medium uppercase ${severityBadgeClass[finding.severity]}`}>
               {finding.severity}
@@ -65,7 +65,7 @@ export default async function FindingDetailPage({
         </section>
 
         <aside className="space-y-4">
-          <section className="border border-[var(--line)] bg-white p-4">
+          <section className="border border-[var(--line)] bg-[var(--panel)] p-4">
             <h2 className="font-semibold">Affected entity</h2>
             {context.entity ? (
               <dl className="mt-3 grid gap-3 text-sm">
@@ -101,7 +101,7 @@ export default async function FindingDetailPage({
             )}
           </section>
 
-          <section className="border border-[var(--line)] bg-white p-4">
+          <section className="border border-[var(--line)] bg-[var(--panel)] p-4">
             <h2 className="font-semibold">Related requirements</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {context.relatedRequirements.map((requirement) => (

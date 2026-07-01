@@ -62,7 +62,7 @@ export function LoadDemoButton({
         type="button"
         onClick={requestLoadDemo}
         disabled={isLoading}
-        className="inline-flex min-h-10 w-full items-center justify-center gap-2 border border-[var(--foreground)] bg-white px-4 disabled:opacity-60 sm:w-auto"
+        className="inline-flex min-h-10 w-full items-center justify-center gap-2 border border-[var(--foreground)] bg-[var(--panel)] px-4 disabled:opacity-60 sm:w-auto"
       >
         <Database size={16} />
         {isLoading ? "Loading demo" : hasProjectData ? "Add demo data" : "Load Demo Project"}
@@ -83,14 +83,14 @@ export function LoadDemoButton({
               type="button"
               onClick={loadDemo}
               disabled={isLoading}
-              className="min-h-9 border border-[var(--warning)] bg-white px-3 font-medium"
+              className="min-h-9 border border-[var(--warning)] bg-[var(--panel)] px-3 font-medium"
             >
               Load anyway
             </button>
             <button
               type="button"
               onClick={() => setIsConfirming(false)}
-              className="min-h-9 border border-[var(--line)] bg-white px-3"
+              className="min-h-9 border border-[var(--line)] bg-[var(--panel)] px-3"
             >
               Cancel
             </button>

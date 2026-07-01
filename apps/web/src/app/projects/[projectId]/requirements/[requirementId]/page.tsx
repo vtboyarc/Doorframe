@@ -33,7 +33,7 @@ export default async function RequirementDetailPage({
         </Link>
       </div>
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_360px]">
-        <section className="border border-[var(--line)] bg-white p-5">
+        <section className="border border-[var(--line)] bg-[var(--panel)] p-5">
           <div className="text-sm text-[var(--muted)]">{requirement.externalId}</div>
           <h1 className="mt-1 text-2xl font-semibold">{requirement.title}</h1>
           <div className="mt-4 whitespace-pre-wrap border border-[var(--line)] bg-[var(--background)] p-4 text-sm">
@@ -65,7 +65,7 @@ export default async function RequirementDetailPage({
         </section>
 
         <aside className="space-y-4">
-          <div id="work-items" className="scroll-mt-4 border border-[var(--line)] bg-white p-4">
+          <div id="work-items" className="scroll-mt-4 border border-[var(--line)] bg-[var(--panel)] p-4">
             <h2 className="font-semibold">Linked work items</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {workItems.map((workItem) => (
@@ -79,7 +79,7 @@ export default async function RequirementDetailPage({
             </div>
           </div>
 
-          <div id="tests" className="scroll-mt-4 border border-[var(--line)] bg-white p-4">
+          <div id="tests" className="scroll-mt-4 border border-[var(--line)] bg-[var(--panel)] p-4">
             <h2 className="font-semibold">Linked tests</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {testCases.map((testCase) => (
@@ -96,7 +96,7 @@ export default async function RequirementDetailPage({
             </div>
           </div>
 
-          <div id="findings" className="scroll-mt-4 border border-[var(--line)] bg-white p-4">
+          <div id="findings" className="scroll-mt-4 border border-[var(--line)] bg-[var(--panel)] p-4">
             <h2 className="font-semibold">Findings</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {findings.map((finding) => (

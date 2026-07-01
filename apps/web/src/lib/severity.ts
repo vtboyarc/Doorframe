@@ -16,14 +16,16 @@ export const testStatusClass: Record<TestStatus, string> = {
   skipped: "text-[var(--muted)]"
 };
 
-// Node border/text color for the trace graph, by test status.
+// Node border/text color for the trace graph, by test status. Graph nodes
+// keep react-flow's default white card background, so these stay dark for
+// contrast instead of tracking the dark-theme CSS variables.
 export function testStatusColor(status: string): string | null {
   if (status === "failed" || status === "errored") {
-    return "#b42318"; // --danger
+    return "#b42318";
   }
 
   if (status === "passed") {
-    return "#1a7f37"; // --success
+    return "#1a7f37";
   }
 
   return null;
