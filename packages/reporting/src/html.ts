@@ -185,6 +185,8 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
     .metric strong { color: #111827; }
     .pill { border-color: #c3c8d0; }
     .ok { color: #1f7a3d; border-color: rgba(31, 122, 61, 0.55); background: rgba(31, 122, 61, 0.12); }
+    .warn { color: #92400e; border-color: rgba(146, 64, 14, 0.55); background: rgba(146, 64, 14, 0.1); }
+    .bad { color: #9f1239; border-color: rgba(159, 18, 57, 0.55); background: rgba(159, 18, 57, 0.1); }
     h2 { page-break-after: avoid; }
     table { page-break-inside: auto; }
     tr { page-break-inside: avoid; page-break-after: auto; }

@@ -16,9 +16,9 @@ const FINDING_CATEGORIES = [
   "custom_rule"
 ] as const;
 
-const sectionClass = "border border-[var(--line)] bg-white p-4";
+const sectionClass = "border border-[var(--line)] bg-[var(--panel)] p-4";
 const labelClass = "block text-sm font-medium";
-const fieldClass = "mt-1 w-full border border-[var(--line)] bg-white px-3 py-2 font-mono text-sm";
+const fieldClass = "mt-1 w-full border border-[var(--line)] bg-[var(--panel)] px-3 py-2 font-mono text-sm";
 
 export function RulesetEditor({ projectId, initial }: { projectId: string; initial: Ruleset }) {
   const [vagueTerms, setVagueTerms] = useState(initial.analyzer.vagueTerms.join(", "));

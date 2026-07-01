@@ -38,7 +38,7 @@ export default async function RequirementsPage({
         </p>
       </div>
       {activeViewLabel ? (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border border-[var(--line)] bg-white px-4 py-3 text-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-sm">
           <div>
             Showing <span className="font-semibold">{rows.length}</span> matching item{rows.length === 1 ? "" : "s"}: {activeViewLabel}
           </div>

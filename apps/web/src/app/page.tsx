@@ -19,11 +19,11 @@ export default function HomePage() {
           <p className="mt-3 max-w-3xl text-[var(--muted)]">
             Open-source local-first requirements traceability and review tooling for regulated engineering teams.
           </p>
-          <div className="mt-6 border border-[var(--warning)] bg-[#fff8e8] p-4 text-sm">
+          <div className="mt-6 border border-[var(--warning)] bg-[var(--warning-soft)] p-4 text-sm">
             Doorframe runs locally by default and does not send imported project data to any external service. Do not use Doorframe with classified, controlled, proprietary, or sensitive data unless your organization has approved that use in your environment.
           </div>
 
-          <section className="mt-6 border border-[var(--line)] bg-white p-5">
+          <section className="mt-6 border border-[var(--line)] bg-[var(--panel)] p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Start with the review artifact</h2>
@@ -42,14 +42,14 @@ export default function HomePage() {
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}`}
-                  className="border border-[var(--line)] bg-white p-4 hover:border-[var(--accent)]"
+                  className="border border-[var(--line)] bg-[var(--panel)] p-4 hover:border-[var(--accent)]"
                 >
                   <div className="font-semibold">{project.name}</div>
                   <div className="mt-1 text-sm text-[var(--muted)]">Updated {new Date(project.updatedAt).toLocaleString()}</div>
                 </Link>
               ))
             ) : (
-              <div className="border border-[var(--line)] bg-white p-4 text-sm text-[var(--muted)]">
+              <div className="border border-[var(--line)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">
                 No local projects yet. Review the demo report or create an empty project to import your own exports.
               </div>
             )}

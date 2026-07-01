@@ -1,8 +1,19 @@
 # Changelog
 
+## v0.1.14 - Draft
+
+- Restore readable print colors for warning (`warn`) and failed (`bad`) status pills in printed or PDF reports, completing the passed-pill fix from v0.1.13.
+- Give passed test statuses in the web app a distinct green (`--success`) so they no longer blend into regular text on the dark theme.
+- Replace the global `bg-white` CSS overrides with theme variables at each call site so the dark theme no longer depends on remapping Tailwind utility classes.
+
 ## v0.1.13 - Draft
 
 - Restore readable print colors for passed (`ok`) status pills so traceability matrix results stay visible when reports are printed or saved to PDF.
+
+## v0.1.12 - Draft
+
+- Apply a dark theme to the web app and generated HTML reports.
+- Add a linked-requirements hero metric (requirements traced to both work items and tests) to the project dashboard.
 
 ## v0.1.11 - Draft
 
