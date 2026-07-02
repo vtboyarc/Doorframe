@@ -23,7 +23,7 @@ Example shape:
       "command": "npx",
       "args": [
         "-y",
-        "doorframe@0.1.14",
+        "doorframe@0.1.15",
         "mcp",
         "--project",
         "/absolute/path/to/doorframe.sqlite",
