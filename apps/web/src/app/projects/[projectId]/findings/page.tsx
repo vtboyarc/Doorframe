@@ -4,6 +4,7 @@ import { PageShell } from "@/components/PageShell";
 import { getProjectData } from "@/lib/db";
 import { humanize, severityBadgeClass } from "@/lib/severity";
 import { findingsByPriority } from "@/lib/view-models";
+import { panelClass } from "@/lib/ui";
 
 const activeFilterClass = "border-[var(--accent-strong)] bg-[var(--accent)] text-white";
 const inactiveFilterClass = "border-[var(--line)] bg-[var(--panel)] hover:border-[var(--accent)]";
@@ -69,7 +70,7 @@ export default async function FindingsPage({
 
       <div className="grid gap-3">
         {findings.map((finding) => (
-          <article key={finding.id} className="border border-[var(--line)] bg-[var(--panel)]">
+          <article key={finding.id} className={panelClass}>
             <Link
               href={`/projects/${projectId}/findings/${finding.id}`}
               className="group block p-4 hover:bg-[var(--background)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
@@ -94,7 +95,7 @@ export default async function FindingsPage({
           </article>
         ))}
         {findings.length === 0 ? (
-          <div className="border border-[var(--line)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">No findings match this filter.</div>
+          <div className={`${panelClass} p-4 text-sm text-[var(--muted)]`}>No findings match this filter.</div>
         ) : null}
       </div>
     </PageShell>

@@ -3,6 +3,7 @@
 import ReactFlow, { Background, Controls, type Edge, type Node } from "reactflow";
 import "reactflow/dist/style.css";
 import { testStatusColor } from "@/lib/severity";
+import { panelClass } from "@/lib/ui";
 
 type GraphNode = {
   id: string;
@@ -72,7 +73,7 @@ export function TraceGraphClient({ nodes, edges }: { nodes: GraphNode[]; edges: 
   }));
 
   return (
-    <div className="h-[680px] border border-[var(--line)] bg-[var(--panel)]">
+    <div className={`h-[680px] ${panelClass}`}>
       <ReactFlow nodes={flowNodes} edges={flowEdges} fitView>
         <Background />
         <Controls />

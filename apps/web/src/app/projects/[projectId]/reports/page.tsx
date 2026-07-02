@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { getProjectData } from "@/lib/db";
+import { panelClass } from "@/lib/ui";
 
 export default async function ReportsPage({
   params
@@ -18,7 +19,7 @@ export default async function ReportsPage({
   return (
     <PageShell project={data.project}>
       <div className="grid gap-4 lg:grid-cols-[460px_1fr]">
-        <section className="border border-[var(--line)] bg-[var(--panel)] p-5">
+        <section className={`${panelClass} p-5`}>
           <h1 className="text-2xl font-semibold">Reports</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Generate a local HTML report with project summary, traceability matrix, findings, missing verification, missing work items, failed tests by requirement, and weak language.
@@ -54,7 +55,7 @@ export default async function ReportsPage({
         <iframe
           title="Traceability report preview"
           src={`/api/projects/${projectId}/report`}
-          className="h-[720px] w-full border border-[var(--line)] bg-[var(--panel)]"
+          className={`h-[720px] w-full ${panelClass}`}
         />
       </div>
     </PageShell>

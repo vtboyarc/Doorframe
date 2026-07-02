@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ProjectSummary } from "@doorframe/core";
+import { panelClass } from "@/lib/ui";
 
 type Metric = {
   key: keyof ProjectSummary;
@@ -59,7 +60,7 @@ export function MetricGrid({
 }) {
   return (
     <section aria-label="Project metrics" className="grid gap-4">
-      <div className="grid overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)] sm:grid-cols-3">
+      <div className={`grid overflow-hidden rounded-lg ${panelClass} sm:grid-cols-3`}>
         {heroMetrics.map(({ key, label, href }) => {
           const value = summary[key];
           const highlighted = key === "totalFindings";
@@ -91,7 +92,7 @@ export function MetricGrid({
               key={key}
               href={href(projectId)}
               aria-label={`${label}: ${value}. Open details.`}
-              className={`group border border-[var(--line)] bg-[var(--panel)] p-4 transition hover:border-[var(--accent)] hover:bg-[var(--panel-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+              className={`group ${panelClass} p-4 transition hover:border-[var(--accent)] hover:bg-[var(--panel-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
                 flagged && tone ? tone.bar : ""
               }`}
             >
