@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { RequirementTableRow } from "@/lib/view-models";
+import { panelClass } from "@/lib/ui";
 
 const column = createColumnHelper<RequirementTableRow>();
 
@@ -89,7 +90,7 @@ export function RequirementsTable({
   });
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--panel)]">
+    <div className={`overflow-hidden rounded-lg ${panelClass}`}>
       <div className="border-b border-[var(--line)] p-3">
         <input
           value={globalFilter}

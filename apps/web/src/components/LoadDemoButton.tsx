@@ -3,6 +3,7 @@
 import { AlertTriangle, Database } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { panelClass } from "@/lib/ui";
 
 export function LoadDemoButton({
   projectId,
@@ -90,7 +91,7 @@ export function LoadDemoButton({
             <button
               type="button"
               onClick={() => setIsConfirming(false)}
-              className="min-h-9 border border-[var(--line)] bg-[var(--panel)] px-3"
+              className={`min-h-9 ${panelClass} px-3`}
             >
               Cancel
             </button>

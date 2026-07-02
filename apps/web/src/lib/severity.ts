@@ -19,16 +19,14 @@ export const testStatusClass: Record<TestStatus, string> = {
 // Node border/text color for the trace graph, by test status. Graph nodes
 // keep react-flow's default white card background, so these stay dark for
 // contrast instead of tracking the dark-theme CSS variables.
+const graphStatusColor: Record<string, string> = {
+  failed: "#b42318",
+  errored: "#b42318",
+  passed: "#1a7f37"
+};
+
 export function testStatusColor(status: string): string | null {
-  if (status === "failed" || status === "errored") {
-    return "#b42318";
-  }
-
-  if (status === "passed") {
-    return "#1a7f37";
-  }
-
-  return null;
+  return graphStatusColor[status] ?? null;
 }
 
 export function humanize(value: string): string {

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.15 - Draft
+
+- Consolidate the web app's repeated panel styling classes into a single shared constant; no visual changes.
+
 ## v0.1.14 - Draft
 
 - Restore readable print colors for warning (`warn`) and failed (`bad`) status pills in printed or PDF reports, completing the passed-pill fix from v0.1.13.

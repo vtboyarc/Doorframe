@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Ruleset } from "@doorframe/core";
 import { humanize } from "@/lib/severity";
+import { panelClass } from "@/lib/ui";
 
 const FINDING_CATEGORIES = [
   "missing_verification",
@@ -16,9 +17,9 @@ const FINDING_CATEGORIES = [
   "custom_rule"
 ] as const;
 
-const sectionClass = "border border-[var(--line)] bg-[var(--panel)] p-4";
+const sectionClass = `${panelClass} p-4`;
 const labelClass = "block text-sm font-medium";
-const fieldClass = "mt-1 w-full border border-[var(--line)] bg-[var(--panel)] px-3 py-2 font-mono text-sm";
+const fieldClass = `mt-1 w-full ${panelClass} px-3 py-2 font-mono text-sm`;
 
 export function RulesetEditor({ projectId, initial }: { projectId: string; initial: Ruleset }) {
   const [vagueTerms, setVagueTerms] = useState(initial.analyzer.vagueTerms.join(", "));

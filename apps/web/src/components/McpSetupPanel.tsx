@@ -15,6 +15,7 @@ import {
   type McpHostPlatform,
   type McpSetupSettings
 } from "@/lib/mcp-setup";
+import { panelClass } from "@/lib/ui";
 
 const statusClass: Record<McpHealthStatus, string> = {
   pass: "border-[var(--success)] bg-[var(--success-soft)] text-[var(--success)]",
@@ -28,7 +29,7 @@ function CopyButton({ text, label, compact }: { text: string; label: string; com
   return (
     <button
       type="button"
-      className={`inline-flex items-center gap-2 border border-[var(--line)] bg-[var(--panel)] text-sm font-medium hover:border-[var(--accent)] ${
+      className={`inline-flex items-center gap-2 ${panelClass} text-sm font-medium hover:border-[var(--accent)] ${
         compact ? "min-h-8 px-2" : "min-h-10 px-3"
       }`}
       onClick={async () => {
@@ -131,7 +132,7 @@ export function McpSetupPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="grid gap-4 border border-[var(--line)] bg-[var(--panel)] p-5 lg:grid-cols-[1fr_auto]">
+      <section className={`grid gap-4 ${panelClass} p-5 lg:grid-cols-[1fr_auto]`}>
         <div>
           <h1 className="text-2xl font-semibold">MCP Setup</h1>
           <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
@@ -153,7 +154,7 @@ export function McpSetupPanel({
         </div>
       </section>
 
-      <section className="border border-[var(--line)] bg-[var(--panel)] p-5">
+      <section className={`${panelClass} p-5`}>
         <StepHeading step={1} title="Choose your AI client" hint="Pick the tool you want to connect to Doorframe." />
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="AI client">
           {mcpClientOptions.map((client) => {
@@ -209,7 +210,7 @@ export function McpSetupPanel({
         </div>
       </section>
 
-      <section className="border border-[var(--line)] bg-[var(--panel)] p-5">
+      <section className={`${panelClass} p-5`}>
         <StepHeading
           step={2}
           title={`Add Doorframe to ${selectedClient.label}`}
@@ -248,7 +249,7 @@ export function McpSetupPanel({
                   <button
                     key={id}
                     type="button"
-                    className="min-h-8 border border-[var(--line)] bg-[var(--panel)] px-3 text-sm font-medium hover:border-[var(--accent)]"
+                    className={`min-h-8 ${panelClass} px-3 text-sm font-medium hover:border-[var(--accent)]`}
                     onClick={() => setClientId(id)}
                   >
                     {client.label}
@@ -412,7 +413,7 @@ export function McpSetupPanel({
                 Write a sanitized audit log of MCP queries
               </label>
               <input
-                className="min-h-10 border border-[var(--line)] bg-[var(--panel)] px-3 text-sm"
+                className={`min-h-10 ${panelClass} px-3 text-sm`}
                 type="text"
                 value={auditLogPath}
                 placeholder="/absolute/path/to/doorframe-mcp-audit.jsonl"
@@ -427,7 +428,7 @@ export function McpSetupPanel({
         </details>
       </section>
 
-      <section className="border border-[var(--line)] bg-[var(--panel)] p-5">
+      <section className={`${panelClass} p-5`}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <StepHeading step={3} title="Verify the connection" hint={healthCheck.summary} />
           <form method="GET">
@@ -483,7 +484,7 @@ export function McpSetupPanel({
         </dl>
       </section>
 
-      <section className="border border-[var(--line)] bg-[var(--panel)] p-5">
+      <section className={`${panelClass} p-5`}>
         <h2 className="text-lg font-semibold">Starter questions</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Copy one into your connected AI client to see what Doorframe MCP can answer.
@@ -508,7 +509,7 @@ export function McpSetupPanel({
         </div>
       </section>
 
-      <section className="border border-[var(--line)] bg-[var(--panel)] p-5">
+      <section className={`${panelClass} p-5`}>
         <h2 className="text-lg font-semibold">Security reminder</h2>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your

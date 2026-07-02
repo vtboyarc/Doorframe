@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { panelClass } from "@/lib/ui";
 
 export function ProjectCreateForm() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export function ProjectCreateForm() {
   }
 
   return (
-    <div className="border border-[var(--line)] bg-[var(--panel)] p-4">
+    <div className={`${panelClass} p-4`}>
       <h2 className="text-base font-semibold">Create empty project</h2>
       <label className="mt-3 block text-sm font-medium" htmlFor="project-name">
         Project name

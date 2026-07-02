@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { TraceGraphClient } from "@/components/TraceGraphClient";
 import { getProjectData } from "@/lib/db";
+import { panelClass } from "@/lib/ui";
 
 export default async function TraceGraphPage({
   params
@@ -52,7 +53,7 @@ export default async function TraceGraphPage({
       {nodes.length > 0 ? (
         <TraceGraphClient nodes={nodes} edges={edges} />
       ) : (
-        <div className="border border-[var(--line)] bg-[var(--panel)] p-4 text-sm text-[var(--muted)]">Import data to render the trace graph.</div>
+        <div className={`${panelClass} p-4 text-sm text-[var(--muted)]`}>Import data to render the trace graph.</div>
       )}
     </PageShell>
   );
