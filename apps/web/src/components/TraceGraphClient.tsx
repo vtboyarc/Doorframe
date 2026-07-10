@@ -27,9 +27,9 @@ const columns: Record<string, number> = {
 };
 
 const colors: Record<string, string> = {
-  requirement: "#176c5f",
-  workItem: "#44546a",
-  testCase: "#6f4e1d"
+  requirement: "var(--accent-strong)",
+  workItem: "var(--info)",
+  testCase: "var(--warning)"
 };
 
 export function TraceGraphClient({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
@@ -39,7 +39,7 @@ export function TraceGraphClient({ nodes, edges }: { nodes: GraphNode[]; edges: 
     // Test nodes are colored by result so failures stand out; everything
     // else falls back to the per-type color.
     const statusColor = node.type === "testCase" && node.status ? testStatusColor(node.status) : null;
-    const color = statusColor ?? colors[node.type] ?? "#333";
+    const color = statusColor ?? colors[node.type] ?? "var(--muted)";
     const failing = node.status === "failed" || node.status === "errored";
     return {
       id: node.id,
@@ -58,8 +58,9 @@ export function TraceGraphClient({ nodes, edges }: { nodes: GraphNode[]; edges: 
       },
       style: {
         border: `${failing ? 2 : 1}px solid ${color}`,
+        background: "var(--panel-strong)",
         borderRadius: 4,
-        color,
+        color: "var(--foreground)",
         width: 220
       }
     };

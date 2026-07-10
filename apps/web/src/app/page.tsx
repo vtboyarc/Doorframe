@@ -14,10 +14,10 @@ export default function HomePage() {
     <PageShell>
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <section>
-          <h1 className="max-w-4xl text-3xl font-semibold">
+          <h1 className="max-w-4xl text-4xl font-semibold leading-tight tracking-[-0.025em]">
             Doorframe turns requirements exports, Jira work items, and test results into a traceability gap report you can use before a review.
           </h1>
-          <p className="mt-3 max-w-3xl text-[var(--muted)]">
+          <p className="mt-4 max-w-3xl text-lg text-[var(--muted)]">
             Open-source local-first requirements traceability and review tooling for regulated engineering teams.
           </p>
           <div className="mt-6 border border-[var(--warning)] bg-[var(--warning-soft)] p-4 text-sm">

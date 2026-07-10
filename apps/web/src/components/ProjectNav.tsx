@@ -22,7 +22,7 @@ export function ProjectNav({ projectId }: { projectId: string }) {
   const projectPath = `/projects/${projectId}`;
 
   return (
-    <nav aria-label="Project navigation" className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-6 pb-4">
+    <nav aria-label="Project navigation" className="mx-auto flex max-w-7xl gap-1 px-6">
       {navItems.map(([label, segment]) => {
         const href = `${projectPath}${segment ? `/${segment}` : ""}`;
         const active = segment ? pathname.startsWith(href) : pathname === projectPath;
@@ -32,10 +32,10 @@ export function ProjectNav({ projectId }: { projectId: string }) {
             key={label}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`whitespace-nowrap border px-3 py-2 text-sm ${
+            className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors ${
               active
-                ? "border-[var(--accent-strong)] bg-[var(--accent)] text-white"
-                : "border-[var(--line)] bg-[var(--background)] text-[var(--muted)] hover:border-[var(--accent)] hover:bg-[var(--panel-strong)] hover:text-[var(--foreground)]"
+                ? "border-[var(--accent-strong)] text-[var(--foreground)]"
+                : "border-transparent text-[var(--muted)] hover:border-[var(--line)] hover:text-[var(--foreground)]"
             }`}
           >
             {label}

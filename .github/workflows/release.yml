@@ -104,11 +104,11 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Build CLI package
-        run: npm run build -w apps/cli
-
       - name: Build web app
         run: npm run build -w apps/web
+
+      - name: Build CLI package
+        run: npm run build -w apps/cli
 
       - name: npm pack dry run
         run: npm pack --dry-run -w apps/cli
