@@ -152,7 +152,7 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
 <title>Doorframe Traceability Report</title>
 <style>
   :root { color-scheme: dark; }
-  body { margin: 0; color: #f4f5f7; background: #08090b; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; line-height: 1.45; }
+  body { margin: 0; color: #f4f5f7; background: #08090b; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
   main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 56px; }
   h1, h2, h3 { color: #f4f5f7; line-height: 1.2; margin: 0 0 12px; }
   h1 { font-size: 30px; }

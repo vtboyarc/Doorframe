@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BaselineDiff } from "@doorframe/core";
+import { panelClass } from "@/lib/ui";
 
 interface BaselineListItem {
   id: string;
@@ -10,17 +11,11 @@ interface BaselineListItem {
   requirementCount: number;
 }
 
-const button = {
-  background: "var(--accent-strong)",
-  color: "#fff",
-  padding: "8px 14px",
-  border: "none",
-  borderRadius: 4,
-  cursor: "pointer",
-  fontSize: 14
-} as const;
-
-const cell = { textAlign: "left" as const, borderBottom: "1px solid #d3d8cf", padding: 8 };
+const buttonClass =
+  "min-h-10 border border-[var(--accent-strong)] bg-[var(--accent)] px-4 text-sm font-medium text-white transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50";
+const fieldClass =
+  "min-h-10 border border-[var(--line)] bg-[var(--panel)] px-3 text-sm outline-none transition focus:border-[var(--accent-strong)]";
+const cellClass = "border-b border-[var(--line)] px-3 py-3 text-left";
 
 export function BaselinesPanel({ projectId }: { projectId: string }) {
   const [baselines, setBaselines] = useState<BaselineListItem[]>([]);
@@ -29,17 +24,16 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
   const [b, setB] = useState("current");
   const [diff, setDiff] = useState<BaselineDiff | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isWorking, setIsWorking] = useState(false);
 
   const load = useCallback(async () => {
     const response = await fetch(`/api/projects/${projectId}/baselines`);
     if (response.ok) {
       const items = (await response.json()) as BaselineListItem[];
       setBaselines(items);
-      if (!a && items.length > 0) {
-        setA(items[0].id);
-      }
+      setA((current) => current || items[0]?.id || "");
     }
-  }, [projectId, a]);
+  }, [projectId]);
 
   useEffect(() => {
     void load();
@@ -47,6 +41,7 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
 
   async function create() {
     setError(null);
+    setIsWorking(true);
     const response = await fetch(`/api/projects/${projectId}/baselines`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -54,92 +49,113 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
     });
     if (!response.ok) {
       setError("Failed to create baseline.");
+      setIsWorking(false);
       return;
     }
     setLabel("");
     await load();
+    setIsWorking(false);
   }
 
   async function runDiff() {
     setError(null);
     setDiff(null);
+    setIsWorking(true);
     const response = await fetch(`/api/projects/${projectId}/baselines/diff?a=${a}&b=${b}`);
     if (!response.ok) {
       const body = (await response.json()) as { error?: string };
       setError(body.error ?? "Failed to compute diff.");
+      setIsWorking(false);
       return;
     }
     setDiff((await response.json()) as BaselineDiff);
+    setIsWorking(false);
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 24, alignItems: "center" }}>
-        <input
-          placeholder="Baseline label"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          style={{ padding: 8, border: "1px solid #d3d8cf", borderRadius: 4, flex: 1 }}
-        />
-        <button style={button} onClick={create}>
-          Capture baseline
-        </button>
-      </div>
+    <div className="grid gap-5">
+      <section className={`${panelClass} p-4`}>
+        <h2 className="font-semibold">Capture current state</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">Create a named, immutable snapshot for a later comparison.</p>
+        <div className="mt-4 flex items-center gap-2">
+          <input
+            placeholder="Baseline label"
+            aria-label="Baseline label"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className={`flex-1 ${fieldClass}`}
+          />
+          <button type="button" className={buttonClass} onClick={create} disabled={isWorking || !label.trim()}>
+            {isWorking ? "Working…" : "Capture baseline"}
+          </button>
+        </div>
+      </section>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginBottom: 24 }}>
-        <thead>
-          <tr>
-            <th style={cell}>Label</th>
-            <th style={cell}>Created</th>
-            <th style={cell}>Requirements</th>
-          </tr>
-        </thead>
-        <tbody>
-          {baselines.length === 0 ? (
+      <div className={`${panelClass} overflow-hidden`}>
+        <table className="w-full border-collapse text-sm">
+          <thead>
             <tr>
-              <td style={cell} colSpan={3}>
-                No baselines yet.
-              </td>
+              <th className={cellClass}>Label</th>
+              <th className={cellClass}>Created</th>
+              <th className={cellClass}>Requirements</th>
             </tr>
-          ) : (
-            baselines.map((baseline) => (
-              <tr key={baseline.id}>
-                <td style={cell}>{baseline.label}</td>
-                <td style={cell}>{new Date(baseline.createdAt).toLocaleString()}</td>
-                <td style={cell}>{baseline.requirementCount}</td>
+          </thead>
+          <tbody>
+            {baselines.length === 0 ? (
+              <tr>
+                <td className={`${cellClass} text-[var(--muted)]`} colSpan={3}>
+                  No baselines yet.
+                </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-
-      <h2 style={{ fontSize: 16, marginBottom: 12 }}>Compare</h2>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
-        <select value={a} onChange={(e) => setA(e.target.value)} style={{ padding: 8 }}>
-          {baselines.map((baseline) => (
-            <option key={baseline.id} value={baseline.id}>
-              {baseline.label}
-            </option>
-          ))}
-        </select>
-        <span>→</span>
-        <select value={b} onChange={(e) => setB(e.target.value)} style={{ padding: 8 }}>
-          <option value="current">Current state</option>
-          {baselines.map((baseline) => (
-            <option key={baseline.id} value={baseline.id}>
-              {baseline.label}
-            </option>
-          ))}
-        </select>
-        <button style={button} onClick={runDiff} disabled={!a}>
-          Diff
-        </button>
+            ) : (
+              baselines.map((baseline) => (
+                <tr key={baseline.id}>
+                  <td className={cellClass}>{baseline.label}</td>
+                  <td className={`${cellClass} font-mono text-xs text-[var(--muted)]`}>
+                    {new Date(baseline.createdAt).toLocaleString()}
+                  </td>
+                  <td className={cellClass}>{baseline.requirementCount}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
+      <section className={`${panelClass} p-4`}>
+        <h2 className="font-semibold">Compare snapshots</h2>
+        <div className="mt-4 flex items-center gap-2">
+          <select aria-label="Starting baseline" value={a} onChange={(e) => setA(e.target.value)} className={fieldClass}>
+            {baselines.map((baseline) => (
+              <option key={baseline.id} value={baseline.id}>
+                {baseline.label}
+              </option>
+            ))}
+          </select>
+          <span>→</span>
+          <select aria-label="Comparison baseline" value={b} onChange={(e) => setB(e.target.value)} className={fieldClass}>
+            <option value="current">Current state</option>
+            {baselines.map((baseline) => (
+              <option key={baseline.id} value={baseline.id}>
+                {baseline.label}
+              </option>
+            ))}
+          </select>
+          <button type="button" className={buttonClass} onClick={runDiff} disabled={isWorking || !a}>
+            Compare
+          </button>
+        </div>
+      </section>
+
+      {error ? (
+        <p role="alert" className="border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
 
       {diff ? (
-        <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+        <section className={`${panelClass} p-4 text-sm leading-relaxed`} aria-live="polite">
+          <h2 className="mb-3 font-semibold">Comparison result</h2>
           <p>
             <strong>Requirements:</strong> +{diff.requirements.added.length} added, -
             {diff.requirements.removed.length} removed, {diff.requirements.modified.length} modified
@@ -165,7 +181,7 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
           <p>
             <strong>Findings:</strong> {diff.findings.added} added, {diff.findings.resolved} resolved
           </p>
-        </div>
+        </section>
       ) : null}
     </div>
   );

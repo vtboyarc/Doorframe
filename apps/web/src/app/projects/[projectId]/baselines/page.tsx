@@ -12,8 +12,8 @@ export default async function BaselinesPage({ params }: { params: Promise<{ proj
 
   return (
     <PageShell project={project}>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Baselines &amp; Diff</h1>
-      <p style={{ marginBottom: 16, color: "#5c6660" }}>
+      <h1 className="text-2xl font-semibold">Baselines &amp; Diff</h1>
+      <p className="mt-1 mb-5 text-sm text-[var(--muted)]">
         Capture an immutable snapshot of the analyzed project, then compare two baselines (or a baseline against the
         current state) to see what changed.
       </p>

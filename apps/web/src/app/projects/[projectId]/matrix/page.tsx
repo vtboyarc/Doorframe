@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { getProject, getProjectData } from "@/lib/db";
 import { matrixRows } from "@doorframe/reporting";
+import { panelClass } from "@/lib/ui";
 
-const cell = { textAlign: "left" as const, borderBottom: "1px solid #d3d8cf", padding: 8, verticalAlign: "top" as const };
+const cellClass = "border-b border-[var(--line)] px-3 py-3 text-left align-top";
 
 export default async function MatrixPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
@@ -20,28 +21,29 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
 
   return (
     <PageShell project={project}>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Traceability Matrix</h1>
-      <p style={{ marginBottom: 16, color: "#5c6660" }}>
+      <h1 className="text-2xl font-semibold">Traceability Matrix</h1>
+      <p className="mt-1 mb-5 text-sm text-[var(--muted)]">
         {rows.length} requirements · {coverage}% with both linked work and tests
       </p>
       {rows.length === 0 ? (
-        <p>No requirements yet. Import data to populate the matrix.</p>
+        <p className={`${panelClass} p-4 text-sm text-[var(--muted)]`}>No requirements yet. Import data to populate the matrix.</p>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+        <div className={`${panelClass} overflow-hidden`}>
+          <table className="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th style={cell}>Requirement</th>
-              <th style={cell}>Title</th>
-              <th style={cell}>Status</th>
-              <th style={cell}>Work items</th>
-              <th style={cell}>Tests</th>
-              <th style={cell}>Findings</th>
+              <th className={cellClass}>Requirement</th>
+              <th className={cellClass}>Title</th>
+              <th className={cellClass}>Status</th>
+              <th className={cellClass}>Work items</th>
+              <th className={cellClass}>Tests</th>
+              <th className={cellClass}>Findings</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.requirement.id}>
-                <td style={cell}>
+                <td className={cellClass}>
                   <Link
                     href={`/projects/${projectId}/requirements/${encodeURIComponent(row.requirement.externalId)}`}
                     className="font-medium text-[var(--accent-strong)] hover:underline"
@@ -49,7 +51,7 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
                     {row.requirement.externalId}
                   </Link>
                 </td>
-                <td style={cell}>
+                <td className={cellClass}>
                   <Link
                     href={`/projects/${projectId}/requirements/${encodeURIComponent(row.requirement.externalId)}`}
                     className="hover:text-[var(--accent-strong)] hover:underline"
@@ -57,12 +59,12 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
                     {row.requirement.title}
                   </Link>
                 </td>
-                <td style={cell}>{row.requirement.status ?? "—"}</td>
-                <td style={cell}>{row.workItems.map((w) => w.externalId).join(", ") || "—"}</td>
-                <td style={cell}>
+                <td className={cellClass}>{row.requirement.status ?? "—"}</td>
+                <td className={cellClass}>{row.workItems.map((w) => w.externalId).join(", ") || "—"}</td>
+                <td className={cellClass}>
                   {row.testCases.map((t) => `${t.name} (${t.status})`).join(", ") || "—"}
                 </td>
-                <td style={cell}>
+                <td className={cellClass}>
                   {row.findings.length > 0 ? (
                     <Link
                       href={`/projects/${projectId}/requirements/${encodeURIComponent(row.requirement.externalId)}#findings`}
@@ -75,7 +77,8 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       )}
     </PageShell>
   );

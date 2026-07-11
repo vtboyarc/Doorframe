@@ -1,6 +1,6 @@
 {
   "name": "doorframe-monorepo",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "private": true,
   "description": "Turn requirements exports, work items, and test results into local traceability reports with optional read-only MCP support.",
   "workspaces": [
@@ -9,11 +9,11 @@
   ],
   "scripts": {
     "dev": "npm run dev -w apps/web",
-    "build": "npm run build -w apps/cli && npm run build -w apps/web",
+    "build": "npm run build:web && npm run build:cli && node scripts/prepare-cli-package.mjs",
     "build:cli": "npm run build -w apps/cli",
     "build:web": "npm run build -w apps/web",
     "start": "npm run start -w apps/web",
-    "doorframe": "npm run build -w apps/cli --silent && node apps/cli/dist/index.js",
+    "doorframe": "npm run build --silent && node apps/cli/dist/index.js",
     "lint": "npm run typecheck",
     "pack:cli:dry-run": "npm pack --dry-run -w apps/cli",
     "release:assets": "node scripts/generate-release-assets.mjs",

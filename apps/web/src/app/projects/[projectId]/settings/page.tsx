@@ -14,8 +14,8 @@ export default async function SettingsPage({ params }: { params: Promise<{ proje
 
   return (
     <PageShell project={project}>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 8 }}>Project Settings &amp; Ruleset</h1>
-      <p style={{ marginBottom: 16, color: "#5c6660" }}>
+      <h1 className="text-2xl font-semibold">Project Settings &amp; Ruleset</h1>
+      <p className="mt-1 mb-5 text-sm text-[var(--muted)]">
         Configure requirement ID patterns, analyzer thresholds, disabled finding categories, and custom rules.
         Saving re-runs analysis with the new ruleset.
       </p>

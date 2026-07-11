@@ -110,7 +110,7 @@ Open the printed URL, normally `http://localhost:3000`.
 With Docker:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.15
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.16
 ```
 
 With Docker Compose from this repository:
@@ -126,7 +126,7 @@ Then open `http://localhost:3000`.
 Normal users should copy the generated command from the MCP Setup page. Advanced users can run the same command manually:
 
 ```bash
-npx -y doorframe@0.1.15 mcp \
+npx -y doorframe@0.1.16 mcp \
   --project /absolute/path/to/doorframe.sqlite \
   --project-id project_123 \
   --mode standard \
@@ -136,7 +136,7 @@ npx -y doorframe@0.1.15 mcp \
 Validate the same stdio path before configuring a client:
 
 ```bash
-npx -y doorframe@0.1.15 mcp doctor \
+npx -y doorframe@0.1.16 mcp doctor \
   --project /absolute/path/to/doorframe.sqlite \
   --project-id project_123 \
   --mode standard \
@@ -170,7 +170,7 @@ Exact configuration format varies by client. A generic MCP server entry looks li
   "mcpServers": {
     "doorframe": {
       "command": "npx",
-      "args": ["-y", "doorframe@0.1.15", "mcp", "--project", "/absolute/path/to/doorframe.sqlite", "--project-id", "project_123", "--mode", "standard", "--max-results", "25"]
+      "args": ["-y", "doorframe@0.1.16", "mcp", "--project", "/absolute/path/to/doorframe.sqlite", "--project-id", "project_123", "--mode", "standard", "--max-results", "25"]
     }
   }
 }
@@ -193,7 +193,7 @@ Data minimization applies to `search_requirements`, `get_requirement_detail`, `l
 MCP audit logging is off by default. To enable a local JSONL log:
 
 ```bash
-npx -y doorframe@0.1.15 mcp --project ./doorframe.sqlite --project-id project_123 --audit-log ./doorframe-mcp-audit.jsonl
+npx -y doorframe@0.1.16 mcp --project ./doorframe.sqlite --project-id project_123 --audit-log ./doorframe-mcp-audit.jsonl
 ```
 
 The audit log records timestamp, project ID/name when available, tool name, sanitized high-level parameters, result count when easy to infer, mode, success/failure, and duration. It does not log full requirement text, full work item descriptions, full test failure messages, raw imported file contents, environment variables, or secrets.
