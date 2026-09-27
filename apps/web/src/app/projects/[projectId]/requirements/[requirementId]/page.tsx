@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
-import { getProject, getProjectData, getRequirement } from "@/lib/db";
+import { getProject, getProjectData } from "@/lib/db";
 import { sentenceLabel, sourceTypeLabel } from "@/lib/labels";
-import { routeIdCandidates, safeDecode } from "@/lib/params";
+import { safeDecode } from "@/lib/params";
+import { findRequirementByRouteParam } from "@/lib/requirement-route";
 import { severityBadgeClass, testStatusClass } from "@/lib/severity";
 import {
   childRequirements,
@@ -17,10 +18,13 @@ import { labelClass, panelClass, primaryButtonClass, secondaryButtonClass, textL
 
 type Params = Promise<{ projectId: string; requirementId: string }>;
 
+// Next passes this route's params to the page still percent-encoded but to generateMetadata decoded,
+// so the page body decodes once for display and the lookup tries both forms.
 export async function generateMetadata({ params }: { params: Params }) {
   const { projectId, requirementId } = await params;
-  const projectName = getProject(projectId)?.name ?? "Project not found";
-  return { title: `${safeDecode(requirementId)} · ${projectName}` };
+  const project = getProject(projectId);
+  const requirement = project ? findRequirementByRouteParam(projectId, requirementId) : null;
+  return { title: `${requirement?.externalId ?? requirementId} · ${project?.name ?? "Project not found"}` };
 }
 
 /** Only follow "back" links that stay inside this project. */
@@ -44,11 +48,7 @@ export default async function RequirementDetailPage({
   }
 
   const base = `/projects/${projectId}`;
-  const externalOrId = safeDecode(requirementId);
-  const requirement =
-    routeIdCandidates(requirementId)
-      .map((candidate) => getRequirement(projectId, candidate))
-      .find(Boolean) ?? null;
+  const requirement = findRequirementByRouteParam(projectId, requirementId);
   const backHref = safeBackHref(back, projectId) ?? `${base}/requirements`;
   const backLabel = backHref.startsWith(`${base}/matrix`)
     ? "Back to matrix"
@@ -62,7 +62,7 @@ export default async function RequirementDetailPage({
     return (
       <PageShell project={data.project}>
         <section className={`${panelClass} mx-auto max-w-xl p-6`}>
-          <h1 className="break-words text-2xl font-semibold">Requirement {externalOrId} is not in this project</h1>
+          <h1 className="break-words text-2xl font-semibold">Requirement {safeDecode(requirementId)} is not in this project</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
             It may have been removed by a later import, or the ID may be spelled differently in the current data.
           </p>

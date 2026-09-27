@@ -10,14 +10,14 @@ Web app usability and correctness pass. The layout, navigation, and dark theme a
 - Requirements, Matrix, and Findings: filters and sorting are kept in the URL, IDs sort naturally (REQ-2 before REQ-10), detail pages have back and previous/next links, and duplicate-wording findings show both requirements side by side with the flagged terms highlighted.
 - Imports: detect UTF-8 BOM, UTF-16, and Latin-1 files and warn when the encoding was guessed; warn when a CSV uses semicolons or tabs; re-importing requirements removes parent links that are no longer in the file.
 - Imports, record removal, ruleset saves, and the demo load commit their records, import history, findings, and audit events together, so a failure or double submit cannot leave a project half-written.
-- Baselines: show what changed per requirement, swap the compared baselines, and reject duplicate labels. The web demo now loads baselines A and B.
+- Baselines: show what changed per requirement, swap the compared baselines, reject duplicate labels, and download the comparison as the offline baseline diff report. The web demo now loads baselines A and B.
 - Trace graph: work items on the left, requirements in the middle, tests on the right; focus and view are kept in the URL; requirements missing work or tests and unlinked work items or tests are marked; large projects open on "Needs attention".
 - Reports: full-width preview with print and download buttons; opening the preview is no longer recorded in the audit log; download filenames use the local date. The HTML report header shows the Doorframe version that generated it.
 - MCP setup: pick the AI client and operating system, see warnings when the database path cannot be opened by the client (container or wrong-platform paths), copy a `mcp doctor` command, and see when the check results are out of date.
-- Settings: the ruleset editor validates ID patterns and custom rules before saving and reports how the finding count changed.
+- Settings: the ruleset editor validates ID patterns, custom rules, and numeric ranges (in the form and the API), reports how the finding count changed, and asks before in-app navigation discards unsaved edits.
 - Audit: readable action labels, event details, and "Show older events".
 - API: consistent 404s for unknown projects, 400s with plain messages for invalid input, and a health check that reports when the database cannot be opened.
-- Analyzer: cap duplicate-wording candidates per requirement so very large imports cannot exhaust memory.
+- Analyzer: cap duplicate-wording candidates per requirement so very large imports cannot exhaust memory, and match configured closed and draft statuses case-insensitively.
 - Accessibility: visible keyboard focus, higher-contrast form borders and primary buttons, and reduced-motion support.
 
 ## v0.1.15 - Draft

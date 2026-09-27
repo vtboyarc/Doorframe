@@ -32,6 +32,8 @@ export interface RunMcpHealthCheckInput {
   auditLogPath?: string;
   /** Operating system of the machine where the AI client launches the MCP server. */
   platform?: McpHostPlatform;
+  /** Operating system of the Doorframe server running these checks. Defaults to this process's platform. */
+  serverPlatform?: McpHostPlatform;
   mcpEntrypointCandidates?: string[];
 }
 
@@ -385,6 +387,16 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
           "warn",
           `Audit log path is relative: ${auditPath}. The MCP server may run from a different working directory than this web app.`,
           "Use an absolute local path for the audit log."
+        )
+      );
+    } else if (pathStyle(auditPath) !== (input.serverPlatform ?? (process.platform === "win32" ? "windows" : "posix"))) {
+      checks.push(
+        check(
+          "audit-log-writable",
+          "Audit log path writable",
+          "warn",
+          `Cannot check ${auditPath} from the Doorframe server, which runs on a different operating system.`,
+          "Make sure the folder exists and is writable on the computer that runs the AI client."
         )
       );
     } else if (writableParent(auditPath)) {

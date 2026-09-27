@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getProjectData, getRequirement } from "@/lib/db";
-import { routeIdCandidates } from "@/lib/params";
+import { getProjectData } from "@/lib/db";
+import { findRequirementByRouteParam } from "@/lib/requirement-route";
 import { findingsByPriority, linkedTestCases, linkedWorkItems, requirementFindings } from "@/lib/view-models";
 
 export async function GET(
@@ -13,10 +13,7 @@ export async function GET(
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
   }
 
-  const requirement =
-    routeIdCandidates(requirementId)
-      .map((candidate) => getRequirement(projectId, candidate))
-      .find(Boolean) ?? null;
+  const requirement = findRequirementByRouteParam(projectId, requirementId);
   if (!requirement) {
     return NextResponse.json({ error: "Requirement not found." }, { status: 404 });
   }

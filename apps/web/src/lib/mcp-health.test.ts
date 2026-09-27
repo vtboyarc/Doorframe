@@ -208,6 +208,24 @@ describe("MCP health check", () => {
     expect(result.checks.find((item) => item.id === "summary-hides-raw-text")?.status).toBe("warn");
   });
 
+  it("does not claim a Windows audit log path is writable when checked from a Linux server", () => {
+    const result = runMcpHealthCheck({
+      projectPath: "/tmp/doorframe.sqlite",
+      projectData: buildFalconProjectData(),
+      baselines: [],
+      platform: "windows",
+      serverPlatform: "posix",
+      auditLogEnabled: true,
+      auditLogPath: "C:\\Users\\Alice Smith\\logs\\audit.jsonl",
+      mcpEntrypointCandidates: []
+    });
+
+    expect(result.checks.find((item) => item.id === "audit-log-writable")).toMatchObject({
+      status: "warn",
+      detail: expect.stringContaining("Cannot check")
+    });
+  });
+
   it("warns when the database path cannot be opened by the AI client", () => {
     const docker = runMcpHealthCheck({ projectPath: "/data/doorframe.sqlite", projectData: buildFalconProjectData(), baselines: [] });
     expect(docker.checks.find((item) => item.id === "container-path")?.status).toBe("warn");
