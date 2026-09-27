@@ -16,7 +16,7 @@ export function PageHeader({
         <h1 className="break-words text-2xl font-semibold tracking-tight">{title}</h1>
         {description ? <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">{description}</p> : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
+      {actions ? <div className="flex shrink-0 flex-wrap gap-2 print:hidden">{actions}</div> : null}
     </div>
   );
 }

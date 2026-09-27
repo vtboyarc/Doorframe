@@ -104,34 +104,36 @@ export default async function RequirementDetailPage({
         <Link href={backHref} className={textLinkClass}>
           <span aria-hidden="true">←</span> {backLabel}
         </Link>
-        <nav aria-label="Adjacent requirements by ID" className="flex flex-wrap gap-x-4 gap-y-1">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <Link
             href={`${base}/trace-graph?focus=${encodeURIComponent(requirement.externalId)}`}
             className={textLinkClass}
           >
             View in trace graph
           </Link>
-          {previous ? (
-            <Link
-              href={withBack(previous.externalId)}
-              title="Previous requirement by ID"
-              aria-label={`Previous requirement by ID: ${previous.externalId}`}
-              className={textLinkClass}
-            >
-              <span aria-hidden="true">←</span> {previous.externalId}
-            </Link>
-          ) : null}
-          {next ? (
-            <Link
-              href={withBack(next.externalId)}
-              title="Next requirement by ID"
-              aria-label={`Next requirement by ID: ${next.externalId}`}
-              className={textLinkClass}
-            >
-              {next.externalId} <span aria-hidden="true">→</span>
-            </Link>
-          ) : null}
-        </nav>
+          <nav aria-label="Adjacent requirements by ID" className="flex flex-wrap gap-x-4 gap-y-1">
+            {previous ? (
+              <Link
+                href={withBack(previous.externalId)}
+                title="Previous requirement by ID"
+                aria-label={`Previous requirement by ID: ${previous.externalId}`}
+                className={textLinkClass}
+              >
+                <span aria-hidden="true">←</span> {previous.externalId}
+              </Link>
+            ) : null}
+            {next ? (
+              <Link
+                href={withBack(next.externalId)}
+                title="Next requirement by ID"
+                aria-label={`Next requirement by ID: ${next.externalId}`}
+                className={textLinkClass}
+              >
+                {next.externalId} <span aria-hidden="true">→</span>
+              </Link>
+            ) : null}
+          </nav>
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">

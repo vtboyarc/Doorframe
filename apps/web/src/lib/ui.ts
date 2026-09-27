@@ -7,7 +7,7 @@ const buttonBase =
   "inline-flex min-h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap border px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
 /** The single main action on a page or panel. */
-export const primaryButtonClass = `${buttonBase} border-[var(--accent-strong)] bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]`;
+export const primaryButtonClass = `${buttonBase} border-[var(--accent-strong)] bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] print:text-[var(--foreground)]`;
 
 /** Supporting actions next to a primary action. */
 export const secondaryButtonClass = `${buttonBase} border-[var(--line-strong)] bg-[var(--panel)] text-[var(--foreground)] hover:border-[var(--accent-strong)] hover:bg-[var(--panel-strong)]`;
