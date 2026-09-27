@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeUpload } from "./import-encoding";
+import { decodeUpload, decodeWindows1252 } from "./import-encoding";
 
 describe("decodeUpload", () => {
   it("reads UTF-8 with or without a byte-order mark", () => {
@@ -18,6 +18,12 @@ describe("decodeUpload", () => {
     expect(decoded.encoding).toBe("windows-1252");
     expect(decoded.text).toBe("R,±2 °C’s");
     expect(decoded.warning).toMatch(/not UTF-8/);
+  });
+
+  it("maps the Windows-1252 bytes that differ from ISO-8859-1", () => {
+    expect(decodeWindows1252(new Uint8Array([0x80, 0x93, 0x94, 0x96, 0x97, 0x99, 0x9f]))).toBe("€“”–—™Ÿ");
+    expect(decodeWindows1252(new Uint8Array([0x41, 0xe9, 0xff]))).toBe("Aéÿ");
+    expect(decodeWindows1252(new Uint8Array(20000).fill(0x61))).toBe("a".repeat(20000));
   });
 
   it("reads UTF-16 files that start with a byte-order mark", () => {
