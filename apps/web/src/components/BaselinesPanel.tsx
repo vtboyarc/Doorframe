@@ -42,10 +42,6 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
-function plural(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? "" : "s"}`;
-}
-
 // Compare the previous baseline with the latest one when there are two or more;
 // otherwise compare the only baseline with the current project state.
 function defaultSelection(items: BaselineListItem[]): { a: string; b: string } {
@@ -265,34 +261,28 @@ export function BaselinesPanel({ projectId, hasData }: { projectId: string; hasD
         ) : baselines.length === 0 ? (
           <p className="p-4 text-sm text-[var(--muted)]">No baselines yet.</p>
         ) : (
-          <table className="w-full border-collapse text-sm">
-            <thead className="hidden sm:table-header-group">
-              <tr className="text-xs uppercase text-[var(--muted)]">
-                <th className="border-b border-[var(--line)] px-3 py-3 text-left font-semibold">Baseline</th>
-                <th className="border-b border-[var(--line)] px-3 py-3 text-left font-semibold">Captured</th>
-                <th className="border-b border-[var(--line)] px-3 py-3 text-right font-semibold">Requirements</th>
-                <th className="border-b border-[var(--line)] px-3 py-3 text-right font-semibold">Findings</th>
-              </tr>
-            </thead>
-            <tbody>
-              {baselines.map((baseline) => (
-                <tr key={baseline.id} className="border-b border-[var(--line)] last:border-b-0">
-                  <td className="px-3 py-3">
-                    <div className="font-medium [overflow-wrap:anywhere]">{baseline.label}</div>
-                    <div className="mt-0.5 text-xs text-[var(--muted)] sm:hidden">
-                      {formatDate(baseline.createdAt)} · {plural(baseline.requirementCount, "requirement")}
-                      {baseline.findingCount !== undefined ? ` · ${plural(baseline.findingCount, "finding")}` : ""}
-                    </div>
-                  </td>
-                  <td className="hidden whitespace-nowrap px-3 py-3 text-[var(--muted)] sm:table-cell">
-                    {formatDate(baseline.createdAt)}
-                  </td>
-                  <td className="hidden px-3 py-3 text-right tabular-nums sm:table-cell">{baseline.requirementCount}</td>
-                  <td className="hidden px-3 py-3 text-right tabular-nums sm:table-cell">{baseline.findingCount ?? "—"}</td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] border-collapse text-sm">
+              <thead>
+                <tr className="text-xs uppercase text-[var(--muted)]">
+                  <th className="border-b border-[var(--line)] px-3 py-3 text-left font-semibold">Baseline</th>
+                  <th className="border-b border-[var(--line)] px-3 py-3 text-left font-semibold">Captured</th>
+                  <th className="border-b border-[var(--line)] px-3 py-3 text-right font-semibold">Requirements</th>
+                  <th className="border-b border-[var(--line)] px-3 py-3 text-right font-semibold">Findings</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {baselines.map((baseline) => (
+                  <tr key={baseline.id} className="border-b border-[var(--line)] last:border-b-0">
+                    <td className="px-3 py-3 font-medium [overflow-wrap:anywhere]">{baseline.label}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-[var(--muted)]">{formatDate(baseline.createdAt)}</td>
+                    <td className="px-3 py-3 text-right tabular-nums">{baseline.requirementCount}</td>
+                    <td className="px-3 py-3 text-right tabular-nums">{baseline.findingCount ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 

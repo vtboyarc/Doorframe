@@ -134,10 +134,7 @@ export default async function FindingsPage({
             })}
           </div>
 
-          <nav
-            aria-label="Finding categories"
-            className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:thin] sm:mx-0 sm:flex-wrap sm:px-0"
-          >
+          <nav aria-label="Finding categories" className="mb-4 flex flex-wrap gap-2">
             <Link
               href={listHref({ severity })}
               aria-current={!category ? "page" : undefined}

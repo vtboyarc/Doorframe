@@ -16,7 +16,7 @@ const tones = {
 } as const;
 
 const heroLinkClass =
-  "group block p-4 transition-colors hover:bg-[var(--panel-strong)] focus-visible:outline-offset-[-2px] sm:p-5";
+  "group block p-5 transition-colors hover:bg-[var(--panel-strong)] focus-visible:outline-offset-[-2px]";
 
 function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
@@ -65,23 +65,23 @@ export function MetricGrid({
     <section aria-label="Project metrics" className="grid gap-4">
       <div className={`grid grid-cols-3 divide-x divide-[var(--line)] ${panelClass}`}>
         <Link href={`${base}/requirements`} className={heroLinkClass}>
-          <div className="text-3xl font-semibold leading-none tabular-nums sm:text-5xl">{summary.totalRequirements}</div>
-          <div className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)] sm:text-sm">Requirements</div>
-          <div className="mt-1 hidden text-sm text-[var(--muted)] sm:block">Imported and analyzed</div>
+          <div className="text-5xl font-semibold leading-none tabular-nums">{summary.totalRequirements}</div>
+          <div className="mt-3 text-sm font-medium uppercase tracking-wide text-[var(--muted)]">Requirements</div>
+          <div className="mt-1 text-sm text-[var(--muted)]">Imported and analyzed</div>
         </Link>
         <Link href={`${base}/matrix`} className={heroLinkClass}>
-          <div className="text-3xl font-semibold leading-none tabular-nums sm:text-5xl">{stats.fullyTracedPercent}%</div>
-          <div className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)] sm:text-sm">Fully traced</div>
-          <div className="mt-1 hidden text-sm text-[var(--muted)] sm:block">
+          <div className="text-5xl font-semibold leading-none tabular-nums">{stats.fullyTracedPercent}%</div>
+          <div className="mt-3 text-sm font-medium uppercase tracking-wide text-[var(--muted)]">Fully traced</div>
+          <div className="mt-1 text-sm text-[var(--muted)]">
             {summary.linkedRequirements} of {summary.totalRequirements} linked to work and tests
           </div>
         </Link>
         <Link href={`${base}/findings`} className={heroLinkClass}>
-          <div className={`text-3xl font-semibold leading-none tabular-nums sm:text-5xl ${findingTone}`}>
+          <div className={`text-5xl font-semibold leading-none tabular-nums ${findingTone}`}>
             {summary.totalFindings}
           </div>
-          <div className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)] sm:text-sm">Findings</div>
-          <div className="mt-1 hidden text-sm text-[var(--muted)] sm:block">
+          <div className="mt-3 text-sm font-medium uppercase tracking-wide text-[var(--muted)]">Findings</div>
+          <div className="mt-1 text-sm text-[var(--muted)]">
             {plural(error, "error")} · {plural(warning, "warning")} · {info} info
           </div>
         </Link>

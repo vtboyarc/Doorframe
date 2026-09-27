@@ -109,16 +109,7 @@ export default async function ReportsPage({
             </p>
           </section>
 
-          <div className="hidden sm:block">
-            <ReportPreview frameId={PREVIEW_ID} src={`${reportUrl}?preview=1`} />
-          </div>
-          <p className={`${panelClass} p-4 text-sm text-[var(--muted)] sm:hidden`}>
-            The report is laid out for a larger screen.{" "}
-            <a href={reportUrl} target="_blank" rel="noopener" className={textLinkClass}>
-              Open it in a new tab
-            </a>{" "}
-            to read or share it.
-          </p>
+          <ReportPreview frameId={PREVIEW_ID} src={`${reportUrl}?preview=1`} />
         </>
       )}
     </PageShell>
