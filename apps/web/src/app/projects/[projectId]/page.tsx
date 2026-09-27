@@ -139,7 +139,7 @@ export default async function ProjectDashboardPage({
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Recent imports</h2>
               <Link href={`${base}/imports`} className={`shrink-0 whitespace-nowrap text-sm ${textLinkClass}`}>
-                View imports →
+                View imports <span aria-hidden="true">→</span>
               </Link>
             </div>
             <div className="mt-3 divide-y divide-[var(--line)]">
@@ -175,7 +175,7 @@ export default async function ProjectDashboardPage({
               <h2 className="text-lg font-semibold">Highest priority findings</h2>
               {data.findings.length > 0 ? (
                 <Link href={`${base}/findings`} className={`shrink-0 whitespace-nowrap text-sm ${textLinkClass}`}>
-                  View all {data.findings.length} →
+                  View all {data.findings.length} <span aria-hidden="true">→</span>
                 </Link>
               ) : null}
             </div>

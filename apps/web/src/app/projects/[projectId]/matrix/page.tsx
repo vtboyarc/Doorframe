@@ -1,3 +1,4 @@
+import { Download } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { matrixRows } from "@doorframe/reporting";
@@ -7,10 +8,10 @@ import { getProjectData } from "@/lib/db";
 import { projectPageMetadata } from "@/lib/metadata";
 import { testStatusClass } from "@/lib/severity";
 import { coveragePercent } from "@/lib/view-models";
-import { panelClass, primaryButtonClass, textLinkClass } from "@/lib/ui";
+import { panelClass, primaryButtonClass, secondaryButtonClass, tableScrollClass, textLinkClass } from "@/lib/ui";
 
 export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
-  return projectPageMetadata(params, "Matrix");
+  return projectPageMetadata(params, "Traceability matrix");
 }
 
 const headerClass =
@@ -41,7 +42,7 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
   return (
     <PageShell project={data.project}>
       <PageHeader
-        title="Traceability Matrix"
+        title="Traceability matrix"
         description={
           rows.length > 0
             ? `${covered} of ${rows.length} requirements (${coveragePercent(covered, rows.length)}%) have both linked work and tests.`
@@ -49,7 +50,8 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
         }
         actions={
           rows.length > 0 ? (
-            <a href={`/api/projects/${projectId}/report?format=csv&download=1`} className={`text-sm ${textLinkClass}`}>
+            <a href={`/api/projects/${projectId}/report?format=csv&download=1`} className={secondaryButtonClass}>
+              <Download size={16} aria-hidden="true" />
               Download CSV
             </a>
           ) : null
@@ -64,8 +66,9 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
           </Link>
         </section>
       ) : (
-        <div className={`${panelClass} max-h-[75vh] overflow-auto`}>
-          <table className="w-full min-w-[880px] border-collapse text-sm">
+        <div className={`${panelClass} ${tableScrollClass}`}>
+          <table className="w-full min-w-[880px] border-collapse text-sm print:min-w-0">
+            <caption className="sr-only">Traceability matrix</caption>
             <thead>
               <tr>
                 <th className={headerClass}>Requirement</th>

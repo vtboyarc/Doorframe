@@ -12,7 +12,7 @@ import {
   toListRow,
   type RequirementView
 } from "@/lib/view-models";
-import { panelClass, primaryButtonClass } from "@/lib/ui";
+import { activeChipClass, chipClass, chipCountClass, inactiveChipClass, panelClass, primaryButtonClass } from "@/lib/ui";
 
 export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
   return projectPageMetadata(params, "Requirements");
@@ -74,15 +74,11 @@ export default async function RequirementsPage({
                 <Link
                   key={option.label}
                   href={option.value ? `${base}/requirements?view=${option.value}` : `${base}/requirements`}
-                  aria-current={active ? "page" : undefined}
-                  className={`inline-flex min-h-9 items-center gap-2 border px-3 text-sm transition-colors ${
-                    active
-                      ? "border-[var(--accent-strong)] bg-[var(--accent)] text-white"
-                      : "border-[var(--line)] bg-[var(--panel)] text-[var(--muted)] hover:border-[var(--accent-strong)] hover:text-[var(--foreground)]"
-                  }`}
+                  aria-current={active ? "true" : undefined}
+                  className={`${chipClass} ${active ? activeChipClass : inactiveChipClass}`}
                 >
                   {option.label}
-                  <span className={`tabular-nums ${active ? "text-white" : "text-[var(--foreground)]"}`}>{count}</span>
+                  <span className={chipCountClass}>{count}</span>
                 </Link>
               );
             })}

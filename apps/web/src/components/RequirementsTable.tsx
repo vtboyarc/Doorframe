@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { RequirementListRow } from "@/lib/view-models";
-import { fieldClass, panelClass, secondaryButtonClass, textLinkClass } from "@/lib/ui";
+import { fieldClass, panelClass, secondaryButtonClass, tableScrollClass, textLinkClass } from "@/lib/ui";
 
 const column = createColumnHelper<RequirementListRow>();
 const PAGE_SIZE = 200;
@@ -195,8 +195,9 @@ export function RequirementsTable({
           {rows.length === 1 ? "" : "s"}
         </div>
       </div>
-      <div className="max-h-[75vh] overflow-auto">
-        <table className="w-full min-w-[880px] border-collapse text-sm">
+      <div className={tableScrollClass}>
+        <table className="w-full min-w-[880px] border-collapse text-sm print:min-w-0">
+          <caption className="sr-only">Requirements</caption>
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -207,12 +208,12 @@ export function RequirementsTable({
                     <th
                       key={header.id}
                       aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none"}
-                      className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--panel)] p-3 text-left text-xs uppercase text-[var(--muted)]"
+                      className="sticky top-0 z-10 border-b border-[var(--line)] bg-[var(--panel)] p-0 text-left text-xs uppercase text-[var(--muted)]"
                     >
                       <button
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
-                        className="inline-flex items-center gap-1 whitespace-nowrap text-left font-semibold uppercase hover:text-[var(--foreground)]"
+                        className="flex w-full items-center gap-1 whitespace-nowrap p-3 text-left font-semibold uppercase hover:text-[var(--foreground)] focus-visible:outline-offset-[-2px]"
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         <SortIcon size={12} aria-hidden="true" className={sorted ? "text-[var(--accent-strong)]" : "opacity-50"} />

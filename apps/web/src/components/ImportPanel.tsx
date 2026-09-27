@@ -196,8 +196,9 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
   const fileHelpId = `${baseId}-file-help`;
 
   return (
-    <div className="flex min-w-0 flex-col gap-4">
-      <div ref={resultRef} role="status" aria-live="polite" className="min-w-0 scroll-mt-4">
+    <div className="flex min-w-0 flex-col">
+      {/* Always mounted so results are announced; takes no space until it has content. */}
+      <div ref={resultRef} role="status" aria-live="polite" className="min-w-0 scroll-mt-4 [&:not(:empty)]:mb-4">
         {result ? <ImportResultPanel key={resultKey} projectId={projectId} result={result} /> : null}
       </div>
 
@@ -208,7 +209,7 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
           aria-labelledby={`${baseId}-form-heading`}
           className={`${panelClass} min-w-0 p-4`}
         >
-          <h2 id={`${baseId}-form-heading`} className="text-base font-semibold">
+          <h2 id={`${baseId}-form-heading`} className="text-lg font-semibold">
             Import a file
           </h2>
 
@@ -427,7 +428,7 @@ function PreviewPanel({
 
   return (
     <section className={`${panelClass} min-w-0 p-4`} aria-labelledby={headingId} aria-busy={preview.status === "loading"}>
-      <h2 id={headingId} className="text-base font-semibold">
+      <h2 id={headingId} className="text-lg font-semibold">
         Preview
       </h2>
       {!isCsv ? (

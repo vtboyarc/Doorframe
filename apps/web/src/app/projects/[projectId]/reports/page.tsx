@@ -76,7 +76,7 @@ export default async function ReportsPage({
         <>
           <section className={`${panelClass} mb-4 p-4`} aria-labelledby="downloads-heading">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-              <h2 id="downloads-heading" className="shrink-0 text-sm font-semibold">
+              <h2 id="downloads-heading" className="shrink-0 text-base font-semibold">
                 Download
               </h2>
               <ul className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">

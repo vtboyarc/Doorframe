@@ -343,7 +343,7 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
         </details>
       </section>
 
-      <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-[var(--line)] bg-[var(--background)] px-4 py-3 sm:mx-0 sm:px-0">
+      <div className="ruleset-save-bar sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-[var(--line)] bg-[var(--background)] px-4 py-3 sm:mx-0 sm:px-0 print:hidden">
         <button type="submit" disabled={isSaving || !dirty} aria-busy={isSaving} className={primaryButtonClass}>
           {isSaving ? "Saving and re-running analysis…" : "Save ruleset"}
         </button>

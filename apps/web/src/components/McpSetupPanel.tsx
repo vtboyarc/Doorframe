@@ -263,7 +263,7 @@ export function McpSetupPanel({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">MCP Setup</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">MCP setup</h1>
           <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
             Connect an approved AI client to this project through Doorframe&apos;s local, read-only MCP server, then ask it
             about requirements, traceability gaps, findings, and baseline changes. Setup takes a few minutes.

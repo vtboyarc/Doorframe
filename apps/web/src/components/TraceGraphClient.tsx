@@ -38,7 +38,7 @@ import {
   type TraceGraphNodeType,
   type TraceGraphView
 } from "@/lib/trace-graph";
-import { fieldClass, labelClass, panelClass } from "@/lib/ui";
+import { chipCountClass, fieldClass, labelClass, panelClass } from "@/lib/ui";
 
 type TraceNodeData = TraceGraphNode & {
   /** The requirement the view is focused on. */
@@ -371,11 +371,12 @@ export function TraceGraphClient({
       ? "Large project: showing requirements that need attention. Pick a requirement to focus."
       : null;
 
-  const viewOptions: Array<{ value: TraceGraphView; label: string; disabled: boolean }> = [
+  const viewOptions: Array<{ value: TraceGraphView; label: string; count?: number; disabled: boolean }> = [
     { value: "all", label: "All", disabled: false },
     {
       value: "attention",
-      label: attentionCount > 0 ? `Needs attention (${attentionCount})` : "Nothing needs attention",
+      label: attentionCount > 0 ? "Needs attention" : "Nothing needs attention",
+      count: attentionCount > 0 ? attentionCount : undefined,
       disabled: attentionCount === 0
     }
   ];
@@ -438,13 +439,14 @@ export function TraceGraphClient({
                   aria-pressed={pressed}
                   disabled={option.disabled}
                   onClick={() => chooseView(option.value)}
-                  className={`whitespace-nowrap px-3 focus-visible:outline-offset-[-2px] disabled:cursor-not-allowed disabled:opacity-60 ${
+                  className={`inline-flex items-center gap-2 whitespace-nowrap px-3 focus-visible:outline-offset-[-2px] disabled:cursor-not-allowed disabled:opacity-60 ${
                     pressed
-                      ? "bg-[var(--accent)] text-white"
+                      ? "bg-[var(--info-soft)] text-[var(--foreground)] shadow-[inset_0_0_0_1px_var(--accent-strong)]"
                       : "text-[var(--muted)] enabled:hover:text-[var(--foreground)]"
                   }`}
                 >
                   {option.label}
+                  {option.count !== undefined ? <span className={chipCountClass}>{option.count}</span> : null}
                 </button>
               );
             })}
@@ -458,7 +460,7 @@ export function TraceGraphClient({
               <>
                 {" · "}
                 <Link href={focused.href} className="text-[var(--accent-strong)] hover:underline">
-                  Open {focused.label} →
+                  Open {focused.label} <span aria-hidden="true">→</span>
                 </Link>
               </>
             ) : null}

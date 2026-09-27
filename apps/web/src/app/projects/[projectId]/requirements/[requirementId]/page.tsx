@@ -102,7 +102,7 @@ export default async function RequirementDetailPage({
     <PageShell project={data.project}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
         <Link href={backHref} className={textLinkClass}>
-          ← {backLabel}
+          <span aria-hidden="true">←</span> {backLabel}
         </Link>
         <nav aria-label="Adjacent requirements" className="flex flex-wrap gap-x-4 gap-y-1">
           <Link
@@ -113,12 +113,12 @@ export default async function RequirementDetailPage({
           </Link>
           {previous ? (
             <Link href={withBack(previous.externalId)} className={textLinkClass}>
-              ← {previous.externalId}
+              <span aria-hidden="true">←</span> {previous.externalId}
             </Link>
           ) : null}
           {next ? (
             <Link href={withBack(next.externalId)} className={textLinkClass}>
-              {next.externalId} →
+              {next.externalId} <span aria-hidden="true">→</span>
             </Link>
           ) : null}
         </nav>

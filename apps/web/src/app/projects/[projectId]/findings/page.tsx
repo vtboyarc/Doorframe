@@ -15,7 +15,16 @@ import {
 import { sentenceLabel } from "@/lib/labels";
 import { projectPageMetadata } from "@/lib/metadata";
 import { severityBadgeClass } from "@/lib/severity";
-import { panelClass, primaryButtonClass, secondaryButtonClass, textLinkClass } from "@/lib/ui";
+import {
+  activeChipClass,
+  chipClass,
+  chipCountClass,
+  inactiveChipClass,
+  panelClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+  textLinkClass
+} from "@/lib/ui";
 
 export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
   return projectPageMetadata(params, "Findings");
@@ -27,16 +36,11 @@ function first(value: SearchValue): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-const severityLabels: Record<FindingSeverity, [string, string]> = {
-  error: ["error", "errors"],
-  warning: ["warning", "warnings"],
-  info: ["info", "info"]
+const severityLabels: Record<FindingSeverity, string> = {
+  error: "Errors",
+  warning: "Warnings",
+  info: "Info"
 };
-
-const chipClass = "inline-flex min-h-9 shrink-0 items-center gap-2 whitespace-nowrap border px-3 text-sm transition-colors";
-const activeChipClass = "border-[var(--accent-strong)] bg-[var(--accent)] text-white";
-const inactiveChipClass =
-  "border-[var(--line)] bg-[var(--panel)] text-[var(--muted)] hover:border-[var(--accent-strong)] hover:text-[var(--foreground)]";
 
 export default async function FindingsPage({
   params,
@@ -113,9 +117,15 @@ export default async function FindingsPage({
         </section>
       ) : (
         <>
-          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-            <span className="text-[var(--muted)]">Severity:</span>
-            <Link href={listHref({ category })} aria-current={!severity ? "page" : undefined} className={`${chipClass} ${!severity ? activeChipClass : inactiveChipClass}`}>
+          <nav aria-labelledby="severity-filter-label" className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+            <span id="severity-filter-label" className="text-[var(--muted)]">
+              Severity:
+            </span>
+            <Link
+              href={listHref({ category })}
+              aria-current={!severity ? "true" : undefined}
+              className={`${chipClass} ${!severity ? activeChipClass : inactiveChipClass}`}
+            >
               All
             </Link>
             {FINDING_SEVERITIES.map((item) => {
@@ -125,19 +135,20 @@ export default async function FindingsPage({
                 <Link
                   key={item}
                   href={listHref({ category, severity: active ? undefined : item })}
-                  aria-current={active ? "page" : undefined}
+                  aria-current={active ? "true" : undefined}
                   className={`${chipClass} ${active ? activeChipClass : inactiveChipClass}`}
                 >
-                  <span className="tabular-nums">{count}</span> {severityLabels[item][count === 1 ? 0 : 1]}
+                  {severityLabels[item]}
+                  <span className={chipCountClass}>{count}</span>
                 </Link>
               );
             })}
-          </div>
+          </nav>
 
           <nav aria-label="Finding categories" className="mb-4 flex flex-wrap gap-2">
             <Link
               href={listHref({ severity })}
-              aria-current={!category ? "page" : undefined}
+              aria-current={!category ? "true" : undefined}
               className={`${chipClass} ${!category ? activeChipClass : inactiveChipClass}`}
             >
               All categories
@@ -146,11 +157,11 @@ export default async function FindingsPage({
               <Link
                 key={item}
                 href={listHref({ category: item, severity })}
-                aria-current={category === item ? "page" : undefined}
+                aria-current={category === item ? "true" : undefined}
                 className={`${chipClass} ${category === item ? activeChipClass : inactiveChipClass}`}
               >
                 {sentenceLabel(item)}
-                <span className="tabular-nums">{view.categoryCounts[item]}</span>
+                <span className={chipCountClass}>{view.categoryCounts[item]}</span>
               </Link>
             ))}
           </nav>
@@ -207,7 +218,7 @@ export default async function FindingsPage({
             <nav aria-label="Findings pages" className="mt-4 flex items-center justify-between gap-3 text-sm">
               {view.page > 1 ? (
                 <Link href={listHref({ category, severity, page: view.page - 1 })} className={secondaryButtonClass}>
-                  ← Previous
+                  <span aria-hidden="true">←</span> Previous
                 </Link>
               ) : (
                 <span />
@@ -217,7 +228,7 @@ export default async function FindingsPage({
               </span>
               {view.page < view.pageCount ? (
                 <Link href={listHref({ category, severity, page: view.page + 1 })} className={secondaryButtonClass}>
-                  Next →
+                  Next <span aria-hidden="true">→</span>
                 </Link>
               ) : (
                 <span />

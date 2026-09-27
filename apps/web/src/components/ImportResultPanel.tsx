@@ -44,13 +44,13 @@ export function ImportResultPanel({ projectId, result }: { projectId: string; re
           </p>
           <nav aria-label="Next steps" className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium">
             <Link href={`${base}/findings`} className={textLinkClass}>
-              Review findings →
+              Review findings <span aria-hidden="true">→</span>
             </Link>
             <Link href={`${base}/requirements`} className={textLinkClass}>
-              View requirements →
+              View requirements <span aria-hidden="true">→</span>
             </Link>
             <Link href={`${base}/reports`} className={textLinkClass}>
-              Open report →
+              Open report <span aria-hidden="true">→</span>
             </Link>
           </nav>
         </>

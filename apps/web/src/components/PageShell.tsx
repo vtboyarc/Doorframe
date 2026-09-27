@@ -18,7 +18,7 @@ export function PageShell({
       >
         Skip to content
       </a>
-      <header className="border-b border-[var(--line)] bg-[var(--panel)]">
+      <header className="border-b border-[var(--line)] bg-[var(--panel)] print:hidden">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <Link href="/" className="flex min-w-0 items-center gap-3" aria-label="Doorframe home">
             <div className="grid h-9 w-9 shrink-0 place-items-center rounded border border-[var(--accent-strong)] bg-[var(--panel-strong)] text-sm font-bold text-[var(--accent-strong)]">
@@ -45,7 +45,10 @@ export function PageShell({
         </div>
         {project ? <ProjectNav projectId={project.id} /> : null}
       </header>
-      <main id="main-content" tabIndex={-1} className="mx-auto max-w-7xl px-4 py-6 outline-none sm:px-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-7xl px-4 py-6 outline-none sm:px-6 print:p-0">
+        <p className="mb-4 hidden text-xs text-[var(--muted)] print:block">
+          Doorframe{project ? ` · ${project.name}` : ""}
+        </p>
         {children}
       </main>
     </div>

@@ -138,7 +138,7 @@ export default async function FindingDetailPage({
     <PageShell project={data.project}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
         <Link href={backHref} className={textLinkClass}>
-          ← {backLabel}
+          <span aria-hidden="true">←</span> {backLabel}
         </Link>
         {ordered.length > 1 && position >= 0 ? (
           <nav aria-label="Adjacent findings" className="flex items-center gap-4">
@@ -147,12 +147,12 @@ export default async function FindingDetailPage({
             </span>
             {previous ? (
               <Link href={findingHref(previous.id)} className={textLinkClass}>
-                ← Previous
+                <span aria-hidden="true">←</span> Previous
               </Link>
             ) : null}
             {next ? (
               <Link href={findingHref(next.id)} className={textLinkClass}>
-                Next →
+                Next <span aria-hidden="true">→</span>
               </Link>
             ) : null}
           </nav>
@@ -217,7 +217,7 @@ export default async function FindingDetailPage({
                   <dd className="font-medium [overflow-wrap:anywhere]">
                     {affectedRequirement ? (
                       <Link href={requirementHref(affectedRequirement.externalId)} className={textLinkClass}>
-                        {affectedRequirement.externalId} →
+                        {affectedRequirement.externalId} <span aria-hidden="true">→</span>
                       </Link>
                     ) : (
                       context.entity.externalId

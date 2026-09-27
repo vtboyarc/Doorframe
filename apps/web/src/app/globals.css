@@ -78,6 +78,36 @@
   }
 }
 
+/* Keep a keyboard-focused field above the sticky save bar on the Settings page. */
+html:has(.ruleset-save-bar) {
+  scroll-padding-bottom: 8rem;
+}
+
+/* Printing an app page: light colors so it reads on paper; the header and nav are hidden in the markup. */
+@media print {
+  :root {
+    color-scheme: light;
+    --background: #ffffff;
+    --foreground: #111111;
+    --muted: #444444;
+    --line: #cccccc;
+    --line-strong: #999999;
+    --panel: #ffffff;
+    --panel-strong: #f2f2f2;
+    --accent: #2f3fae;
+    --accent-hover: #2f3fae;
+    --accent-strong: #2f3fae;
+    --danger: #b00020;
+    --danger-soft: #fde8ea;
+    --warning: #8a5a00;
+    --warning-soft: #fdf3e0;
+    --success: #1b6e3a;
+    --success-soft: #e6f4ea;
+    --info: #2f3fae;
+    --info-soft: #eef0fb;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

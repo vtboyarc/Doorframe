@@ -8,7 +8,7 @@ import { countAuditEvents, getProject, listAuditEvents } from "@/lib/db";
 import { auditActionLabel } from "@/lib/labels";
 import { projectPageMetadata } from "@/lib/metadata";
 import { auditEventTarget } from "@/lib/view-models";
-import { panelClass, textLinkClass } from "@/lib/ui";
+import { panelClass, tableScrollClass, textLinkClass } from "@/lib/ui";
 
 const AUDIT_PAGE_SIZE = 200;
 const AUDIT_MAX_LIMIT = 5000;
@@ -82,8 +82,9 @@ export default async function AuditPage({
         </p>
       ) : (
         <>
-          <div className={`${panelClass} max-h-[75vh] overflow-auto`}>
-            <table className="w-full min-w-[760px] border-collapse text-sm">
+          <div className={`${panelClass} ${tableScrollClass}`}>
+            <table className="w-full min-w-[760px] border-collapse text-sm print:min-w-0">
+              <caption className="sr-only">Audit events, newest first</caption>
               <thead>
                 <tr>
                   <th className={headerClass}>When</th>
@@ -112,7 +113,7 @@ export default async function AuditPage({
                       </td>
                       <td className={`${cellClass} whitespace-nowrap text-right`}>
                         <Link href={target.href} className={textLinkClass}>
-                          {target.label} →
+                          {target.label} <span aria-hidden="true">→</span>
                         </Link>
                       </td>
                     </tr>

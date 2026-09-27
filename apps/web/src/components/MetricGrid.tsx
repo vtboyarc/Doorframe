@@ -88,7 +88,7 @@ export function MetricGrid({
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-[var(--muted)]">Gaps to review</h2>
+        <h2 className="mb-2 text-base font-semibold">Gaps to review</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {gaps.map((gap) => {
             const flagged = gap.value > 0;

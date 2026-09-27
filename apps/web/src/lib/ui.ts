@@ -24,3 +24,16 @@ export const textLinkClass = "text-[var(--accent-strong)] underline-offset-2 hov
 
 /** Uppercase label above a value, e.g. in <dt> elements. */
 export const labelClass = "text-xs font-medium uppercase tracking-wide text-[var(--muted)]";
+
+/** Filter chips (links or buttons): label first, then a muted count. */
+export const chipClass = "inline-flex min-h-9 shrink-0 items-center gap-2 whitespace-nowrap border px-3 text-sm transition-colors";
+export const activeChipClass = "border-[var(--accent-strong)] bg-[var(--info-soft)] text-[var(--foreground)]";
+export const inactiveChipClass =
+  "border-[var(--line)] bg-[var(--panel)] text-[var(--muted)] hover:border-[var(--accent-strong)] hover:text-[var(--foreground)]";
+export const chipCountClass = "tabular-nums text-[var(--muted)]";
+
+/**
+ * Scroll box around a data table with a sticky header. The top scroll padding keeps a
+ * keyboard-focused row out from under the header; printing shows every row.
+ */
+export const tableScrollClass = "max-h-[75vh] overflow-auto scroll-pt-12 print:max-h-none print:overflow-visible";

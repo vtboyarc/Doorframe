@@ -6,7 +6,7 @@ import { TraceGraphClient } from "@/components/TraceGraphClient";
 import { getProjectData } from "@/lib/db";
 import { projectPageMetadata } from "@/lib/metadata";
 import { graphNotice, traceGraphData, type TraceGraphNotice } from "@/lib/trace-graph";
-import { panelClass, textLinkClass } from "@/lib/ui";
+import { panelClass, primaryButtonClass, textLinkClass } from "@/lib/ui";
 
 export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
   return projectPageMetadata(params, "Trace graph");
@@ -58,7 +58,7 @@ export default async function TraceGraphPage({
   return (
     <PageShell project={data.project}>
       <PageHeader
-        title="Trace Graph"
+        title="Trace graph"
         description="Linked work items (left), requirements (middle), and linked tests (right) from imported local files."
       />
       {graph.nodes.length > 0 ? (
@@ -72,13 +72,16 @@ export default async function TraceGraphPage({
           />
         </>
       ) : (
-        <div className={`${panelClass} p-4 text-sm text-[var(--muted)]`}>
-          Nothing to draw yet.{" "}
-          <Link href={`/projects/${projectId}/imports`} className={textLinkClass}>
-            Import requirements, work items, or test results
-          </Link>{" "}
-          to render the trace graph.
-        </div>
+        <section className={`${panelClass} p-6`}>
+          <h2 className="text-lg font-semibold">Nothing to draw yet</h2>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
+            The graph shows requirements with the work items and tests that reference them. Import a requirements export
+            to start.
+          </p>
+          <Link href={`/projects/${projectId}/imports?type=requirements-csv`} className={`mt-4 ${primaryButtonClass}`}>
+            Import requirements
+          </Link>
+        </section>
       )}
     </PageShell>
   );
