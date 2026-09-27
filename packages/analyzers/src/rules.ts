@@ -21,13 +21,18 @@ export interface AnalysisInput {
   traceLinks: TraceLink[];
 }
 
-function isClosedWith(status: string | undefined, closedStatuses: string[]): boolean {
-  return closedStatuses.includes((status ?? "").trim().toLowerCase());
+/** Configured statuses are matched case-insensitively; blank entries are ignored. */
+function statusKeys(statuses: string[]): string[] {
+  return statuses.map((status) => status.trim().toLowerCase()).filter(Boolean);
 }
 
-function isDraftOrChangedWith(status: string | undefined, draftStatuses: string[]): boolean {
+export function isClosedWith(status: string | undefined, closedStatuses: string[]): boolean {
+  return statusKeys(closedStatuses).includes((status ?? "").trim().toLowerCase());
+}
+
+export function isDraftOrChangedWith(status: string | undefined, draftStatuses: string[]): boolean {
   const normalized = (status ?? "").trim().toLowerCase();
-  return draftStatuses.some((candidate) => normalized.includes(candidate));
+  return statusKeys(draftStatuses).some((candidate) => normalized.includes(candidate));
 }
 
 function linkedEntityIds(

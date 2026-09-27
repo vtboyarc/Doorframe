@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Finding, ProjectSnapshot, Requirement, TestCase, TraceLink, WorkItem } from "@doorframe/core";
-import { baselineDiffDetails } from "./baseline-details";
+import { generateBaselineDiffHtmlReport } from "@doorframe/reporting";
+import { baselineDiffDetails, baselineDiffReport } from "./baseline-details";
 
 const time = "2026-01-01T00:00:00.000Z";
 
@@ -76,5 +77,27 @@ describe("baselineDiffDetails", () => {
     expect(details.addedLinks).toEqual([]);
     expect(details.removedLinks).toEqual([]);
     expect(details.changedRequirements).toEqual([]);
+  });
+});
+
+describe("baselineDiffReport", () => {
+  it("names both sides and renders an offline HTML report", () => {
+    const from: ProjectSnapshot = {
+      requirements: [requirement("a1", "REQ-1", "Old <text>")],
+      workItems: [],
+      testCases: [],
+      traceLinks: [],
+      findings: []
+    };
+    const to: ProjectSnapshot = { ...from, requirements: [requirement("b1", "REQ-1", "New <text>"), requirement("b2", "REQ-2", "Added")] };
+
+    const report = baselineDiffReport(from, to, "Review 1", "Current project data");
+    expect(report).toMatchObject({ baselineAName: "Review 1", baselineBName: "Current project data" });
+    expect(report.summary).toMatchObject({ added: 1, changed: 1, deleted: 0 });
+
+    const html = generateBaselineDiffHtmlReport(report);
+    expect(html).toContain("Baseline A: Review 1");
+    expect(html).toContain("&lt;text&gt;");
+    expect(html).not.toMatch(/<(script|link)\b|https?:\/\//i);
   });
 });

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Requirement, TestCase, TraceLink, WorkItem } from "@doorframe/core";
-import { findDuplicateCandidates, generateFindings, MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT } from "./rules";
+import {
+  findDuplicateCandidates,
+  generateFindings,
+  isClosedWith,
+  isDraftOrChangedWith,
+  MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT
+} from "./rules";
 
 const baseTime = "2026-01-01T00:00:00.000Z";
 
@@ -108,5 +114,15 @@ describe("findDuplicateCandidates", () => {
     expect(Math.max(...perRequirement.values())).toBe(MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT);
     expect(findings.length).toBeLessThanOrEqual(requirements.length * MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT);
     expect(findings[0].title).toBe("REQ-0 resembles REQ-1");
+  });
+});
+
+describe("status matching", () => {
+  it("ignores case and blank entries in the configured status lists", () => {
+    expect(isClosedWith("done", ["Done", "Closed"])).toBe(true);
+    expect(isClosedWith(" CLOSED ", ["closed"])).toBe(true);
+    expect(isClosedWith("In Progress", ["Done", ""])).toBe(false);
+    expect(isDraftOrChangedWith("Changed by review", ["Changed"])).toBe(true);
+    expect(isDraftOrChangedWith("Approved", ["", "  "])).toBe(false);
   });
 });

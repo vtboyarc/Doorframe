@@ -88,6 +88,21 @@ export function rulesetProblems(ruleset: Pick<Ruleset, "requirementIdPatterns" |
   return { requirementIdPatterns: patternProblems, customRules: ruleProblems };
 }
 
+/** Ranges the API enforces for the numeric analyzer settings (the schema alone allows 0 and any integer). */
+export function analyzerRangeProblems(
+  analyzer: Pick<Ruleset["analyzer"], "jaccardThreshold" | "nonVerifiableMinSignals">
+): string[] {
+  const problems: string[] = [];
+  if (!(analyzer.jaccardThreshold > 0 && analyzer.jaccardThreshold <= 1)) {
+    problems.push("Duplicate similarity threshold must be greater than 0 and at most 1.");
+  }
+  const signals = analyzer.nonVerifiableMinSignals;
+  if (!Number.isInteger(signals) || signals < 0 || signals > NON_VERIFIABLE_SIGNAL_COUNT) {
+    problems.push(`Measurable signals required must be a whole number from 0 to ${NON_VERIFIABLE_SIGNAL_COUNT}.`);
+  }
+  return problems;
+}
+
 function parseJsonField(value: string): { value?: unknown; error?: string } {
   try {
     return { value: JSON.parse(value) };

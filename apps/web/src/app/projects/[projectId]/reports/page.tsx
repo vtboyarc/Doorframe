@@ -104,8 +104,8 @@ export default async function ReportsPage({
               Showing what changed since the last review?{" "}
               <Link href={`${base}/baselines`} className={textLinkClass}>
                 Compare baselines
-              </Link>
-              .
+              </Link>{" "}
+              and download the baseline diff report from there.
             </p>
           </section>
 

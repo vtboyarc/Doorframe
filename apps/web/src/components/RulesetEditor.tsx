@@ -28,6 +28,9 @@ const customRuleExample = `[
   }
 ]`;
 
+/** Grow text areas with their content where the browser supports it; `rows` is the fallback. */
+const autoSizeClass = "[field-sizing:content] max-h-[28rem]";
+
 function rowsFor(value: string, min: number, max = 16): number {
   return Math.min(max, Math.max(min, value.split("\n").length + 1));
 }
@@ -76,14 +79,37 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
 
   const dirty = useMemo(() => JSON.stringify(values) !== JSON.stringify(saved), [values, saved]);
 
-  // Warn before leaving the page with unsaved edits.
+  // Warn before leaving the page with unsaved edits: beforeunload covers reloads and closing the
+  // tab; in-app links navigate on the client, so ask before following one.
   useEffect(() => {
     if (!dirty) {
       return;
     }
     const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    const confirmLinkClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!(link instanceof HTMLAnchorElement) || link.target === "_blank" || link.hasAttribute("download")) {
+        return;
+      }
+      const destination = new URL(link.href, window.location.href);
+      if (destination.pathname === window.location.pathname && destination.search === window.location.search) {
+        return;
+      }
+      if (!window.confirm("You have unsaved ruleset changes. Leave this page and discard them?")) {
+        // Stop the click before Next.js's link handler sees it.
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
+    window.addEventListener("click", confirmLinkClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", warn);
+      window.removeEventListener("click", confirmLinkClick, true);
+    };
   }, [dirty]);
 
   const id = (field: string) => `${baseId}-${field}`;
@@ -193,7 +219,7 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
               value={values.vagueTerms}
               onChange={(event) => update("vagueTerms", event.target.value)}
               aria-describedby={describedBy("vagueTerms")}
-              className={`${fieldClass} py-2`}
+              className={`${fieldClass} ${autoSizeClass} py-2`}
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -242,13 +268,15 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
               label="Closed work item statuses"
               help="Work items with these statuses count as done. Case-insensitive; separate with commas."
             >
-              <input
+              <textarea
                 id={id("closedStatuses")}
+                rows={2}
                 value={values.closedStatuses}
                 onChange={(event) => update("closedStatuses", event.target.value)}
                 aria-describedby={describedBy("closedStatuses")}
                 autoCapitalize="off"
-                className={fieldClass}
+                spellCheck={false}
+                className={`${fieldClass} ${autoSizeClass} py-2`}
               />
             </Field>
             <Field
@@ -256,13 +284,15 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
               label="Draft or changed requirement statuses"
               help={'Requirements whose status contains any of these are treated as unsettled, so "review" also matches "in review". Case-insensitive.'}
             >
-              <input
+              <textarea
                 id={id("draftStatuses")}
+                rows={2}
                 value={values.draftStatuses}
                 onChange={(event) => update("draftStatuses", event.target.value)}
                 aria-describedby={describedBy("draftStatuses")}
                 autoCapitalize="off"
-                className={fieldClass}
+                spellCheck={false}
+                className={`${fieldClass} ${autoSizeClass} py-2`}
               />
             </Field>
           </div>
@@ -304,7 +334,7 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
-            className={`${monoFieldClass} ${invalid("requirementIdPatterns")}`}
+            className={`${monoFieldClass} ${autoSizeClass} min-h-40 ${invalid("requirementIdPatterns")}`}
           />
         </Field>
       </section>
@@ -326,7 +356,7 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
-            className={`${monoFieldClass} ${invalid("customRules")}`}
+            className={`${monoFieldClass} ${autoSizeClass} min-h-28 ${invalid("customRules")}`}
           />
         </Field>
         <details className="mt-3 text-sm">
@@ -347,7 +377,16 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
         <button type="submit" disabled={isSaving || !dirty} aria-busy={isSaving} className={primaryButtonClass}>
           {isSaving ? "Saving and re-running analysis…" : "Save ruleset"}
         </button>
-        <button type="button" onClick={() => setValues(saved)} disabled={!dirty || isSaving} className={secondaryButtonClass}>
+        <button
+          type="button"
+          onClick={() => {
+            setValues(saved);
+            setErrors({});
+            setStatus(null);
+          }}
+          disabled={!dirty || isSaving}
+          className={secondaryButtonClass}
+        >
           Discard changes
         </button>
         <button

@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_RULESET } from "@doorframe/core";
-import { formValuesFromRuleset, normalizeStatusList, parseRulesetForm, rulesetProblems, splitList } from "./ruleset-form";
+import {
+  analyzerRangeProblems,
+  formValuesFromRuleset,
+  normalizeStatusList,
+  parseRulesetForm,
+  rulesetProblems,
+  splitList
+} from "./ruleset-form";
 
 const defaults = formValuesFromRuleset(DEFAULT_RULESET);
 
@@ -68,5 +75,17 @@ describe("list helpers", () => {
   it("splits on commas and newlines", () => {
     expect(splitList("a, b\nc,,a")).toEqual(["a", "b", "c"]);
     expect(normalizeStatusList([" Done ", "done", "In Review"])).toEqual(["done", "in review"]);
+  });
+});
+
+describe("analyzerRangeProblems", () => {
+  it("accepts the defaults and rejects values the form would refuse", () => {
+    expect(analyzerRangeProblems(DEFAULT_RULESET.analyzer)).toEqual([]);
+    expect(analyzerRangeProblems({ jaccardThreshold: 1, nonVerifiableMinSignals: 0 })).toEqual([]);
+    expect(analyzerRangeProblems({ jaccardThreshold: 0, nonVerifiableMinSignals: 2 })).toEqual([
+      "Duplicate similarity threshold must be greater than 0 and at most 1."
+    ]);
+    expect(analyzerRangeProblems({ jaccardThreshold: 0.8, nonVerifiableMinSignals: 9 })).toHaveLength(1);
+    expect(analyzerRangeProblems({ jaccardThreshold: 1.5, nonVerifiableMinSignals: 1.5 })).toHaveLength(2);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, Download } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { BaselineDiff, RequirementFieldChange } from "@doorframe/core";
@@ -364,9 +364,18 @@ export function BaselinesPanel({ projectId, hasData }: { projectId: string; hasD
           aria-busy={isComparing}
           aria-labelledby="diff-heading"
         >
-          <h2 id="diff-heading" className="font-semibold [overflow-wrap:anywhere]">
-            Changes from {labelFor(a)} to {labelFor(b)}
-          </h2>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <h2 id="diff-heading" className="min-w-0 font-semibold [overflow-wrap:anywhere]">
+              Changes from {labelFor(a)} to {labelFor(b)}
+            </h2>
+            <a
+              href={`/api/projects/${projectId}/baselines/diff?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}&format=html&download=1`}
+              className={secondaryButtonClass}
+            >
+              <Download size={16} aria-hidden="true" />
+              Download diff report (HTML)
+            </a>
+          </div>
           <p className="sr-only" role="status">
             Comparison updated: {details.addedRequirements.length} added, {details.removedRequirements.length} removed,{" "}
             {details.changedRequirements.length} changed requirements.

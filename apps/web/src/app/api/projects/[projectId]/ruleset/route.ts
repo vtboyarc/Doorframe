@@ -3,7 +3,7 @@ import { getFindings, getProject, getRuleset, recordAuditEvent, runImportTransac
 import { auditActor } from "@/lib/audit-actor";
 import { rerunAnalysis } from "@/lib/analysis";
 import { rulesetSchema } from "@doorframe/core";
-import { normalizeStatusList, rulesetProblems } from "@/lib/ruleset-form";
+import { analyzerRangeProblems, normalizeStatusList, rulesetProblems } from "@/lib/ruleset-form";
 
 export const runtime = "nodejs";
 
@@ -45,7 +45,7 @@ export const PUT = async (request: Request, context: { params: Promise<{ project
     }
   };
   const problems = rulesetProblems(ruleset);
-  const messages = [...problems.requirementIdPatterns, ...problems.customRules];
+  const messages = [...analyzerRangeProblems(ruleset.analyzer), ...problems.requirementIdPatterns, ...problems.customRules];
   if (messages.length > 0) {
     return NextResponse.json({ error: messages.join(" ") }, { status: 400 });
   }

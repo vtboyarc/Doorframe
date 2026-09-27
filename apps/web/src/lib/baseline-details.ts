@@ -1,6 +1,7 @@
 import {
   compareRequirementBaselines,
   type BaselineChangedRequirement,
+  type BaselineDiffReport,
   type BaselineDiffTestContext,
   type BaselineDiffWorkItemContext
 } from "@doorframe/analyzers";
@@ -100,16 +101,26 @@ function toRequirementRefs(requirements: ProjectSnapshot["requirements"]): Requi
     .sort((left, right) => compareExternalIds(left.externalId, right.externalId));
 }
 
-export function baselineDiffDetails(from: ProjectSnapshot, to: ProjectSnapshot): BaselineDiffDetails {
+/** Requirement-level diff between two snapshots, judged against the later snapshot's work items and tests. */
+export function baselineDiffReport(
+  from: ProjectSnapshot,
+  to: ProjectSnapshot,
+  fromName = "from",
+  toName = "to"
+): BaselineDiffReport {
   const context = traceContext(to);
-  const report = compareRequirementBaselines({
-    baselineAName: "from",
-    baselineBName: "to",
+  return compareRequirementBaselines({
+    baselineAName: fromName,
+    baselineBName: toName,
     requirementsA: from.requirements,
     requirementsB: to.requirements,
     workItems: context.workItems,
     testCases: context.testCases
   });
+}
+
+export function baselineDiffDetails(from: ProjectSnapshot, to: ProjectSnapshot): BaselineDiffDetails {
+  const report = baselineDiffReport(from, to);
 
   const fromFindings = new Set(from.findings.map(findingKey));
   const toFindings = new Set(to.findings.map(findingKey));
