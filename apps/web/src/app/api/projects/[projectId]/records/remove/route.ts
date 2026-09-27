@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getFindings, getProject, recordAuditEvent, removeRecords } from "@/lib/db";
+import { getFindings, getProject, recordAuditEvent, removeRecords, runImportTransaction } from "@/lib/db";
 import { auditActor } from "@/lib/audit-actor";
 import { rerunAnalysis } from "@/lib/analysis";
 import { entityCount } from "@/lib/import-messages";
@@ -43,12 +43,15 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   }
 
   const { entityType, externalIds } = parsed.data;
-  const removed = removeRecords(projectId, entityType, externalIds);
-  const removedCount = removed.removedExternalIds.length;
-  let findingCount = getFindings(projectId).length;
+  // Remove and re-analyze together so a failure cannot leave records removed with stale findings.
+  const { removed, findingCount } = runImportTransaction(() => {
+    const result = removeRecords(projectId, entityType, externalIds);
+    const removedCount = result.removedExternalIds.length;
+    if (removedCount === 0) {
+      return { removed: result, findingCount: getFindings(projectId).length };
+    }
 
-  if (removedCount > 0) {
-    const listed = removed.removedExternalIds.slice(0, AUDIT_SUMMARY_IDS).join(", ");
+    const listed = result.removedExternalIds.slice(0, AUDIT_SUMMARY_IDS).join(", ");
     const more = removedCount > AUDIT_SUMMARY_IDS ? `, and ${removedCount - AUDIT_SUMMARY_IDS} more` : "";
     recordAuditEvent({
       projectId,
@@ -58,16 +61,16 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       details: {
         entityType,
         removedCount,
-        removedLinkCount: removed.removedLinkCount,
-        externalIds: removed.removedExternalIds.slice(0, 50)
+        removedLinkCount: result.removedLinkCount,
+        externalIds: result.removedExternalIds.slice(0, 50)
       }
     });
-    findingCount = rerunAnalysis(projectId).length;
-  }
+    return { removed: result, findingCount: rerunAnalysis(projectId).length };
+  });
 
   const body: RemoveRecordsResponse = {
     entityType,
-    removedCount,
+    removedCount: removed.removedExternalIds.length,
     removedExternalIds: removed.removedExternalIds,
     removedLinkCount: removed.removedLinkCount,
     findingCount

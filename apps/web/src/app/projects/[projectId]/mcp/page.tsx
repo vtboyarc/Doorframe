@@ -4,6 +4,7 @@ import { PageShell } from "@/components/PageShell";
 import { getDoorframeDatabasePath, getProjectData, listBaselines } from "@/lib/db";
 import { runMcpHealthCheck } from "@/lib/mcp-health";
 import {
+  clampMaxResults,
   mcpClientOptions,
   type McpClientId,
   type McpDataMode,
@@ -11,6 +12,7 @@ import {
   type McpSetupSettings
 } from "@/lib/mcp-setup";
 import { projectPageMetadata } from "@/lib/metadata";
+import { doorframeVersion } from "@/lib/version";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -25,11 +27,6 @@ function parseClientId(value: string | undefined): McpClientId {
 
 function parseMode(value: string | undefined): McpDataMode {
   return value === "summary" || value === "standard" || value === "detailed" ? value : "standard";
-}
-
-function parseMaxResults(value: string | undefined): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(1, Math.min(Math.floor(parsed), 500)) : 25;
 }
 
 function parsePlatform(value: string | undefined): McpHostPlatform | undefined {
@@ -63,12 +60,17 @@ export default async function McpSetupPage({
     projectPath,
     projectId,
     mode: parseMode(firstParam(resolvedSearchParams, "mode")),
-    maxResults: parseMaxResults(firstParam(resolvedSearchParams, "maxResults")),
+    maxResults: clampMaxResults(firstParam(resolvedSearchParams, "maxResults")),
     hideRawText: firstParam(resolvedSearchParams, "hideRawText") === "true",
     auditLogEnabled: firstParam(resolvedSearchParams, "auditLogEnabled") === "true",
     auditLogPath: firstParam(resolvedSearchParams, "auditLogPath"),
     platform: platformParam ?? (process.platform === "win32" ? "windows" : "posix"),
-    packageVersion: process.env.DOORFRAME_CLI_VERSION?.trim() || undefined
+    // Pin the config to the Doorframe version that built this app (set at runtime by `doorframe serve`, or
+    // inlined for production builds such as the Docker image). Development builds stay unpinned because a
+    // bumped version may not be published yet.
+    packageVersion:
+      process.env.DOORFRAME_CLI_VERSION?.trim() ||
+      (process.env.NODE_ENV === "production" ? doorframeVersion() : undefined)
   };
   const healthCheck = runMcpHealthCheck({
     projectPath,
@@ -78,14 +80,15 @@ export default async function McpSetupPage({
     maxResults: initialSettings.maxResults,
     hideRawText: initialSettings.hideRawText,
     auditLogEnabled: initialSettings.auditLogEnabled,
-    auditLogPath: initialSettings.auditLogPath
+    auditLogPath: initialSettings.auditLogPath,
+    platform: initialSettings.platform
   });
 
   return (
     <PageShell project={data.project}>
       <McpSetupPanel
-        projectName={data.project.name}
         projectId={data.project.id}
+        hasRequirements={data.requirements.length > 0}
         projectPath={projectPath}
         initialSettings={initialSettings}
         platformPinned={platformParam !== undefined}

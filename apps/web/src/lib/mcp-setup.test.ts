@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildMcpDoctorCommandText,
+  clampMaxResults,
   dockerMcpLimitationText,
   generateMcpConfig,
   getMcpClientGuide,
   mcpClientOptions,
+  pathStyle,
   type McpSetupSettings
 } from "./mcp-setup";
 
@@ -213,5 +216,43 @@ describe("MCP client setup guides", () => {
   it("names workspace config files for Cursor and VS Code", () => {
     expect(getMcpClientGuide("cursor", "posix").configFile?.path).toBe(".cursor/mcp.json");
     expect(getMcpClientGuide("vscode", "posix").configFile?.path).toBe(".vscode/mcp.json");
+  });
+});
+
+describe("MCP setup helpers", () => {
+  it("clamps max results the same way everywhere", () => {
+    expect(clampMaxResults("")).toBe(25);
+    expect(clampMaxResults("0")).toBe(25);
+    expect(clampMaxResults(Number.NaN)).toBe(25);
+    expect(clampMaxResults("12.7")).toBe(12);
+    expect(clampMaxResults(9000)).toBe(500);
+    expect(generateMcpConfig({ ...baseSettings, maxResults: 0 }).args).toContain("25");
+  });
+
+  it("recognizes Windows and POSIX database paths", () => {
+    expect(pathStyle("C:\\Users\\alice\\doorframe.sqlite")).toBe("windows");
+    expect(pathStyle("\\\\server\\share\\doorframe.sqlite")).toBe("windows");
+    expect(pathStyle("/home/alice/.doorframe/doorframe.sqlite")).toBe("posix");
+    expect(pathStyle("doorframe.sqlite")).toBe("unknown");
+  });
+
+  it("builds a doctor command with the same project and data options", () => {
+    const text = buildMcpDoctorCommandText({ ...baseSettings, mode: "summary", hideRawText: true, packageVersion: "1.2.3" });
+
+    expect(text).toBe(
+      "npx -y doorframe@1.2.3 mcp doctor --project /Users/alice/.doorframe/doorframe.sqlite --project-id project_alpha --mode summary --max-results 25 --hide-raw-text"
+    );
+  });
+
+  it("warns when audit logging is on but no path was entered", () => {
+    const generated = generateMcpConfig({ ...baseSettings, auditLogEnabled: true, auditLogPath: "  " });
+
+    expect(generated.warnings).toEqual(["audit-log-path-missing"]);
+    expect(generated.args).not.toContain("--audit-log");
+    expect(generateMcpConfig({ ...baseSettings, auditLogEnabled: true, auditLogPath: "/tmp/audit.jsonl" }).warnings).toEqual([]);
+  });
+
+  it("uses a Windows-style Cursor config path for Windows clients", () => {
+    expect(getMcpClientGuide("cursor", "windows").configFile?.path).toBe(".cursor\\mcp.json");
   });
 });

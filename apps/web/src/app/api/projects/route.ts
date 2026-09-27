@@ -19,8 +19,9 @@ export async function POST(request: Request) {
   const parsed = createProjectSchema.safeParse(body);
 
   if (!parsed.success) {
+    const onlyDemoInvalid = parsed.error.issues.every((issue) => issue.path[0] === "demo");
     return NextResponse.json(
-      { error: `Project name is required (1-${PROJECT_NAME_MAX_LENGTH} characters).` },
+      { error: onlyDemoInvalid ? "demo must be true or false." : `Project name is required (1-${PROJECT_NAME_MAX_LENGTH} characters).` },
       { status: 400 }
     );
   }

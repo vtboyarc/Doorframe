@@ -15,7 +15,11 @@ export const GET = async (request: Request, context: { params: Promise<{ project
   const aId = url.searchParams.get("a");
   const bId = url.searchParams.get("b");
 
-  const a = aId ? getBaseline(aId) : null;
+  if (!aId) {
+    return NextResponse.json({ error: "Choose a baseline to compare from." }, { status: 400 });
+  }
+
+  const a = getBaseline(aId);
   if (!a || a.projectId !== projectId) {
     return NextResponse.json({ error: "Baseline 'a' not found." }, { status: 404 });
   }

@@ -4,21 +4,22 @@ import {
   COLUMN_X,
   GRAPH_WIDTH,
   MIN_READABLE_ZOOM,
-  NARROW_ZOOM,
   NODE_HEIGHT,
-  NODE_WIDTH,
+  PAN_MARGIN,
   ROW_HEIGHT,
   defaultView,
   firstLinkedRequirement,
   fitViewport,
   graphNotice,
   initialView,
+  labelBreakChunks,
   layout,
   neighborIds,
   panExtent,
   subgraph,
   topViewport,
   traceGraphData,
+  visibleArea,
   visibleNodeIds,
   type TraceGraphData,
   type TraceGraphEdge,
@@ -286,12 +287,11 @@ describe("viewport helpers", () => {
     expect(viewport.x).toBeCloseTo((1200 - GRAPH_WIDTH) / 2);
   });
 
-  it("starts narrow canvases at a readable zoom on the requirements column", () => {
-    const canvas = { width: 358, height: 590 };
-    const viewport = topViewport(canvas);
-    expect(viewport.zoom).toBe(NARROW_ZOOM);
-    const columnCenter = (COLUMN_X.requirement + NODE_WIDTH.requirement / 2) * viewport.zoom + viewport.x;
-    expect(columnCenter).toBeCloseTo(canvas.width / 2);
+  it("fits the columns to narrower desktop canvases without dropping below a readable zoom", () => {
+    const viewport = topViewport({ width: 940, height: 600 });
+    expect(viewport.zoom).toBeCloseTo((940 - 48) / GRAPH_WIDTH);
+    expect(viewport.x).toBeCloseTo((940 - GRAPH_WIDTH * viewport.zoom) / 2);
+    expect(topViewport({ width: 300, height: 600 })).toEqual({ x: 24, y: 24, zoom: MIN_READABLE_ZOOM });
   });
 
   it("fits a small graph to the canvas", () => {
@@ -308,11 +308,32 @@ describe("viewport helpers", () => {
   });
 
   it("limits panning to the laid-out graph plus a margin", () => {
-    const [[minX, minY], [maxX, maxY]] = panExtent({ width: GRAPH_WIDTH, height: 400 });
-    expect(minX).toBeLessThan(0);
-    expect(minY).toBeLessThan(0);
-    expect(maxX).toBeGreaterThan(GRAPH_WIDTH);
-    expect(maxY).toBeGreaterThan(400);
+    expect(panExtent({ width: GRAPH_WIDTH, height: 400 })).toEqual([
+      [-PAN_MARGIN, -PAN_MARGIN],
+      [GRAPH_WIDTH + PAN_MARGIN, 400 + PAN_MARGIN]
+    ]);
+  });
+
+  it("grows the pan limits to include the starting view of a short graph", () => {
+    const canvas = { width: 1200, height: 700 };
+    const start = topViewport(canvas);
+    const area = visibleArea(start, canvas);
+    expect(area).toEqual({ x: -start.x, y: -24, width: 1200, height: 700 });
+
+    const [[minX, minY], [maxX, maxY]] = panExtent({ width: GRAPH_WIDTH, height: NODE_HEIGHT }, area);
+    expect(minX).toBeLessThanOrEqual(area.x);
+    expect(minY).toBe(-PAN_MARGIN);
+    expect(maxX).toBeGreaterThanOrEqual(area.x + area.width);
+    expect(maxY).toBe(area.y + area.height);
+  });
+
+  it("reports the visible area in graph units at other zoom levels", () => {
+    expect(visibleArea({ x: 100, y: -200, zoom: 0.5 }, { width: 800, height: 600 })).toEqual({
+      x: -200,
+      y: 400,
+      width: 1600,
+      height: 1200
+    });
   });
 });
 
@@ -370,5 +391,19 @@ describe("graphNotice", () => {
     expect(text(notice)).toBe(
       "The work item does not mention a requirement ID that matches your ID patterns. Check the ID patterns in Settings."
     );
+  });
+});
+
+describe("labelBreakChunks", () => {
+  it("offers breaks after separators and at camel case boundaries", () => {
+    expect(labelBreakChunks("testDisplaysPacketHealth_REQ_001")).toEqual(["test", "Displays", "Packet", "Health_", "REQ_", "001"]);
+    expect(labelBreakChunks("gateway.status/ok")).toEqual(["gateway.", "status/", "ok"]);
+    expect(labelBreakChunks("REQ-001")).toEqual(["REQ-", "001"]);
+    expect(labelBreakChunks("")).toEqual([]);
+  });
+
+  it("keeps the original text when joined", () => {
+    const label = "test_forward_sensorPacket_case_2 (REQ-0003)";
+    expect(labelBreakChunks(label).join("")).toBe(label);
   });
 });

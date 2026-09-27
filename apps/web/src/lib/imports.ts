@@ -20,7 +20,8 @@ import {
 import {
   buildProjectDataFromImportedRecords,
   defaultJiraCsvMapping,
-  defaultRequirementsCsvMapping
+  defaultRequirementsCsvMapping,
+  TRACE_LINK_RULES
 } from "@doorframe/storage";
 import {
   createBaseline,
@@ -29,7 +30,7 @@ import {
   getRequirements,
   getRuleset,
   getTraceLinks,
-  listBaselines,
+  listBaselineSummaries,
   listRecordIds,
   listTraceReferences,
   replaceTraceReferences,
@@ -51,6 +52,7 @@ import {
   buildTraceReferences,
   planLinkSync,
   planParentLinks,
+  staleParentLinkIds,
   planReferenceLinks,
   referenceRule,
   traceLinkKey,
@@ -92,9 +94,26 @@ function saveSummary(existing: Map<string, string>, savedExternalIds: string[], 
  */
 function linkStoredReferences(projectId: string): number {
   const requirementIdByExternalId = externalIdToId(projectId, "requirement");
+  const requirements = getRequirements(projectId);
+  // Drop parent links that no longer match a child's current Parent ID before adding missing ones.
+  deleteTraceLinksById(
+    projectId,
+    staleParentLinkIds({
+      requirements,
+      requirementIdByExternalId,
+      existingParentLinks: getTraceLinks(projectId)
+        .filter(
+          (link) =>
+            link.linkType === TRACE_LINK_RULES.parent.linkType &&
+            link.sourceType === "requirement" &&
+            link.targetType === "requirement"
+        )
+        .map((link) => ({ linkId: link.id, parentId: link.sourceId, childId: link.targetId }))
+    })
+  );
   const existingLinkKeys = new Set(getTraceLinks(projectId).map(traceLinkKey));
   const parentLinks = planParentLinks({
-    requirements: getRequirements(projectId),
+    requirements,
     requirementIdByExternalId,
     existingLinkKeys
   });
@@ -286,12 +305,15 @@ export interface DemoInputs {
   testCases: ParsedTestCase[];
 }
 
-export async function loadDemoProject(projectId: string): Promise<{
-  recordCount: number;
-  linkCount: number;
-  errors: string[];
+/** The fictional demo exports, read and parsed but not yet saved. */
+export interface DemoFiles {
+  requirements: ReturnType<typeof parseRequirementsCsv>;
+  jira: ReturnType<typeof parseJiraCsv>;
+  junit: ReturnType<typeof parseJUnitXml>;
   inputs: DemoInputs;
-}> {
+}
+
+export async function readDemoFiles(): Promise<DemoFiles> {
   const dir = await examplesDir();
   const [requirementsCsv, previousRequirementsCsv, jiraCsv, junitXml] = await Promise.all([
     fs
@@ -301,17 +323,13 @@ export async function loadDemoProject(projectId: string): Promise<{
     fs.readFile(path.join(dir, "sample-jira.csv"), "utf8"),
     fs.readFile(path.join(dir, "sample-junit.xml"), "utf8")
   ]);
-  const requirements = parseRequirementsCsv(requirementsCsv, defaultRequirementsCsvMapping);
   const jira = parseJiraCsv(jiraCsv, defaultJiraCsvMapping);
   const junit = parseJUnitXml(junitXml);
-  const requirementSave = saveRequirementRecords(projectId, requirements.records);
-  const jiraSave = saveJiraRecords(projectId, jira.records);
-  const junitSave = saveJunitRecords(projectId, junit.records);
 
   return {
-    recordCount: requirementSave.recordCount + jiraSave.recordCount + junitSave.recordCount,
-    linkCount: requirementSave.linkCount + jiraSave.linkCount + junitSave.linkCount,
-    errors: [...requirements.errors, ...jira.errors, ...junit.errors],
+    requirements: parseRequirementsCsv(requirementsCsv, defaultRequirementsCsvMapping),
+    jira,
+    junit,
     inputs: {
       previousRequirements: previousRequirementsCsv
         ? parseRequirementsCsv(previousRequirementsCsv, defaultRequirementsCsvMapping).records
@@ -319,6 +337,22 @@ export async function loadDemoProject(projectId: string): Promise<{
       workItems: jira.records,
       testCases: junit.records
     }
+  };
+}
+
+/** Save the parsed demo records into a project. Synchronous so callers can wrap it in a transaction. */
+export function saveDemoRecords(
+  projectId: string,
+  files: DemoFiles
+): { recordCount: number; linkCount: number; errors: string[] } {
+  const requirementSave = saveRequirementRecords(projectId, files.requirements.records);
+  const jiraSave = saveJiraRecords(projectId, files.jira.records);
+  const junitSave = saveJunitRecords(projectId, files.junit.records);
+
+  return {
+    recordCount: requirementSave.recordCount + jiraSave.recordCount + junitSave.recordCount,
+    linkCount: requirementSave.linkCount + jiraSave.linkCount + junitSave.linkCount,
+    errors: [...files.requirements.errors, ...files.jira.errors, ...files.junit.errors]
   };
 }
 
@@ -334,7 +368,7 @@ export function createDemoBaselines(projectId: string, inputs: DemoInputs): Base
     return [];
   }
 
-  const existingLabels = new Set(listBaselines(projectId).map((baseline) => baseline.label));
+  const existingLabels = new Set(listBaselineSummaries(projectId).map((baseline) => baseline.label));
   if (existingLabels.has(DEMO_BASELINE_LABELS.previous) && existingLabels.has(DEMO_BASELINE_LABELS.current)) {
     return [];
   }

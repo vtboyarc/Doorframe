@@ -241,6 +241,15 @@ export function firstLinkedRequirement(graph: TraceGraphData): Map<string, strin
   return result;
 }
 
+/**
+ * Split a test or requirement label into chunks the browser may wrap between:
+ * after "_", ".", "/", ":", or "-", and at lowerCamel to Upper boundaries. The
+ * client joins them with <wbr> so long test names wrap at word-like points.
+ */
+export function labelBreakChunks(label: string): string[] {
+  return label.split(/(?<=[_./:-])|(?<=[a-z0-9])(?=[A-Z])/).filter(Boolean);
+}
+
 // Layout --------------------------------------------------------------------
 
 export interface Point {
@@ -360,10 +369,6 @@ export interface Viewport {
   zoom: number;
 }
 
-/** Canvases narrower than this start zoomed on the requirements column. */
-export const NARROW_CANVAS_WIDTH = 640;
-/** Zoom for narrow canvases: readable text; users pan sideways to the other columns. */
-export const NARROW_ZOOM = 0.75;
 /** Fit-to-view never zooms out further than this; it fits the width instead. */
 export const MIN_READABLE_ZOOM = 0.5;
 export const MAX_FIT_ZOOM = 1.1;
@@ -376,37 +381,53 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-/** Pan limits for React Flow's translateExtent: the laid-out graph plus a margin. */
-export function panExtent(graphLayout: Pick<TraceGraphLayout, "width" | "height">): [[number, number], [number, number]] {
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** The area of the graph, in graph units, that a viewport shows on a canvas. */
+export function visibleArea(viewport: Viewport, canvas: Size): Rect {
+  return {
+    x: -viewport.x / viewport.zoom,
+    y: -viewport.y / viewport.zoom,
+    width: canvas.width / viewport.zoom,
+    height: canvas.height / viewport.zoom
+  };
+}
+
+/**
+ * Pan limits for React Flow's translateExtent: the laid-out graph plus a
+ * margin, grown to include the starting view. Including the starting view keeps
+ * a short graph where it was placed instead of jumping on the first scroll.
+ */
+export function panExtent(
+  graphLayout: Pick<TraceGraphLayout, "width" | "height">,
+  startArea?: Rect
+): [[number, number], [number, number]] {
+  const minX = Math.min(-PAN_MARGIN, startArea?.x ?? 0);
+  const minY = Math.min(-PAN_MARGIN, startArea?.y ?? 0);
+  const maxX = Math.max(graphLayout.width + PAN_MARGIN, startArea ? startArea.x + startArea.width : 0);
+  const maxY = Math.max(graphLayout.height + PAN_MARGIN, startArea ? startArea.y + startArea.height : 0);
   return [
-    [-PAN_MARGIN, -PAN_MARGIN],
-    [graphLayout.width + PAN_MARGIN, graphLayout.height + PAN_MARGIN]
+    [minX, minY],
+    [maxX, maxY]
   ];
 }
 
-/** Narrow canvases: readable zoom, requirements column centered, `top` (graph units) at the top. */
-function narrowViewport(canvas: Size, top: number): Viewport {
-  const center = COLUMN_X.requirement + NODE_WIDTH.requirement / 2;
-  return {
-    x: canvas.width / 2 - center * NARROW_ZOOM,
-    y: VIEW_MARGIN - top * NARROW_ZOOM,
-    zoom: NARROW_ZOOM
-  };
-}
-
-/** Fit the column width at a readable zoom, with the top of the graph at the top. */
-function topAlignedViewport(canvas: Size, top: number): Viewport {
+/**
+ * The top of the columns: the full column width at a readable zoom (never
+ * above 100%, never below {@link MIN_READABLE_ZOOM}), centered when it fits.
+ */
+export function topViewport(canvas: Size): Viewport {
   const zoom = clamp((canvas.width - 2 * VIEW_MARGIN) / GRAPH_WIDTH, MIN_READABLE_ZOOM, 1);
   return {
     x: Math.max(VIEW_MARGIN, (canvas.width - GRAPH_WIDTH * zoom) / 2),
-    y: VIEW_MARGIN - top * zoom,
+    y: VIEW_MARGIN,
     zoom
   };
-}
-
-/** The top of the columns at a readable zoom. */
-export function topViewport(canvas: Size): Viewport {
-  return canvas.width < NARROW_CANVAS_WIDTH ? narrowViewport(canvas, 0) : topAlignedViewport(canvas, 0);
 }
 
 /**
@@ -414,10 +435,6 @@ export function topViewport(canvas: Size): Viewport {
  * would make text unreadable, fit the width instead and start at the top.
  */
 export function fitViewport(graphLayout: Pick<TraceGraphLayout, "width" | "height">, canvas: Size): Viewport {
-  if (canvas.width < NARROW_CANVAS_WIDTH) {
-    return narrowViewport(canvas, 0);
-  }
-
   const width = Math.max(graphLayout.width, 1);
   const height = Math.max(graphLayout.height, 1);
   const zoom = Math.min(
@@ -426,7 +443,7 @@ export function fitViewport(graphLayout: Pick<TraceGraphLayout, "width" | "heigh
     (canvas.height - 2 * VIEW_MARGIN) / height
   );
   if (zoom < MIN_READABLE_ZOOM) {
-    return topAlignedViewport(canvas, 0);
+    return topViewport(canvas);
   }
 
   return {

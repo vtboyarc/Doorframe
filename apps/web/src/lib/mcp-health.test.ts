@@ -196,4 +196,28 @@ describe("MCP health check", () => {
       fix: "Open or create a Doorframe project before configuring MCP."
     });
   });
+
+  it("does not report a data-minimization failure for a project without requirements", () => {
+    const result = runMcpHealthCheck({
+      projectPath: "/tmp/doorframe.sqlite",
+      projectData: { ...buildFalconProjectData(), requirements: [], traceLinks: [], findings: [] },
+      baselines: [],
+      mcpEntrypointCandidates: []
+    });
+
+    expect(result.checks.find((item) => item.id === "summary-hides-raw-text")?.status).toBe("warn");
+  });
+
+  it("warns when the database path cannot be opened by the AI client", () => {
+    const docker = runMcpHealthCheck({ projectPath: "/data/doorframe.sqlite", projectData: buildFalconProjectData(), baselines: [] });
+    expect(docker.checks.find((item) => item.id === "container-path")?.status).toBe("warn");
+
+    const mismatch = runMcpHealthCheck({
+      projectPath: "/home/alice/.doorframe/doorframe.sqlite",
+      projectData: buildFalconProjectData(),
+      baselines: [],
+      platform: "windows"
+    });
+    expect(mismatch.checks.find((item) => item.id === "path-platform")?.status).toBe("warn");
+  });
 });

@@ -43,8 +43,10 @@ export const GET = async (request: Request, context: { params: Promise<{ project
   }
 
   const url = new URL(request.url);
-  const requestedFormat = url.searchParams.get("format") ?? "html";
-  const formatKey = requestedFormat in FORMATS ? requestedFormat : "html";
+  const formatKey = url.searchParams.get("format") ?? "html";
+  if (!Object.hasOwn(FORMATS, formatKey)) {
+    return NextResponse.json({ error: "Unknown report format. Use html, md, json, or csv." }, { status: 400 });
+  }
   const format = FORMATS[formatKey];
   const download = url.searchParams.get("download") === "1";
   // The in-app preview re-renders on every visit to the Reports page; only

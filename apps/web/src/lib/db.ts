@@ -935,6 +935,51 @@ export function listBaselines(projectId: string): Baseline[] {
   return rows.map(baselineFromRow);
 }
 
+export interface BaselineSummary {
+  id: string;
+  projectId: string;
+  label: string;
+  createdAt: string;
+  requirementCount: number;
+  findingCount: number;
+}
+
+/** Baseline metadata and counts without parsing each stored snapshot. */
+export function listBaselineSummaries(projectId: string): BaselineSummary[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT id, project_id, label, created_at,
+        json_array_length(snapshot_json, '$.requirements') AS requirement_count,
+        json_array_length(snapshot_json, '$.findings') AS finding_count
+      FROM baselines WHERE project_id = ?
+      ORDER BY created_at DESC, rowid DESC`
+    )
+    .all(projectId) as Array<{
+    id: string;
+    project_id: string;
+    label: string;
+    created_at: string;
+    requirement_count: number | null;
+    finding_count: number | null;
+  }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    projectId: row.project_id,
+    label: row.label,
+    createdAt: row.created_at,
+    requirementCount: row.requirement_count ?? 0,
+    findingCount: row.finding_count ?? 0
+  }));
+}
+
+/** Whether the project already has a baseline with this label, ignoring case. */
+export function baselineLabelExists(projectId: string, label: string): boolean {
+  return Boolean(
+    getDb().prepare("SELECT 1 FROM baselines WHERE project_id = ? AND label = ? COLLATE NOCASE").get(projectId, label)
+  );
+}
+
 export function getBaseline(baselineId: string): Baseline | null {
   const row = getDb()
     .prepare("SELECT * FROM baselines WHERE id = ?")

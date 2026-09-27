@@ -12,7 +12,7 @@ import {
   listTraceReferences,
   removeRecords
 } from "./db";
-import { loadDemoProject, saveJiraRecords, saveJunitRecords, saveRequirementRecords } from "./imports";
+import { readDemoFiles, saveDemoRecords, saveJiraRecords, saveJunitRecords, saveRequirementRecords } from "./imports";
 
 // These tests exercise the real SQLite storage in a throwaway data directory.
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "doorframe-web-imports-"));
@@ -50,7 +50,7 @@ afterAll(() => {
 describe("web import storage", () => {
   it("creates the same trace links whichever file is imported first", async () => {
     const demoProject = project("Demo order");
-    await loadDemoProject(demoProject);
+    saveDemoRecords(demoProject, await readDemoFiles());
     const expected = linkLabels(getProjectData(demoProject)!);
 
     const reversed = project("Tests and work items first");

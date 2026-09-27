@@ -212,3 +212,24 @@ export function planParentLinks(input: {
 
   return links;
 }
+
+/**
+ * Parent links that no longer match a child's current Parent ID, for example
+ * after the parent changed or was cleared in a newer export.
+ */
+export function staleParentLinkIds(input: {
+  requirements: Array<{ id: string; parentExternalId?: string }>;
+  requirementIdByExternalId: ReadonlyMap<string, string>;
+  existingParentLinks: Array<{ linkId: string; parentId: string; childId: string }>;
+}): string[] {
+  const wantedParent = new Map(
+    input.requirements.map((child) => [
+      child.id,
+      child.parentExternalId ? input.requirementIdByExternalId.get(child.parentExternalId) : undefined
+    ])
+  );
+
+  return input.existingParentLinks
+    .filter((link) => wantedParent.has(link.childId) && wantedParent.get(link.childId) !== link.parentId)
+    .map((link) => link.linkId);
+}

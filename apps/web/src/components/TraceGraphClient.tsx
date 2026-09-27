@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
+  ControlButton,
   Controls,
   Handle,
   Position,
@@ -14,32 +15,37 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { testStatusColor } from "@/lib/severity";
-import { panelClass } from "@/lib/ui";
+import {
+  MAX_FIT_ZOOM,
+  MIN_READABLE_ZOOM,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  defaultView,
+  firstLinkedRequirement,
+  fitViewport,
+  initialView,
+  labelBreakChunks,
+  layout,
+  needsAttention,
+  panExtent,
+  subgraph,
+  topViewport,
+  visibleArea,
+  visibleNodeIds,
+  type Rect,
+  type TraceGraphEdge,
+  type TraceGraphNode,
+  type TraceGraphNodeType,
+  type TraceGraphView
+} from "@/lib/trace-graph";
+import { fieldClass, labelClass, panelClass } from "@/lib/ui";
 
-export type TraceGraphNodeType = "requirement" | "workItem" | "testCase";
-
-export type TraceGraphNode = {
-  id: string;
-  type: TraceGraphNodeType;
-  label: string;
-  title: string;
-  status?: string;
-  /** Requirement nodes only: number of findings tied to the requirement. */
-  findingCount?: number;
-  /** Requirement nodes only: true when the requirement lacks linked work or tests. */
-  hasGap?: boolean;
-  /** Requirement nodes only: link to the requirement detail page. */
-  href?: string;
+type TraceNodeData = TraceGraphNode & {
+  /** The requirement the view is focused on. */
+  focused: boolean;
+  /** Clicking focuses a requirement: every requirement, and work items and tests with one. */
+  clickable: boolean;
 };
-
-export type TraceGraphEdge = {
-  id: string;
-  source: string;
-  target: string;
-  label: string;
-};
-
-type TraceNodeData = TraceGraphNode & { dimmed?: boolean };
 
 const typeLabels: Record<TraceGraphNodeType, string> = {
   requirement: "Requirement",
@@ -47,26 +53,21 @@ const typeLabels: Record<TraceGraphNodeType, string> = {
   testCase: "Test"
 };
 
-const columnX: Record<TraceGraphNodeType, number> = {
-  requirement: 0,
-  workItem: 320,
-  testCase: 640
-};
-
-const nodeWidth: Record<TraceGraphNodeType, number> = {
-  requirement: 250,
-  workItem: 250,
-  testCase: 330
-};
-
-const ROW_HEIGHT = 84;
-const GRAPH_WIDTH = columnX.testCase + nodeWidth.testCase;
-
 const typeColors: Record<TraceGraphNodeType, string> = {
   requirement: "var(--accent-strong)",
   workItem: "var(--info)",
   testCase: "var(--muted)"
 };
+
+/** Show a text filter above the requirement picker once it lists more options than this. */
+const PICKER_FILTER_THRESHOLD = 50;
+
+// Edges show the connections, so the attachment points stay invisible.
+const handleClass = "!h-1 !w-1 !min-w-0 !border-0 !bg-transparent";
+
+function isFailing(status: string | undefined): boolean {
+  return status === "failed" || status === "errored";
+}
 
 function nodeColor(node: TraceGraphNode): string {
   if (node.type === "testCase" && node.status) {
@@ -80,39 +81,105 @@ function nodeColor(node: TraceGraphNode): string {
   return typeColors[node.type];
 }
 
+function nodeTooltip(node: TraceNodeData): string {
+  const lines = [node.label, node.title].filter(Boolean);
+  if (node.hasGap) {
+    lines.push("Missing linked work or tests.");
+  }
+  if (node.orphan) {
+    lines.push("Not linked to a requirement.");
+  } else if (node.clickable && !node.focused) {
+    lines.push(node.type === "requirement" ? "Click to focus on its links." : "Click to focus on its requirement.");
+  }
+  return lines.join("\n");
+}
+
+function NodeHandles({ type }: { type: TraceGraphNodeType }) {
+  if (type === "workItem") {
+    return <Handle type="target" position={Position.Right} className={handleClass} />;
+  }
+
+  if (type === "testCase") {
+    return <Handle type="target" position={Position.Left} className={handleClass} />;
+  }
+
+  return (
+    <>
+      <Handle type="target" id="top" position={Position.Top} className={handleClass} />
+      <Handle type="source" id="left" position={Position.Left} className={handleClass} />
+      <Handle type="source" id="right" position={Position.Right} className={handleClass} />
+      <Handle type="source" id="bottom" position={Position.Bottom} className={handleClass} />
+    </>
+  );
+}
+
+/** Long test names wrap after separators and at camel case boundaries before breaking mid-word. */
+function BreakableText({ text }: { text: string }) {
+  return (
+    <>
+      {labelBreakChunks(text).map((chunk, index) => (
+        <Fragment key={index}>
+          {index > 0 ? <wbr /> : null}
+          {chunk}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+function nodeBadge(data: TraceNodeData): string | null {
+  if (data.type === "testCase") {
+    return data.status ?? null;
+  }
+  if (data.type === "requirement" && data.findingCount > 0) {
+    return `${data.findingCount} finding${data.findingCount === 1 ? "" : "s"}`;
+  }
+  return null;
+}
+
 function TraceNode({ data }: NodeProps<TraceNodeData>) {
   const color = nodeColor(data);
-  const failing = data.status === "failed" || data.status === "errored";
+  const emphasized = data.focused || isFailing(data.status);
+  const badge = nodeBadge(data);
 
   return (
     <div
-      className="border bg-[var(--panel-strong)] px-3 py-2 text-left text-[var(--foreground)] shadow-sm"
+      title={nodeTooltip(data)}
+      className={`flex flex-col overflow-hidden border bg-[var(--panel-strong)] px-3 py-1.5 text-left text-[var(--foreground)] shadow-sm ${
+        data.clickable ? "cursor-pointer hover:bg-[var(--line)]" : "cursor-default"
+      }`}
       style={{
-        width: nodeWidth[data.type],
+        width: NODE_WIDTH[data.type],
+        height: NODE_HEIGHT,
         borderColor: color,
-        borderWidth: failing ? 2 : 1,
-        borderStyle: data.type === "requirement" && data.hasGap ? "dashed" : "solid"
+        borderWidth: emphasized ? 2 : 1,
+        borderStyle: data.hasGap || data.orphan ? "dashed" : "solid"
       }}
     >
-      <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5 !min-w-0 !border-0 !bg-[var(--line)]" />
-      <div className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase tracking-wide" style={{ color }}>
-        <span>{typeLabels[data.type]}</span>
-        {data.type === "testCase" && data.status ? <span>{data.status}</span> : null}
-        {data.type === "requirement" && data.findingCount ? (
-          <span>
-            {data.findingCount} finding{data.findingCount === 1 ? "" : "s"}
-          </span>
-        ) : null}
+      <NodeHandles type={data.type} />
+      <div
+        className="flex items-center justify-between gap-2 text-[10px] font-medium uppercase leading-[14px] tracking-wide"
+        style={{ color }}
+      >
+        <span className="truncate">
+          {typeLabels[data.type]}
+          {data.orphan ? " · no requirement" : ""}
+        </span>
+        {badge ? <span className="shrink-0">{badge}</span> : null}
       </div>
-      <div className="mt-0.5 truncate text-sm font-semibold" title={data.label}>
-        {data.label}
-      </div>
-      {data.type !== "testCase" ? (
-        <div className="truncate text-xs text-[var(--muted)]" title={data.title}>
-          {data.title}
-        </div>
-      ) : null}
-      <Handle type="source" position={Position.Right} className="!h-1.5 !w-1.5 !min-w-0 !border-0 !bg-[var(--line)]" />
+      {data.type === "testCase" ? (
+        <>
+          <div className="mt-0.5 line-clamp-2 text-sm font-semibold leading-[18px] [overflow-wrap:anywhere]">
+            <BreakableText text={data.label} />
+          </div>
+          {data.title ? <div className="truncate text-xs leading-4 text-[var(--muted)]">{data.title}</div> : null}
+        </>
+      ) : (
+        <>
+          <div className="mt-0.5 truncate text-sm font-semibold leading-5">{data.label}</div>
+          <div className="line-clamp-2 text-xs leading-4 text-[var(--muted)] [overflow-wrap:anywhere]">{data.title}</div>
+        </>
+      )}
     </div>
   );
 }
@@ -123,190 +190,258 @@ function TraceNode({ data }: NodeProps<TraceNodeData>) {
 const nodeTypes = { trace: TraceNode };
 const edgeTypes = {};
 
-function neighborIds(nodeIds: Set<string>, edges: TraceGraphEdge[]): Set<string> {
-  const result = new Set(nodeIds);
-  edges.forEach((edge) => {
-    if (nodeIds.has(edge.source)) {
-      result.add(edge.target);
+const sourceHandles: Record<TraceGraphEdge["kind"], string> = { work: "left", test: "right", requirement: "bottom" };
+
+function toFlowEdge(edge: TraceGraphEdge, statusById: Map<string, string | undefined>, showLabel: boolean): Edge {
+  const failing = edge.kind === "test" && isFailing(statusById.get(edge.target));
+  return {
+    id: edge.id,
+    source: edge.source,
+    target: edge.target,
+    sourceHandle: sourceHandles[edge.kind],
+    targetHandle: edge.kind === "requirement" ? "top" : undefined,
+    label: showLabel ? edge.label : undefined,
+    labelStyle: { fill: "var(--muted)", fontSize: 11 },
+    labelBgStyle: { fill: "var(--panel)" },
+    style: {
+      stroke: failing ? "var(--danger)" : "var(--muted)",
+      strokeOpacity: failing ? 0.9 : 0.5,
+      strokeDasharray: edge.kind === "requirement" ? "4 3" : undefined
     }
-    if (nodeIds.has(edge.target)) {
-      result.add(edge.source);
-    }
-  });
-  return result;
-}
-
-/**
- * Lay nodes out in three columns. Work items and tests are ordered by the first
- * requirement they trace to, which keeps most edges short and roughly horizontal.
- */
-function layout(nodes: TraceGraphNode[], edges: TraceGraphEdge[]): Map<string, { x: number; y: number }> {
-  const requirementOrder = new Map(
-    nodes.filter((node) => node.type === "requirement").map((node, index) => [node.id, index])
-  );
-  const firstRequirement = new Map<string, number>();
-  edges.forEach((edge) => {
-    const pairs: Array<[string, string]> = [
-      [edge.source, edge.target],
-      [edge.target, edge.source]
-    ];
-    pairs.forEach(([requirementId, otherId]) => {
-      const order = requirementOrder.get(requirementId);
-      if (order === undefined || requirementOrder.has(otherId)) {
-        return;
-      }
-      firstRequirement.set(otherId, Math.min(firstRequirement.get(otherId) ?? Number.MAX_SAFE_INTEGER, order));
-    });
-  });
-
-  const positions = new Map<string, { x: number; y: number }>();
-  (["requirement", "workItem", "testCase"] as const).forEach((type) => {
-    nodes
-      .filter((node) => node.type === type)
-      .map((node, index) => ({
-        node,
-        rank: type === "requirement" ? index : (firstRequirement.get(node.id) ?? Number.MAX_SAFE_INTEGER),
-        index
-      }))
-      .sort((left, right) => left.rank - right.rank || left.index - right.index)
-      .forEach(({ node }, row) => {
-        positions.set(node.id, { x: columnX[type], y: row * ROW_HEIGHT });
-      });
-  });
-
-  return positions;
+  };
 }
 
 const legend = [
   { label: "Requirement", color: "var(--accent-strong)", dashed: false },
   { label: "Requirement missing work or tests", color: "var(--warning)", dashed: true },
   { label: "Work item", color: "var(--info)", dashed: false },
+  { label: "Work item or test with no requirement", color: "var(--muted)", dashed: true },
   { label: "Passed test", color: "var(--success)", dashed: false },
   { label: "Failed or errored test", color: "var(--danger)", dashed: false },
   { label: "Skipped test", color: "var(--muted)", dashed: false }
 ];
 
-const fieldClass = "min-h-10 border border-[var(--line)] bg-[var(--panel)] px-3 text-sm";
+const fitViewOptions = { padding: 0.1, minZoom: MIN_READABLE_ZOOM, maxZoom: MAX_FIT_ZOOM };
 
-export function TraceGraphClient({ nodes, edges }: { nodes: TraceGraphNode[]; edges: TraceGraphEdge[] }) {
-  const [focusId, setFocusId] = useState("");
-  const [gapsOnly, setGapsOnly] = useState(false);
+function BackToTopIcon() {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="4" y="2" width="24" height="4" />
+      <path d="M16 8 27 20h-7v10h-8V20H5z" />
+    </svg>
+  );
+}
 
+function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}
+
+/** Keep ?focus= and ?view= in the address bar without a server navigation. */
+function useUrlState(focusLabel: string | undefined, view: TraceGraphView, defaultViewValue: TraceGraphView) {
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("focus");
+    url.searchParams.delete("view");
+    if (focusLabel) {
+      url.searchParams.set("focus", focusLabel);
+    }
+    if (view !== defaultViewValue) {
+      url.searchParams.set("view", view);
+    }
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(null, "", next);
+    }
+  }, [focusLabel, view, defaultViewValue]);
+}
+
+export function TraceGraphClient({
+  nodes,
+  edges,
+  initialFocus,
+  initialView: initialViewParam
+}: {
+  nodes: TraceGraphNode[];
+  edges: TraceGraphEdge[];
+  /** Requirement external ID from ?focus=. */
+  initialFocus?: string;
+  /** Value of ?view=. */
+  initialView?: string;
+}) {
+  const graph = useMemo(() => ({ nodes, edges }), [nodes, edges]);
   const requirements = useMemo(() => nodes.filter((node) => node.type === "requirement"), [nodes]);
-  const gapCount = useMemo(() => requirements.filter((node) => node.hasGap || node.findingCount).length, [requirements]);
+  const attentionCount = useMemo(() => nodes.filter(needsAttention).length, [nodes]);
+  const startingView = useMemo(() => defaultView(nodes), [nodes]);
+  const firstRequirement = useMemo(() => firstLinkedRequirement(graph), [graph]);
+
+  const [view, setView] = useState<TraceGraphView>(() => initialView(initialViewParam, nodes));
+  const [focusId, setFocusId] = useState(
+    () => requirements.find((node) => node.label === initialFocus)?.id ?? ""
+  );
+  const [pickerFilter, setPickerFilter] = useState("");
+  const [flow, setFlow] = useState<ReactFlowInstance | null>(null);
+  const [canvas, setCanvas] = useState<HTMLDivElement | null>(null);
+  // The area the starting view shows; pan limits include it so that view never shifts.
+  const [startArea, setStartArea] = useState<Rect | undefined>(undefined);
+
   const focused = requirements.find((node) => node.id === focusId) ?? null;
+  useUrlState(focused?.label, view, startingView);
 
-  const visibleIds = useMemo(() => {
-    if (focusId) {
-      return neighborIds(new Set([focusId]), edges);
-    }
+  const visible = useMemo(() => subgraph(graph, visibleNodeIds(graph, view, focusId)), [graph, view, focusId]);
+  const graphLayout = useMemo(() => layout(visible.nodes, visible.edges), [visible]);
+  const translateExtent = useMemo(() => panExtent(graphLayout, startArea), [graphLayout, startArea]);
 
-    if (gapsOnly) {
-      const gapRequirementIds = new Set(
-        requirements.filter((node) => node.hasGap || node.findingCount).map((node) => node.id)
-      );
-      return neighborIds(gapRequirementIds, edges);
-    }
-
-    return null;
-  }, [focusId, gapsOnly, requirements, edges]);
-
-  const visibleNodes = useMemo(
-    () => (visibleIds ? nodes.filter((node) => visibleIds.has(node.id)) : nodes),
-    [nodes, visibleIds]
+  const flowNodes = useMemo<Node<TraceNodeData>[]>(
+    () =>
+      visible.nodes.map((node) => ({
+        id: node.id,
+        type: "trace",
+        position: graphLayout.positions.get(node.id) ?? { x: 0, y: 0 },
+        // Known sizes let React Flow skip off-screen cards before measuring them.
+        width: NODE_WIDTH[node.type],
+        height: NODE_HEIGHT,
+        data: {
+          ...node,
+          focused: node.id === focusId,
+          clickable: node.type === "requirement" || firstRequirement.has(node.id)
+        },
+        connectable: false
+      })),
+    [visible, graphLayout, focusId, firstRequirement]
   );
-  const visibleEdges = useMemo(
-    () => (visibleIds ? edges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target)) : edges),
-    [edges, visibleIds]
-  );
-
-  const flowNodes = useMemo<Node<TraceNodeData>[]>(() => {
-    const positions = layout(visibleNodes, visibleEdges);
-    return visibleNodes.map((node) => ({
-      id: node.id,
-      type: "trace",
-      position: positions.get(node.id) ?? { x: 0, y: 0 },
-      data: node,
-      connectable: false
-    }));
-  }, [visibleNodes, visibleEdges]);
 
   const statusById = useMemo(() => new Map(nodes.map((node) => [node.id, node.status])), [nodes]);
   const flowEdges = useMemo<Edge[]>(
-    () =>
-      visibleEdges.map((edge) => {
-        const targetStatus = statusById.get(edge.target);
-        const failing = targetStatus === "failed" || targetStatus === "errored";
-        return {
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          // Link-type labels only help once the graph is small enough to read.
-          label: visibleIds ? edge.label : undefined,
-          labelStyle: { fill: "var(--muted)", fontSize: 11 },
-          labelBgStyle: { fill: "var(--panel)" },
-          style: { stroke: failing ? "var(--danger)" : "var(--muted)", strokeOpacity: failing ? 0.9 : 0.45 }
-        };
-      }),
-    [visibleEdges, statusById, visibleIds]
+    // Link-type labels only help once the graph is small enough to read.
+    () => visible.edges.map((edge) => toFlowEdge(edge, statusById, Boolean(focusId))),
+    [visible, statusById, focusId]
   );
 
-  function focusOn(id: string) {
-    setFocusId(id);
-  }
+  // Fit the drawn subset (fit = true) or show the top of the columns, and let
+  // the pan limits include that view so the first scroll does not shift it.
+  const showView = useCallback(
+    (fit: boolean) => {
+      if (!flow || !canvas) {
+        return;
+      }
+      const size = { width: canvas.clientWidth, height: canvas.clientHeight };
+      const viewport = fit ? fitViewport(graphLayout, size) : topViewport(size);
+      setStartArea(visibleArea(viewport, size));
+      flow.setViewport(viewport);
+    },
+    [flow, canvas, graphLayout]
+  );
 
-  function toggleGapsOnly(next: boolean) {
-    setGapsOnly(next);
+  // Reposition the single React Flow instance whenever the drawn subset changes:
+  // fit a focused requirement, otherwise show the top of the columns.
+  useEffect(() => {
+    showView(Boolean(focusId));
+  }, [showView, focusId]);
+
+  function chooseView(next: TraceGraphView) {
+    setView(next);
     setFocusId("");
   }
 
-  // Start at the top of the columns with a readable zoom. A single focused
-  // requirement is small, so that view is fitted to the canvas instead.
-  function showTop(flow: ReactFlowInstance) {
-    const width = document.getElementById("trace-graph-canvas")?.clientWidth ?? GRAPH_WIDTH;
-    const zoom = Math.min(1, Math.max(0.35, (width - 48) / GRAPH_WIDTH));
-    flow.setViewport({ x: Math.max(24, (width - GRAPH_WIDTH * zoom) / 2), y: 24, zoom });
-  }
+  // The picker lists the requirements in the current view (plus the focused one).
+  const viewRequirements = useMemo(() => {
+    if (view === "all") {
+      return requirements;
+    }
+    const ids = visibleNodeIds(graph, view, "");
+    return requirements.filter((node) => !ids || ids.has(node.id));
+  }, [graph, requirements, view]);
+
+  const showPickerFilter = viewRequirements.length > PICKER_FILTER_THRESHOLD;
+  const pickerOptions = useMemo(() => {
+    const query = showPickerFilter ? pickerFilter.trim().toLowerCase() : "";
+    const matches = query
+      ? viewRequirements.filter((node) => `${node.label} ${node.title}`.toLowerCase().includes(query))
+      : viewRequirements;
+    return focused && !matches.includes(focused) ? [focused, ...matches] : matches;
+  }, [viewRequirements, pickerFilter, showPickerFilter, focused]);
 
   const counts = {
-    requirement: visibleNodes.filter((node) => node.type === "requirement").length,
-    workItem: visibleNodes.filter((node) => node.type === "workItem").length,
-    testCase: visibleNodes.filter((node) => node.type === "testCase").length
+    requirement: visible.nodes.filter((node) => node.type === "requirement").length,
+    workItem: visible.nodes.filter((node) => node.type === "workItem").length,
+    testCase: visible.nodes.filter((node) => node.type === "testCase").length
   };
+  const largeProjectNote =
+    view === "attention" && !focusId && startingView === "attention"
+      ? "Large project: showing requirements that need attention. Pick a requirement to focus."
+      : null;
+
+  const viewOptions: Array<{ value: TraceGraphView; label: string; disabled: boolean }> = [
+    { value: "all", label: "All", disabled: false },
+    {
+      value: "attention",
+      label: attentionCount > 0 ? `Needs attention (${attentionCount})` : "Nothing needs attention",
+      disabled: attentionCount === 0
+    }
+  ];
 
   return (
     <div className="grid grid-cols-1 gap-3">
-      <div className={`${panelClass} grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end`}>
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,320px)_auto] sm:items-end">
-          <label className="block text-sm">
-            <span className="text-[var(--muted)]">Focus on a requirement</span>
-            <select
-              value={focusId}
-              onChange={(event) => focusOn(event.target.value)}
-              className={`mt-1 w-full ${fieldClass}`}
+      <div className={`${panelClass} grid min-w-0 gap-3 p-3`}>
+        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div className="min-w-0">
+            <label htmlFor="trace-graph-focus" className="block text-sm text-[var(--muted)]">
+              Focus on a requirement
+            </label>
+            <div
+              className={`mt-1 grid min-w-0 gap-2 ${
+                showPickerFilter ? "sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]" : "sm:grid-cols-[minmax(0,28rem)]"
+              }`}
             >
-              <option value="">All requirements</option>
-              {requirements.map((node) => (
-                <option key={node.id} value={node.id}>
-                  {node.label} — {node.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div role="group" aria-label="Which requirements to show" className="flex min-h-10 w-fit border border-[var(--line)] text-sm">
-            {[
-              { value: false, label: "All" },
-              { value: true, label: `Needs attention (${gapCount})` }
-            ].map((option) => {
-              const pressed = gapsOnly === option.value && !focusId;
+              {showPickerFilter ? (
+                <input
+                  type="search"
+                  value={pickerFilter}
+                  onChange={(event) => setPickerFilter(event.target.value)}
+                  placeholder="Filter by ID or title"
+                  aria-label="Filter the requirement list by ID or title"
+                  aria-controls="trace-graph-focus"
+                  className={fieldClass}
+                />
+              ) : null}
+              <select
+                id="trace-graph-focus"
+                value={focusId}
+                onChange={(event) => setFocusId(event.target.value)}
+                className={fieldClass}
+              >
+                <option value="">All requirements in this view</option>
+                {pickerOptions.map((node) => (
+                  <option key={node.id} value={node.id}>
+                    {node.label} — {node.title}
+                  </option>
+                ))}
+                {pickerOptions.length === 0 && pickerFilter ? (
+                  <option value="no-match" disabled>
+                    No requirements match the filter
+                  </option>
+                ) : null}
+              </select>
+            </div>
+          </div>
+          <div
+            role="group"
+            aria-label="Which requirements to show"
+            className="flex min-h-10 w-fit max-w-full border border-[var(--line-strong)] text-sm"
+          >
+            {viewOptions.map((option) => {
+              const pressed = view === option.value;
               return (
                 <button
-                  key={option.label}
+                  key={option.value}
                   type="button"
                   aria-pressed={pressed}
-                  onClick={() => toggleGapsOnly(option.value)}
-                  className={`whitespace-nowrap px-3 focus-visible:outline-offset-[-2px] ${
-                    pressed ? "bg-[var(--accent)] text-white" : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                  disabled={option.disabled}
+                  onClick={() => chooseView(option.value)}
+                  className={`whitespace-nowrap px-3 focus-visible:outline-offset-[-2px] disabled:cursor-not-allowed disabled:opacity-60 ${
+                    pressed
+                      ? "bg-[var(--accent)] text-white"
+                      : "text-[var(--muted)] enabled:hover:text-[var(--foreground)]"
                   }`}
                 >
                   {option.label}
@@ -315,63 +450,76 @@ export function TraceGraphClient({ nodes, edges }: { nodes: TraceGraphNode[]; ed
             })}
           </div>
         </div>
-        <div className="text-sm text-[var(--muted)] lg:text-right">
-          Showing {counts.requirement} requirement{counts.requirement === 1 ? "" : "s"}, {counts.workItem} work item
-          {counts.workItem === 1 ? "" : "s"}, {counts.testCase} test{counts.testCase === 1 ? "" : "s"}
-          {focused?.href ? (
-            <>
-              {" · "}
-              <Link href={focused.href} className="text-[var(--accent-strong)] hover:underline">
-                Open {focused.label} →
-              </Link>
-            </>
-          ) : null}
+        <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm text-[var(--muted)]">
+          <p className="min-w-0" aria-live="polite">
+            Showing {plural(counts.requirement, "requirement", "requirements")},{" "}
+            {plural(counts.workItem, "work item", "work items")}, {plural(counts.testCase, "test", "tests")}
+            {focused?.href ? (
+              <>
+                {" · "}
+                <Link href={focused.href} className="text-[var(--accent-strong)] hover:underline">
+                  Open {focused.label} →
+                </Link>
+              </>
+            ) : null}
+          </p>
+          {largeProjectNote ? <p className="min-w-0 text-[var(--info)]">{largeProjectNote}</p> : null}
         </div>
       </div>
 
-      <div id="trace-graph-canvas" className={`h-[70vh] min-h-[420px] ${panelClass}`}>
+      <div ref={setCanvas} className={`h-[70vh] min-h-[420px] min-w-0 ${panelClass}`}>
         <ReactFlow
-          // Remount when the filter changes so each view gets a fresh viewport.
-          key={`${focusId}|${gapsOnly}`}
           nodes={flowNodes}
           edges={flowEdges}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          fitView={Boolean(focusId)}
-          fitViewOptions={{ padding: 0.15, maxZoom: 1.1 }}
-          onInit={(flow) => {
-            if (!focusId) {
-              showTop(flow);
+          onInit={setFlow}
+          onNodeClick={(_event, node: Node<TraceNodeData>) => {
+            const target = node.data.type === "requirement" ? node.id : firstRequirement.get(node.id);
+            if (target) {
+              setFocusId(target);
             }
           }}
-          onNodeClick={(_event, node) => {
-            if (node.data.type === "requirement") {
-              focusOn(node.id);
-            }
-          }}
+          onlyRenderVisibleElements
+          translateExtent={translateExtent}
+          fitViewOptions={fitViewOptions}
           nodesConnectable={false}
+          nodesDraggable={false}
+          nodesFocusable={false}
+          edgesFocusable={false}
+          elementsSelectable={false}
+          disableKeyboardA11y
           panOnScroll
           zoomOnScroll={false}
           minZoom={0.2}
           maxZoom={1.5}
         >
           <Background color="var(--line)" gap={24} />
-          <Controls showInteractive={false} />
+          <Controls showInteractive={false} fitViewOptions={fitViewOptions}>
+            <ControlButton onClick={() => showView(false)} title="Back to top" aria-label="Back to top">
+              <BackToTopIcon />
+            </ControlButton>
+          </Controls>
         </ReactFlow>
       </div>
 
-      <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-[var(--muted)]" aria-label="Legend">
-        {legend.map((item) => (
-          <span key={item.label} className="inline-flex items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="inline-block h-3 w-5 border bg-[var(--panel-strong)]"
-              style={{ borderColor: item.color, borderStyle: item.dashed ? "dashed" : "solid" }}
-            />
-            {item.label}
-          </span>
-        ))}
-        <span>Click a requirement to focus on its links. Scroll to move; use the controls or pinch to zoom.</span>
+      <div className="grid min-w-0 gap-2 text-xs text-[var(--muted)]">
+        <h2 id="trace-graph-legend" className={labelClass}>
+          Legend
+        </h2>
+        <ul aria-labelledby="trace-graph-legend" className="flex flex-wrap gap-x-5 gap-y-2">
+          {legend.map((item) => (
+            <li key={item.label} className="inline-flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="inline-block h-3 w-5 border bg-[var(--panel-strong)]"
+                style={{ borderColor: item.color, borderStyle: item.dashed ? "dashed" : "solid" }}
+              />
+              {item.label}
+            </li>
+          ))}
+        </ul>
+        <p>Click a card to focus on its requirement. Scroll or drag to move; use the controls to zoom.</p>
       </div>
     </div>
   );

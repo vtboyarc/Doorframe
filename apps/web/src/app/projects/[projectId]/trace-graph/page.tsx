@@ -1,81 +1,80 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/PageHeader";
 import { PageShell } from "@/components/PageShell";
-import { TraceGraphClient, type TraceGraphEdge, type TraceGraphNode } from "@/components/TraceGraphClient";
+import { TraceGraphClient } from "@/components/TraceGraphClient";
 import { getProjectData } from "@/lib/db";
-import { requirementRows } from "@/lib/view-models";
-import { panelClass } from "@/lib/ui";
 import { projectPageMetadata } from "@/lib/metadata";
+import { graphNotice, traceGraphData, type TraceGraphNotice } from "@/lib/trace-graph";
+import { panelClass, textLinkClass } from "@/lib/ui";
 
 export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
   return projectPageMetadata(params, "Trace graph");
 }
 
+function firstValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function GraphNotice({ notice }: { notice: TraceGraphNotice }) {
+  const tone =
+    notice.cause === "no-links"
+      ? "border-[var(--warning)] bg-[var(--warning-soft)]"
+      : "border-[var(--info)] bg-[var(--info-soft)]";
+
+  return (
+    <p className={`mb-3 border p-3 text-sm ${tone}`}>
+      {notice.segments.map((segment, index) =>
+        typeof segment === "string" ? (
+          <span key={index}>{segment}</span>
+        ) : (
+          <Link key={index} href={segment.href} className={`${textLinkClass} underline`}>
+            {segment.text}
+          </Link>
+        )
+      )}
+    </p>
+  );
+}
+
 export default async function TraceGraphPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ focus?: string | string[]; view?: string | string[] }>;
 }) {
   const { projectId } = await params;
+  const { focus, view } = await searchParams;
   const data = getProjectData(projectId);
 
   if (!data) {
     notFound();
   }
 
-  const nodes: TraceGraphNode[] = [
-    ...requirementRows(data).map((row) => ({
-      id: row.id,
-      type: "requirement" as const,
-      label: row.externalId,
-      title: row.title,
-      findingCount: row.findingCount,
-      hasGap: row.linkedWorkCount === 0 || row.linkedTestCount === 0,
-      href: `/projects/${projectId}/requirements/${encodeURIComponent(row.externalId)}`
-    })),
-    ...data.workItems.map((workItem) => ({
-      id: workItem.id,
-      type: "workItem" as const,
-      label: workItem.externalId,
-      title: workItem.title
-    })),
-    ...data.testCases.map((testCase) => ({
-      id: testCase.id,
-      type: "testCase" as const,
-      label: testCase.name,
-      title: testCase.status,
-      status: testCase.status
-    }))
-  ];
-  const edges: TraceGraphEdge[] = data.traceLinks.map((link) => ({
-    id: link.id,
-    source: link.sourceId,
-    target: link.targetId,
-    label: link.linkType
-  }));
+  const graph = traceGraphData(data, projectId);
+  const notice = graphNotice(graph, projectId);
 
   return (
     <PageShell project={data.project}>
-      <div className="mb-5">
-        <h1 className="text-2xl font-semibold">Trace Graph</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Requirements (left), linked work items (middle), and linked tests (right) from imported local files.
-        </p>
-      </div>
-      {nodes.length > 0 ? (
+      <PageHeader
+        title="Trace Graph"
+        description="Linked work items (left), requirements (middle), and linked tests (right) from imported local files."
+      />
+      {graph.nodes.length > 0 ? (
         <>
-          {edges.length === 0 ? (
-            <p className="mb-3 border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm">
-              No trace links yet. Import a Jira CSV or JUnit XML file that mentions requirement IDs to connect the
-              columns.
-            </p>
-          ) : null}
-          <TraceGraphClient nodes={nodes} edges={edges} />
+          {notice ? <GraphNotice notice={notice} /> : null}
+          <TraceGraphClient
+            nodes={graph.nodes}
+            edges={graph.edges}
+            initialFocus={firstValue(focus)}
+            initialView={firstValue(view)}
+          />
         </>
       ) : (
         <div className={`${panelClass} p-4 text-sm text-[var(--muted)]`}>
           Nothing to draw yet.{" "}
-          <Link href={`/projects/${projectId}/imports`} className="text-[var(--accent-strong)] hover:underline">
+          <Link href={`/projects/${projectId}/imports`} className={textLinkClass}>
             Import requirements, work items, or test results
           </Link>{" "}
           to render the trace graph.

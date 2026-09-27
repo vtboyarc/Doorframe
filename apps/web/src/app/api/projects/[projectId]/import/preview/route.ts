@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { decodeUpload } from "@/lib/import-encoding";
 import {
   detectNonCommaDelimiter,
   inferJiraCsvMapping,
@@ -66,7 +67,7 @@ export const POST = async (request: Request, context: { params: Promise<{ projec
 
   let preview: CsvPreview;
   try {
-    preview = readCsvPreview(await file.text(), PREVIEW_ROWS);
+    preview = readCsvPreview(decodeUpload(new Uint8Array(await file.arrayBuffer())).text, PREVIEW_ROWS);
   } catch (error) {
     const failure = describeImportFailure(sourceType, error);
     return errorResponse(422, { error: failure.message, detail: failure.detail });

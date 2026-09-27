@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createBaseline, getProject, listBaselines, recordAuditEvent } from "@/lib/db";
+import { baselineLabelExists, createBaseline, getProject, listBaselineSummaries, recordAuditEvent } from "@/lib/db";
 import { auditActor } from "@/lib/audit-actor";
 import { BASELINE_LABEL_MAX_LENGTH } from "@/lib/limits";
 
@@ -10,15 +10,8 @@ export const GET = async (_request: Request, context: { params: Promise<{ projec
   if (!getProject(projectId)) {
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
   }
-  // Omit large snapshots from the list response.
-  const baselines = listBaselines(projectId).map((baseline) => ({
-    id: baseline.id,
-    projectId: baseline.projectId,
-    label: baseline.label,
-    createdAt: baseline.createdAt,
-    requirementCount: baseline.snapshot.requirements.length,
-    findingCount: baseline.snapshot.findings.length
-  }));
+  // Metadata and counts only; snapshots can be large.
+  const baselines = listBaselineSummaries(projectId);
   return NextResponse.json(baselines);
 };
 
@@ -45,14 +38,17 @@ export const POST = async (request: Request, context: { params: Promise<{ projec
     );
   }
 
-  if (!label) {
-    const now = new Date();
-    label = `Baseline ${now.toISOString().slice(0, 16).replace("T", " ")} UTC`;
+  if (label && baselineLabelExists(projectId, label)) {
+    return NextResponse.json({ error: `A baseline named "${label}" already exists. Choose another label.` }, { status: 409 });
   }
 
-  const existing = listBaselines(projectId).some((baseline) => baseline.label.toLowerCase() === label.toLowerCase());
-  if (existing) {
-    return NextResponse.json({ error: `A baseline named "${label}" already exists. Choose another label.` }, { status: 409 });
+  if (!label) {
+    // Generated labels never collide: add a counter when two captures land in the same second.
+    const generated = `Baseline ${new Date().toISOString().slice(0, 19).replace("T", " ")} UTC`;
+    label = generated;
+    for (let copy = 2; baselineLabelExists(projectId, label); copy += 1) {
+      label = `${generated} (${copy})`;
+    }
   }
 
   const baseline = createBaseline(projectId, label);

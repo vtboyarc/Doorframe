@@ -8,7 +8,7 @@ import {
   getStaleTraceCandidatesData,
   searchRequirementsData
 } from "../../../mcp-server/src/tools";
-import type { McpDataMode } from "./mcp-setup";
+import { pathStyle, type McpDataMode, type McpHostPlatform } from "./mcp-setup";
 
 export type McpHealthStatus = "pass" | "warn" | "fail";
 
@@ -29,6 +29,8 @@ export interface RunMcpHealthCheckInput {
   hideRawText?: boolean;
   auditLogEnabled?: boolean;
   auditLogPath?: string;
+  /** Operating system of the machine where the AI client launches the MCP server. */
+  platform?: McpHostPlatform;
   mcpEntrypointCandidates?: string[];
 }
 
@@ -105,33 +107,33 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
     checks.push(
       check(
         "project-found",
-        "project found",
+        "Project found",
         "fail",
         "No Doorframe project is open.",
         "Open or create a Doorframe project before configuring MCP."
       )
     );
   } else {
-    checks.push(check("project-found", "project found", "pass", `Project found: ${input.projectData.project.name}`));
+    checks.push(check("project-found", "Project found", "pass", `Project found: ${input.projectData.project.name}`));
   }
 
   if (!input.projectPath.trim()) {
     checks.push(
       check(
         "database-readable",
-        "project database readable",
+        "Database readable",
         "fail",
         "Doorframe could not determine a project database path.",
         "Start Doorframe with a configured data directory and open a project."
       )
     );
   } else if (readableFile(input.projectPath)) {
-    checks.push(check("database-readable", "project database readable", "pass", input.projectPath));
+    checks.push(check("database-readable", "Database readable", "pass", input.projectPath));
   } else {
     checks.push(
       check(
         "database-readable",
-        "project database readable",
+        "Database readable",
         "fail",
         `Database is not readable at ${input.projectPath}.`,
         "Use the absolute path to the Doorframe SQLite database visible to the AI client."
@@ -139,15 +141,40 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
     );
   }
 
+  const databaseStyle = pathStyle(input.projectPath);
+  if (input.projectPath.replaceAll("\\", "/").startsWith("/data/")) {
+    checks.push(
+      check(
+        "container-path",
+        "Database path usable by the AI client",
+        "warn",
+        `${input.projectPath} is a path inside the Doorframe Docker container. A desktop AI client cannot open it or start the MCP server there.`,
+        "Run Doorframe with npx on the machine where the AI client runs, or mount the data folder on the host and use the host path."
+      )
+    );
+  } else if (input.platform && databaseStyle !== "unknown" && databaseStyle !== input.platform) {
+    checks.push(
+      check(
+        "path-platform",
+        "Database path usable by the AI client",
+        "warn",
+        `The database path is a ${databaseStyle === "windows" ? "Windows" : "macOS/Linux"} path, but the AI client is set to ${
+          input.platform === "windows" ? "Windows" : "macOS/Linux"
+        }.`,
+        "Run the AI client on the same machine and operating system as Doorframe, or install Doorframe where the client runs."
+      )
+    );
+  }
+
   if (input.projectData && input.projectData.requirements.length > 0) {
     checks.push(
-      check("requirements-found", "requirements found", "pass", `${input.projectData.requirements.length} requirement(s) found.`)
+      check("requirements-found", "Requirements imported", "pass", `${input.projectData.requirements.length} requirement(s) found.`)
     );
   } else {
     checks.push(
       check(
         "requirements-found",
-        "requirements found",
+        "Requirements imported",
         "fail",
         "This project has no requirements.",
         "Import requirements before using Doorframe MCP for project review questions."
@@ -170,7 +197,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
       checks.push(
         check(
           "findings-or-analyzers",
-          "findings or analyzers available",
+          "Analysis available",
           "pass",
           findingCount > 0
             ? `Findings found: ${findingCount}.`
@@ -182,7 +209,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
       checks.push(
         check(
           "findings-or-analyzers",
-          "findings or analyzers available",
+          "Analysis available",
           "fail",
           message,
           "Review project data and ruleset settings, then re-run analysis."
@@ -193,12 +220,12 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
 
   const baselineCount = input.baselines.length;
   if (baselineCount >= 2) {
-    checks.push(check("baseline-data", "baseline data available", "pass", `${baselineCount} baseline(s) available.`));
+    checks.push(check("baseline-data", "Baselines for change questions", "pass", `${baselineCount} baseline(s) available.`));
   } else {
     checks.push(
       check(
         "baseline-data",
-        "baseline data available",
+        "Baselines for change questions",
         "warn",
         "Baseline-specific MCP tools will be limited until at least two baselines exist. Project summary, findings, and traceability-gap tools can still work.",
         "Create two baselines before asking baseline-diff or stale-trace questions, or ignore this warning for projects that do not use baseline review yet."
@@ -208,15 +235,15 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
 
   const entrypoint = (input.mcpEntrypointCandidates ?? defaultEntrypointCandidates()).find(readableFile);
   if (entrypoint) {
-    checks.push(check("mcp-entrypoint", "MCP server entrypoint visible", "pass", entrypoint));
+    checks.push(check("mcp-entrypoint", "Doorframe installed on this server", "pass", entrypoint));
   } else {
     checks.push(
       check(
         "mcp-entrypoint",
-        "MCP server entrypoint visible",
+        "Doorframe installed on this server",
         "warn",
-        "No local source checkout MCP entrypoint was found from the web app process.",
-        "Use the generated npm command in a local AI client, or install Doorframe where the AI client can launch it."
+        "The web app could not find a local Doorframe install. The generated config starts Doorframe with npx on the AI client's machine, which needs npm registry access (or an internal mirror) the first time.",
+        "Install Doorframe where the AI client runs, or make sure that machine can reach your npm registry."
       )
     );
   }
@@ -227,7 +254,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
       checks.push(
         check(
           "get-project-summary",
-          "get_project_summary works",
+          "Project summary tool responds",
           "pass",
           `${summary.counts.requirements} requirement(s), ${summary.counts.findings} finding(s).`
         )
@@ -236,7 +263,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
       checks.push(
         check(
           "get-project-summary",
-          "get_project_summary works",
+          "Project summary tool responds",
           "fail",
           error instanceof Error ? error.message : "get_project_summary failed.",
           "Confirm the project database has the Doorframe schema and can be opened read-only."
@@ -249,7 +276,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
       checks.push(
         check(
           "get-review-brief",
-          "get_review_brief works",
+          "Review brief tool responds",
           "pass",
           `Review brief returned ${brief.resultCount} scoped fact(s).`
         )
@@ -258,7 +285,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
       checks.push(
         check(
           "get-review-brief",
-          "get_review_brief works",
+          "Review brief tool responds",
           "fail",
           error instanceof Error ? error.message : "get_review_brief failed.",
           "Re-run analysis and confirm the project has requirements before using review briefs."
@@ -272,7 +299,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
         checks.push(
           check(
             "get-stale-trace-candidates",
-            "get_stale_trace_candidates works",
+            "Stale trace tool responds",
             "pass",
             `${stale.candidates.length} stale trace candidate(s) returned.`
           )
@@ -281,7 +308,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
         checks.push(
           check(
             "get-stale-trace-candidates",
-            "get_stale_trace_candidates works",
+            "Stale trace tool responds",
             "fail",
             error instanceof Error ? error.message : "get_stale_trace_candidates failed.",
             "Create current baselines and retry the MCP health check."
@@ -292,25 +319,43 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
 
     try {
       const search = searchRequirementsData(projectDb, { limit: 5 }, { ...options, mode: "summary" });
-      const rawTextHidden =
-        search.requirements.length > 0 &&
-        search.requirements.every((requirement) => requirement.textExcerpt === undefined && requirement.rawTextHidden);
-      checks.push(
-        check(
-          "summary-hides-raw-text",
-          "summary mode hides raw requirement text",
-          rawTextHidden ? "pass" : "fail",
-          rawTextHidden
-            ? "Summary mode returned IDs, titles, counts, and hidden raw text markers."
-            : "Summary mode returned raw requirement text unexpectedly.",
-          rawTextHidden ? undefined : "Keep --mode summary or --hide-raw-text enabled and review MCP data-minimization settings."
-        )
+      const rawTextHidden = search.requirements.every(
+        (requirement) => requirement.textExcerpt === undefined && requirement.rawTextHidden
       );
+      if (search.requirements.length === 0) {
+        checks.push(
+          check(
+            "summary-hides-raw-text",
+            "Summary mode hides requirement text",
+            "warn",
+            "Not checked yet: there are no requirements to return. Re-run after importing requirements."
+          )
+        );
+      } else if (rawTextHidden) {
+        checks.push(
+          check(
+            "summary-hides-raw-text",
+            "Summary mode hides requirement text",
+            "pass",
+            "Summary mode returned IDs, titles, counts, and hidden raw text markers."
+          )
+        );
+      } else {
+        checks.push(
+          check(
+            "summary-hides-raw-text",
+            "Summary mode hides requirement text",
+            "fail",
+            "Summary mode returned raw requirement text unexpectedly.",
+            "Keep --mode summary or --hide-raw-text enabled and review MCP data-minimization settings."
+          )
+        );
+      }
     } catch (error) {
       checks.push(
         check(
           "summary-hides-raw-text",
-          "summary mode hides raw requirement text",
+          "Summary mode hides requirement text",
           "fail",
           error instanceof Error ? error.message : "Summary mode check failed.",
           "Confirm requirements can be listed by the MCP data adapters."
@@ -325,29 +370,29 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
       checks.push(
         check(
           "audit-log-writable",
-          "audit log path writable",
+          "Audit log path writable",
           "fail",
           "Audit logging is enabled but no audit log path is configured.",
           "Choose a local JSONL path visible to the MCP server process."
         )
       );
-    } else if (!path.isAbsolute(auditPath)) {
+    } else if (pathStyle(auditPath) === "unknown") {
       checks.push(
         check(
           "audit-log-writable",
-          "audit log path writable",
+          "Audit log path writable",
           "warn",
           `Audit log path is relative: ${auditPath}. The MCP server may run from a different working directory than this web app.`,
           "Use an absolute local path for the audit log."
         )
       );
     } else if (writableParent(auditPath)) {
-      checks.push(check("audit-log-writable", "audit log path writable", "pass", path.dirname(auditPath)));
+      checks.push(check("audit-log-writable", "Audit log path writable", "pass", path.dirname(auditPath)));
     } else {
       checks.push(
         check(
           "audit-log-writable",
-          "audit log path writable",
+          "Audit log path writable",
           "fail",
           `Audit log directory is not writable: ${path.dirname(auditPath)}.`,
           "Choose a writable local directory and avoid logging full project text."
@@ -355,7 +400,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
       );
     }
   } else {
-    checks.push(check("audit-log-writable", "audit log path writable", "pass", "Audit logging is off by default."));
+    checks.push(check("audit-log-writable", "Audit log path writable", "pass", "Audit logging is off by default."));
   }
 
   const ready = checks.every((item) => item.status !== "fail");
@@ -363,7 +408,9 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
   return {
     title: "Doorframe MCP health check",
     ready,
-    summary: ready ? "Doorframe MCP looks ready." : "Doorframe MCP needs attention before use.",
+    summary: ready
+      ? "Project data is ready for MCP questions. These checks run on the Doorframe server."
+      : "Fix the failed checks before connecting an AI client.",
     checks,
     suggestedQuestion: "Use Doorframe to prep me for test readiness review."
   };

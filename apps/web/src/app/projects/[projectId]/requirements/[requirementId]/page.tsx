@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { getProject, getProjectData, getRequirement } from "@/lib/db";
 import { sentenceLabel, sourceTypeLabel } from "@/lib/labels";
+import { routeIdCandidates, safeDecode } from "@/lib/params";
 import { severityBadgeClass, testStatusClass } from "@/lib/severity";
 import {
   childRequirements,
@@ -19,7 +20,7 @@ type Params = Promise<{ projectId: string; requirementId: string }>;
 export async function generateMetadata({ params }: { params: Params }) {
   const { projectId, requirementId } = await params;
   const projectName = getProject(projectId)?.name ?? "Project not found";
-  return { title: `${decodeURIComponent(requirementId)} · ${projectName}` };
+  return { title: `${safeDecode(requirementId)} · ${projectName}` };
 }
 
 /** Only follow "back" links that stay inside this project. */
@@ -43,8 +44,11 @@ export default async function RequirementDetailPage({
   }
 
   const base = `/projects/${projectId}`;
-  const externalOrId = decodeURIComponent(requirementId);
-  const requirement = getRequirement(projectId, externalOrId);
+  const externalOrId = safeDecode(requirementId);
+  const requirement =
+    routeIdCandidates(requirementId)
+      .map((candidate) => getRequirement(projectId, candidate))
+      .find(Boolean) ?? null;
   const backHref = safeBackHref(back, projectId) ?? `${base}/requirements`;
   const backLabel = backHref.startsWith(`${base}/matrix`)
     ? "Back to matrix"

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getFindings, getProject, getRuleset, recordAuditEvent, saveRuleset } from "@/lib/db";
+import { getFindings, getProject, getRuleset, recordAuditEvent, runImportTransaction, saveRuleset } from "@/lib/db";
 import { auditActor } from "@/lib/audit-actor";
 import { rerunAnalysis } from "@/lib/analysis";
 import { rulesetSchema } from "@doorframe/core";
@@ -51,14 +51,17 @@ export const PUT = async (request: Request, context: { params: Promise<{ project
   }
 
   const previousFindingCount = getFindings(projectId).length;
-  const saved = saveRuleset(projectId, ruleset);
-  recordAuditEvent({
-    projectId,
-    action: "ruleset.updated",
-    actor: auditActor(),
-    summary: "Updated project ruleset."
+  // Save and re-analyze together so a failure cannot leave the new ruleset with findings from the old one.
+  const { saved, findings } = runImportTransaction(() => {
+    const stored = saveRuleset(projectId, ruleset);
+    recordAuditEvent({
+      projectId,
+      action: "ruleset.updated",
+      actor: auditActor(),
+      summary: "Updated project ruleset."
+    });
+    return { saved: stored, findings: rerunAnalysis(projectId) };
   });
-  const findings = rerunAnalysis(projectId);
 
   return NextResponse.json({ ruleset: saved, findingCount: findings.length, previousFindingCount });
 };

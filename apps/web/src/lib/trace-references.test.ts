@@ -3,6 +3,7 @@ import {
   buildTraceReferences,
   planLinkSync,
   planParentLinks,
+  staleParentLinkIds,
   planReferenceLinks,
   traceLinkKey,
   type TraceReference
@@ -168,5 +169,30 @@ describe("planParentLinks", () => {
     });
 
     expect(links).toEqual([]);
+  });
+});
+
+describe("staleParentLinkIds", () => {
+  it("drops parent links whose child now names a different parent or none", () => {
+    const requirementIdByExternalId = new Map([
+      ["REQ-100", "req-100"],
+      ["REQ-200", "req-200"]
+    ]);
+    const stale = staleParentLinkIds({
+      requirements: [
+        { id: "req-1", parentExternalId: "REQ-200" },
+        { id: "req-2" },
+        { id: "req-3", parentExternalId: "REQ-100" }
+      ],
+      requirementIdByExternalId,
+      existingParentLinks: [
+        { linkId: "moved", parentId: "req-100", childId: "req-1" },
+        { linkId: "cleared", parentId: "req-100", childId: "req-2" },
+        { linkId: "kept", parentId: "req-100", childId: "req-3" },
+        { linkId: "unknown-child", parentId: "req-100", childId: "req-9" }
+      ]
+    });
+
+    expect(stale).toEqual(["moved", "cleared"]);
   });
 });

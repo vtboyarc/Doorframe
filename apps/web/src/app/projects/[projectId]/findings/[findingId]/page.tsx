@@ -6,6 +6,7 @@ import { PageShell } from "@/components/PageShell";
 import { getProject, getProjectData } from "@/lib/db";
 import { findingsListView, flaggedTerms, isFindingCategory, isFindingSeverity, mentionedEntities } from "@/lib/findings";
 import { sentenceLabel, sourceTypeLabel } from "@/lib/labels";
+import { routeIdCandidates } from "@/lib/params";
 import { severityBadgeClass, testStatusClass } from "@/lib/severity";
 import { findingContext, linkedTestCases, linkedWorkItems } from "@/lib/view-models";
 import { labelClass, panelClass, primaryButtonClass, secondaryButtonClass, textLinkClass } from "@/lib/ui";
@@ -15,7 +16,7 @@ type Params = Promise<{ projectId: string; findingId: string }>;
 export async function generateMetadata({ params }: { params: Params }) {
   const { projectId, findingId } = await params;
   const data = getProjectData(projectId);
-  const finding = data?.findings.find((item) => item.id === decodeURIComponent(findingId));
+  const finding = data?.findings.find((item) => routeIdCandidates(findingId).includes(item.id));
   const projectName = getProject(projectId)?.name ?? "Project not found";
   return { title: `${finding?.title ?? "Finding"} · ${projectName}` };
 }
@@ -80,7 +81,7 @@ export default async function FindingDetailPage({
   const base = `/projects/${projectId}`;
   const backHref = safeBackHref(back, projectId) ?? `${base}/findings`;
   const backLabel = backHref.startsWith(`${base}/requirements`) ? "Back to requirement" : "Back to findings";
-  const finding = data.findings.find((item) => item.id === decodeURIComponent(findingId));
+  const finding = data.findings.find((item) => routeIdCandidates(findingId).includes(item.id));
 
   if (!finding) {
     return (

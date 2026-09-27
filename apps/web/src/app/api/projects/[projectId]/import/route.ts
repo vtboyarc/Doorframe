@@ -1,8 +1,9 @@
 import { detectNonCommaDelimiter, readCsvHeaders, readCsvPreview } from "@doorframe/parsers";
 import { NextResponse } from "next/server";
-import { addImportBatch, getFindings, getProject, getRuleset, recordAuditEvent } from "@/lib/db";
+import { addImportBatch, getFindings, getProject, getRuleset, recordAuditEvent, runImportTransaction } from "@/lib/db";
 import { auditActor } from "@/lib/audit-actor";
 import { rerunAnalysis } from "@/lib/analysis";
+import { decodeUpload } from "@/lib/import-encoding";
 import { parseImportFile, saveParsedImport, type ParsedImportFile, type SaveParsedResult } from "@/lib/imports";
 import {
   delimiterMessage,
@@ -96,7 +97,9 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const text = buffer.toString("utf8");
+  // ReqIFZ is a zip archive and is read from the buffer; everything else is text.
+  const decoded = sourceType === "reqifz" ? { text: "", warning: undefined } : decodeUpload(buffer);
+  const text = decoded.text;
 
   const delimiterProblem = csvDelimiterProblem(sourceType, text);
   if (delimiterProblem) {
@@ -118,47 +121,55 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       failure = describeImportFailure(sourceType, error);
     }
 
-    // Nothing is saved for an empty file, so it can never offer to remove every record.
-    const saved: SaveParsedResult | null = parsed && parsed.records.length > 0 ? saveParsedImport(projectId, parsed) : null;
-    const recordCount = saved?.recordCount ?? 0;
-    const status: ImportStatus = failure ? "failed" : recordCount > 0 ? "imported" : "empty";
     const rawErrors = parsed?.errors ?? [];
-    const explanation =
-      failure ??
-      (status === "empty"
-        ? describeEmptyImport(sourceType, rawErrors, isCsvImportType(sourceType) ? csvDataRows(text) : undefined)
-        : null);
-    // When nothing was imported, the explanation already covers missing columns.
-    const messages = friendlyParserMessages(
-      sourceType,
-      status === "imported" ? rawErrors : rawErrors.filter((error) => !isMissingColumnError(error))
-    );
-    const entityType = importTypeInfo(sourceType).entityType;
+    // Save, bookkeeping, and re-analysis commit together, so a failure leaves the project as it was.
+    const { saved, recordCount, status, explanation, messages, findingCount } = runImportTransaction(() => {
+      // Nothing is saved for an empty file, so it can never offer to remove every record.
+      const saved: SaveParsedResult | null =
+        parsed && parsed.records.length > 0 ? saveParsedImport(projectId, parsed) : null;
+      const recordCount = saved?.recordCount ?? 0;
+      const status: ImportStatus = failure ? "failed" : recordCount > 0 ? "imported" : "empty";
+      const explanation =
+        failure ??
+        (status === "empty"
+          ? describeEmptyImport(sourceType, rawErrors, isCsvImportType(sourceType) ? csvDataRows(text) : undefined)
+          : null);
+      // When nothing was imported, the explanation already covers missing columns.
+      const messages = [
+        ...(decoded.warning ? [decoded.warning] : []),
+        ...friendlyParserMessages(
+          sourceType,
+          status === "imported" ? rawErrors : rawErrors.filter((error) => !isMissingColumnError(error))
+        )
+      ];
 
-    addImportBatch(
-      projectId,
-      sourceType,
-      file.name,
-      recordCount,
-      explanation ? [explanation.message, ...messages] : messages
-    );
-    recordAuditEvent({
-      projectId,
-      action: "import.completed",
-      actor: auditActor(),
-      summary: auditSummary(status, recordCount, file.name, sourceType),
-      details: {
+      addImportBatch(
+        projectId,
         sourceType,
-        filename: file.name,
-        status,
+        file.name,
         recordCount,
-        createdCount: saved?.createdCount ?? 0,
-        updatedCount: saved?.updatedCount ?? 0,
-        linkCount: saved?.linkCount ?? 0,
-        errorCount: messages.length
-      }
+        explanation ? [explanation.message, ...messages] : messages
+      );
+      recordAuditEvent({
+        projectId,
+        action: "import.completed",
+        actor: auditActor(),
+        summary: auditSummary(status, recordCount, file.name, sourceType),
+        details: {
+          sourceType,
+          filename: file.name,
+          status,
+          recordCount,
+          createdCount: saved?.createdCount ?? 0,
+          updatedCount: saved?.updatedCount ?? 0,
+          linkCount: saved?.linkCount ?? 0,
+          errorCount: messages.length
+        }
+      });
+      const findingCount = recordCount > 0 ? rerunAnalysis(projectId).length : getFindings(projectId).length;
+      return { saved, recordCount, status, explanation, messages, findingCount };
     });
-    const findingCount = recordCount > 0 ? rerunAnalysis(projectId).length : getFindings(projectId).length;
+    const entityType = importTypeInfo(sourceType).entityType;
 
     const body: ImportResponse = {
       status,
