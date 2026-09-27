@@ -129,6 +129,23 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
     }
   }, [result]);
 
+  // Clicking the input clears it (below) so re-choosing the same path, for example after fixing
+  // the file, fires change again. If the picker is then dismissed, forget the old file too, so
+  // the form matches the empty input.
+  useEffect(() => {
+    const input = fileInputRef.current;
+    if (!input) {
+      return;
+    }
+    const onCancel = () => {
+      if (!input.files?.length) {
+        setFile(null);
+      }
+    };
+    input.addEventListener("cancel", onCancel);
+    return () => input.removeEventListener("cancel", onCancel);
+  }, []);
+
   function chooseFile(next: File | null) {
     setFile(next);
     setFailure(null);
@@ -237,6 +254,9 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
             id={`${baseId}-file`}
             type="file"
             accept={typeInfo.accept}
+            onClick={(event) => {
+              event.currentTarget.value = "";
+            }}
             onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
             disabled={isImporting}
             aria-describedby={fileHelpId}
