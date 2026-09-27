@@ -100,7 +100,13 @@ export default async function RequirementDetailPage({
         <Link href={backHref} className={textLinkClass}>
           ← {backLabel}
         </Link>
-        <nav aria-label="Adjacent requirements" className="flex gap-4">
+        <nav aria-label="Adjacent requirements" className="flex flex-wrap gap-x-4 gap-y-1">
+          <Link
+            href={`${base}/trace-graph?focus=${encodeURIComponent(requirement.externalId)}`}
+            className={textLinkClass}
+          >
+            View in trace graph
+          </Link>
           {previous ? (
             <Link href={withBack(previous.externalId)} className={textLinkClass}>
               ← {previous.externalId}
