@@ -1,6 +1,7 @@
 import { auditActor } from "./audit-actor";
 import { rerunAnalysis } from "./analysis";
 import { addImportBatch, getProject, getProjectData, recordAuditEvent, runImportTransaction } from "./db";
+import { plural } from "./import-messages";
 import { createDemoBaselines, readDemoFiles, saveDemoRecords } from "./imports";
 
 export const DEMO_PROJECT_NAME = "Falcon Telemetry Gateway Demo";
@@ -50,7 +51,7 @@ export async function loadDemoIntoProject(projectId: string): Promise<DemoLoadRe
       projectId,
       action: "import.completed",
       actor: auditActor(),
-      summary: `Loaded ${saved.recordCount} fictional demo record(s) (Falcon Telemetry Gateway).`,
+      summary: `Loaded ${plural(saved.recordCount, "fictional demo record")} (Falcon Telemetry Gateway).`,
       details: {
         sourceType: DEMO_SOURCE_TYPE,
         recordCount: saved.recordCount,

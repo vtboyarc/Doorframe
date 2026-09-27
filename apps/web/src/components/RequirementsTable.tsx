@@ -12,7 +12,7 @@ import {
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { RequirementListRow } from "@/lib/view-models";
 import { fieldClass, panelClass, secondaryButtonClass, tableScrollClass, textLinkClass } from "@/lib/ui";
@@ -59,8 +59,11 @@ export function RequirementsTable({
   initialSort?: string;
 }) {
   const router = useRouter();
-  const [globalFilter, setGlobalFilter] = useState(initialQuery);
-  const [sorting, setSorting] = useState<SortingState>(() => parseSort(initialSort));
+  // Prefer the current URL over the server-rendered props: after browser Back, Next can restore this
+  // page from a render made before the filter was typed, while the URL still carries it.
+  const searchParams = useSearchParams();
+  const [globalFilter, setGlobalFilter] = useState(() => searchParams.get("q") ?? initialQuery);
+  const [sorting, setSorting] = useState<SortingState>(() => parseSort(searchParams.get("sort") ?? initialSort));
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // Keep the filter and sort in the URL so "Back to requirements" returns to the same list.
@@ -75,7 +78,7 @@ export function RequirementsTable({
   }, [projectId, view, globalFilter, sorting]);
 
   useEffect(() => {
-    window.history.replaceState(window.history.state, "", listUrl);
+    window.history.replaceState(null, "", listUrl);
   }, [listUrl]);
 
   const detailHref = (externalId: string, hash = "") =>

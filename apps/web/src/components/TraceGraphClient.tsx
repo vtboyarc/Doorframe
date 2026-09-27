@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
@@ -274,9 +275,12 @@ export function TraceGraphClient({
   const startingView = useMemo(() => defaultView(nodes), [nodes]);
   const firstRequirement = useMemo(() => firstLinkedRequirement(graph), [graph]);
 
-  const [view, setView] = useState<TraceGraphView>(() => initialView(initialViewParam, nodes));
+  // Prefer the current URL over the server-rendered props: after browser Back, Next can restore this
+  // page from a render made before a requirement was picked, while the URL still carries it.
+  const searchParams = useSearchParams();
+  const [view, setView] = useState<TraceGraphView>(() => initialView(searchParams.get("view") ?? initialViewParam, nodes));
   const [focusId, setFocusId] = useState(
-    () => requirements.find((node) => node.label === initialFocus)?.id ?? ""
+    () => requirements.find((node) => node.label === (searchParams.get("focus") ?? initialFocus))?.id ?? ""
   );
   const [pickerFilter, setPickerFilter] = useState("");
   const [flow, setFlow] = useState<ReactFlowInstance | null>(null);

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { PageShell } from "@/components/PageShell";
+import { RequirementViewNav } from "@/components/RequirementViewNav";
 import { RequirementsTable } from "@/components/RequirementsTable";
 import { getProjectData } from "@/lib/db";
 import { projectPageMetadata } from "@/lib/metadata";
@@ -12,7 +13,7 @@ import {
   toListRow,
   type RequirementView
 } from "@/lib/view-models";
-import { activeChipClass, chipClass, chipCountClass, inactiveChipClass, panelClass, primaryButtonClass } from "@/lib/ui";
+import { panelClass, primaryButtonClass } from "@/lib/ui";
 
 export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
   return projectPageMetadata(params, "Requirements");
@@ -66,23 +67,15 @@ export default async function RequirementsPage({
         </section>
       ) : (
         <>
-          <nav aria-label="Requirement views" className="mb-3 flex flex-wrap gap-2">
-            {views.map((option) => {
-              const active = option.value === view;
-              const count = filterRequirementRows(allRows, option.value).length;
-              return (
-                <Link
-                  key={option.label}
-                  href={option.value ? `${base}/requirements?view=${option.value}` : `${base}/requirements`}
-                  aria-current={active ? "true" : undefined}
-                  className={`${chipClass} ${active ? activeChipClass : inactiveChipClass}`}
-                >
-                  {option.label}
-                  <span className={chipCountClass}>{count}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          <RequirementViewNav
+            basePath={`${base}/requirements`}
+            activeView={view}
+            options={views.map((option) => ({
+              value: option.value,
+              label: option.label,
+              count: filterRequirementRows(allRows, option.value).length
+            }))}
+          />
           <RequirementsTable
             // Remount when the view changes so the table starts from the new rows.
             key={view ?? "all"}

@@ -12,8 +12,10 @@ import {
   fileTooLargeMessage,
   friendlyParserMessages,
   isMissingColumnError,
+  plural,
   type FailureDescription
 } from "@/lib/import-messages";
+import { sourceTypeLabel } from "@/lib/labels";
 import { parseClientMapping, summarizeMissing } from "@/lib/import-records";
 import {
   importTypeInfo,
@@ -60,8 +62,8 @@ function csvDelimiterProblem(sourceType: ImportSourceType, text: string): string
 
 function auditSummary(status: ImportStatus, recordCount: number, filename: string, sourceType: ImportSourceType): string {
   return status === "imported"
-    ? `Imported ${recordCount} record(s) from ${filename} (${sourceType}).`
-    : `Import of ${filename} (${sourceType}) saved no records.`;
+    ? `Imported ${plural(recordCount, "record")} from ${filename} (${sourceTypeLabel(sourceType)}).`
+    : `Import of ${filename} (${sourceTypeLabel(sourceType)}) saved no records.`;
 }
 
 export async function POST(request: Request, context: { params: Promise<{ projectId: string }> }) {

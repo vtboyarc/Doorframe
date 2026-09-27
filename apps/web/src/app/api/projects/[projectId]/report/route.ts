@@ -12,23 +12,27 @@ import {
 
 export const runtime = "nodejs";
 
-const FORMATS: Record<string, { contentType: string; ext: string; render: (data: ProjectData) => string }> = {
+const FORMATS: Record<string, { label: string; contentType: string; ext: string; render: (data: ProjectData) => string }> = {
   html: {
+    label: "HTML",
     contentType: "text/html; charset=utf-8",
     ext: "html",
     render: (data) => generateHtmlTraceabilityReport(data, { version: doorframeVersion() })
   },
   md: {
+    label: "Markdown",
     contentType: "text/markdown; charset=utf-8",
     ext: "md",
     render: (data) => generateMarkdownTraceabilityReport(data)
   },
   json: {
+    label: "JSON",
     contentType: "application/json; charset=utf-8",
     ext: "json",
     render: (data) => generateJsonReport(data)
   },
   csv: {
+    label: "CSV matrix",
     contentType: "text/csv; charset=utf-8",
     ext: "csv",
     render: (data) => generateTraceabilityMatrixCsv(data)
@@ -59,7 +63,7 @@ export const GET = async (request: Request, context: { params: Promise<{ project
       projectId,
       action: "report.generated",
       actor: auditActor(),
-      summary: `${download ? "Downloaded" : "Opened"} ${formatKey.toUpperCase()} report.`
+      summary: `${download ? "Downloaded" : "Opened"} ${format.label} report.`
     });
   }
 

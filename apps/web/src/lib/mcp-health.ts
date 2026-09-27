@@ -8,6 +8,7 @@ import {
   getStaleTraceCandidatesData,
   searchRequirementsData
 } from "../../../mcp-server/src/tools";
+import { plural } from "./import-messages";
 import { pathStyle, type McpDataMode, type McpHostPlatform } from "./mcp-setup";
 
 export type McpHealthStatus = "pass" | "warn" | "fail";
@@ -201,7 +202,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
           "pass",
           findingCount > 0
             ? `Findings found: ${findingCount}.`
-            : `Analyzers can run and currently produce ${generatedFindings.length} finding(s).`
+            : `Analyzers can run and currently produce ${plural(generatedFindings.length, "finding")}.`
         )
       );
     } catch (error) {
@@ -256,7 +257,7 @@ export function runMcpHealthCheck(input: RunMcpHealthCheckInput): McpHealthCheck
           "get-project-summary",
           "Project summary tool responds",
           "pass",
-          `${summary.counts.requirements} requirement(s), ${summary.counts.findings} finding(s).`
+          `${plural(summary.counts.requirements, "requirement")}, ${plural(summary.counts.findings, "finding")}.`
         )
       );
     } catch (error) {
