@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createBaseline, getProject, listBaselines, recordAuditEvent } from "@/lib/db";
 import { auditActor } from "@/lib/audit-actor";
+import { BASELINE_LABEL_MAX_LENGTH } from "@/lib/limits";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,8 @@ export const GET = async (_request: Request, context: { params: Promise<{ projec
     projectId: baseline.projectId,
     label: baseline.label,
     createdAt: baseline.createdAt,
-    requirementCount: baseline.snapshot.requirements.length
+    requirementCount: baseline.snapshot.requirements.length,
+    findingCount: baseline.snapshot.findings.length
   }));
   return NextResponse.json(baselines);
 };
@@ -26,14 +28,26 @@ export const POST = async (request: Request, context: { params: Promise<{ projec
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
   }
 
-  let label = `Baseline ${new Date().toISOString()}`;
+  let label = "";
   try {
-    const body = (await request.json()) as { label?: string };
-    if (body.label) {
-      label = body.label;
+    const body = (await request.json()) as { label?: unknown };
+    if (typeof body.label === "string") {
+      label = body.label.trim();
     }
   } catch {
     // Empty/invalid body is fine; use the default label.
+  }
+
+  if (label.length > BASELINE_LABEL_MAX_LENGTH) {
+    return NextResponse.json(
+      { error: `Baseline labels can be at most ${BASELINE_LABEL_MAX_LENGTH} characters.` },
+      { status: 400 }
+    );
+  }
+
+  if (!label) {
+    const now = new Date();
+    label = `Baseline ${now.toISOString().slice(0, 16).replace("T", " ")} UTC`;
   }
 
   const baseline = createBaseline(projectId, label);

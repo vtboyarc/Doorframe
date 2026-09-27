@@ -99,6 +99,12 @@ describe("report formats", () => {
     expect(html).toContain("Appendix");
   });
 
+  it("shows the Doorframe version only when one is provided", () => {
+    expect(generateHtmlTraceabilityReport(fixture(), { version: "9.8.7" })).toContain("Doorframe version: 9.8.7");
+    expect(generateHtmlTraceabilityReport(fixture())).not.toContain("Doorframe version");
+    expect(generateHtmlTraceabilityReport(fixture(), { version: "<b>1</b>" })).toContain("Doorframe version: &lt;b&gt;1&lt;/b&gt;");
+  });
+
   it("escapes unsafe HTML and does not reference external resources", () => {
     const unsafe = fixture();
     unsafe.project.name = "<script>alert(1)</script>";

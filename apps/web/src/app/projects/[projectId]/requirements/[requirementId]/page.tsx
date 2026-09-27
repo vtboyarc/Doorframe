@@ -1,90 +1,197 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
-import { getProjectData, getRequirement } from "@/lib/db";
-import { humanize, severityBadgeClass, testStatusClass } from "@/lib/severity";
-import { linkedTestCases, linkedWorkItems, requirementFindings } from "@/lib/view-models";
-import { panelClass } from "@/lib/ui";
+import { getProject, getProjectData, getRequirement } from "@/lib/db";
+import { sentenceLabel, sourceTypeLabel } from "@/lib/labels";
+import { severityBadgeClass, testStatusClass } from "@/lib/severity";
+import {
+  childRequirements,
+  findingsByPriority,
+  linkedTestCases,
+  linkedWorkItems,
+  parentRequirement,
+  requirementFindings
+} from "@/lib/view-models";
+import { labelClass, panelClass, primaryButtonClass, secondaryButtonClass, textLinkClass } from "@/lib/ui";
+
+type Params = Promise<{ projectId: string; requirementId: string }>;
+
+export async function generateMetadata({ params }: { params: Params }) {
+  const { projectId, requirementId } = await params;
+  const projectName = getProject(projectId)?.name ?? "Project not found";
+  return { title: `${decodeURIComponent(requirementId)} · ${projectName}` };
+}
+
+/** Only follow "back" links that stay inside this project. */
+function safeBackHref(back: string | undefined, projectId: string): string | null {
+  return back && back.startsWith(`/projects/${projectId}/`) && !back.startsWith("//") ? back : null;
+}
 
 export default async function RequirementDetailPage({
-  params
+  params,
+  searchParams
 }: {
-  params: Promise<{ projectId: string; requirementId: string }>;
+  params: Params;
+  searchParams: Promise<{ back?: string }>;
 }) {
   const { projectId, requirementId } = await params;
+  const { back } = await searchParams;
   const data = getProjectData(projectId);
-  const requirement = getRequirement(projectId, decodeURIComponent(requirementId));
 
-  if (!data || !requirement) {
+  if (!data) {
     notFound();
+  }
+
+  const base = `/projects/${projectId}`;
+  const externalOrId = decodeURIComponent(requirementId);
+  const requirement = getRequirement(projectId, externalOrId);
+  const backHref = safeBackHref(back, projectId) ?? `${base}/requirements`;
+  const backLabel = backHref.startsWith(`${base}/matrix`)
+    ? "Back to matrix"
+    : backHref.startsWith(`${base}/findings`)
+      ? "Back to finding"
+      : backHref.startsWith(`${base}/baselines`)
+        ? "Back to baselines"
+        : "Back to requirements";
+
+  if (!requirement) {
+    return (
+      <PageShell project={data.project}>
+        <section className={`${panelClass} mx-auto max-w-xl p-6`}>
+          <h1 className="break-words text-2xl font-semibold">Requirement {externalOrId} is not in this project</h1>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            It may have been removed by a later import, or the ID may be spelled differently in the current data.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link href={`${base}/requirements`} className={primaryButtonClass}>
+              Browse requirements
+            </Link>
+            <Link href={`${base}/baselines`} className={secondaryButtonClass}>
+              Compare baselines
+            </Link>
+          </div>
+        </section>
+      </PageShell>
+    );
   }
 
   const workItems = linkedWorkItems(requirement, data);
   const testCases = linkedTestCases(requirement, data);
-  const findings = requirementFindings(requirement, data);
+  const findings = findingsByPriority(requirementFindings(requirement, data));
+  const parent = parentRequirement(requirement, data);
+  const children = childRequirements(requirement, data);
+  const position = data.requirements.findIndex((candidate) => candidate.id === requirement.id);
+  const previous = position > 0 ? data.requirements[position - 1] : null;
+  const next = position >= 0 && position < data.requirements.length - 1 ? data.requirements[position + 1] : null;
+  const withBack = (externalId: string) =>
+    `${base}/requirements/${encodeURIComponent(externalId)}${back ? `?back=${encodeURIComponent(backHref)}` : ""}`;
+
+  const attributes: Array<[string, string | undefined]> = [
+    ["Status", requirement.status],
+    ["Verification method", requirement.verificationMethod],
+    ["Type", requirement.type],
+    ["Priority", requirement.priority],
+    ["Source", sourceTypeLabel(requirement.source)]
+  ];
 
   return (
     <PageShell project={data.project}>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-        <Link href={`/projects/${projectId}/requirements`} className="text-[var(--accent-strong)] hover:underline">
-          ← Back to requirements
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+        <Link href={backHref} className={textLinkClass}>
+          ← {backLabel}
         </Link>
-        <Link href={`/projects/${projectId}/findings`} className="text-[var(--accent-strong)] hover:underline">
-          View all findings
-        </Link>
+        <nav aria-label="Adjacent requirements" className="flex gap-4">
+          {previous ? (
+            <Link href={withBack(previous.externalId)} className={textLinkClass}>
+              ← {previous.externalId}
+            </Link>
+          ) : null}
+          {next ? (
+            <Link href={withBack(next.externalId)} className={textLinkClass}>
+              {next.externalId} →
+            </Link>
+          ) : null}
+        </nav>
       </div>
-      <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_360px]">
-        <section className={`${panelClass} p-5`}>
+
+      <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className={`${panelClass} min-w-0 p-5`}>
           <div className="text-sm text-[var(--muted)]">{requirement.externalId}</div>
-          <h1 className="mt-1 text-2xl font-semibold">{requirement.title}</h1>
-          <div className="mt-4 whitespace-pre-wrap border border-[var(--line)] bg-[var(--background)] p-4 text-sm">
-            {requirement.text}
+          <h1 className="mt-1 text-2xl font-semibold [overflow-wrap:anywhere]">{requirement.title}</h1>
+          <div className="mt-4 whitespace-pre-wrap border border-[var(--line)] bg-[var(--background)] p-4 text-sm [overflow-wrap:anywhere]">
+            {requirement.text || <span className="text-[var(--muted)]">No requirement text was imported.</span>}
           </div>
           <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+            {attributes.map(([label, value]) => (
+              <div key={label}>
+                <dt className={labelClass}>{label}</dt>
+                <dd className="mt-0.5">{value || <span className="text-[var(--muted)]">Not set</span>}</dd>
+              </div>
+            ))}
             <div>
-              <dt className="text-xs uppercase text-[var(--muted)]">Status</dt>
-              <dd>{requirement.status ?? "Unspecified"}</dd>
+              <dt className={labelClass}>Parent</dt>
+              <dd className="mt-0.5">
+                {parent ? (
+                  <Link href={withBack(parent.externalId)} className={textLinkClass}>
+                    {parent.externalId} · {parent.title}
+                  </Link>
+                ) : requirement.parentExternalId ? (
+                  <span>
+                    {requirement.parentExternalId} <span className="text-[var(--muted)]">(not in this project)</span>
+                  </span>
+                ) : (
+                  <span className="text-[var(--muted)]">None</span>
+                )}
+              </dd>
             </div>
-            <div>
-              <dt className="text-xs uppercase text-[var(--muted)]">Verification method</dt>
-              <dd>{requirement.verificationMethod ?? "Unspecified"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs uppercase text-[var(--muted)]">Type</dt>
-              <dd>{requirement.type ?? "Unspecified"}</dd>
-            </div>
-            <div>
-              <dt className="text-xs uppercase text-[var(--muted)]">Priority</dt>
-              <dd>{requirement.priority ?? "Unspecified"}</dd>
+            <div className="sm:col-span-2">
+              <dt className={labelClass}>Child requirements</dt>
+              <dd className="mt-0.5">
+                {children.length > 0 ? (
+                  <span className="flex flex-wrap gap-x-3 gap-y-1">
+                    {children.map((child) => (
+                      <Link key={child.id} href={withBack(child.externalId)} className={textLinkClass}>
+                        {child.externalId}
+                      </Link>
+                    ))}
+                  </span>
+                ) : (
+                  <span className="text-[var(--muted)]">None</span>
+                )}
+              </dd>
             </div>
           </dl>
 
-          <h2 className="mt-6 text-lg font-semibold">Raw attributes</h2>
-          <pre className="mt-2 max-h-[360px] overflow-auto border border-[var(--line)] bg-[#101820] p-4 text-xs text-white">
-            {JSON.stringify(requirement.rawAttributes ?? {}, null, 2)}
-          </pre>
+          <details className="mt-6 border border-[var(--line)]">
+            <summary className="px-4 py-3 text-sm font-medium">Imported raw attributes</summary>
+            <pre className="max-h-[360px] overflow-auto whitespace-pre-wrap border-t border-[var(--line)] bg-[var(--background)] p-4 text-xs text-[var(--foreground)] [overflow-wrap:anywhere]">
+              {JSON.stringify(requirement.rawAttributes ?? {}, null, 2)}
+            </pre>
+          </details>
         </section>
 
-        <aside className="space-y-4">
+        <aside className="min-w-0 space-y-4">
           <div id="work-items" className={`scroll-mt-4 ${panelClass} p-4`}>
-            <h2 className="font-semibold">Linked work items</h2>
+            <h2 className="font-semibold">Linked work items ({workItems.length})</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {workItems.map((workItem) => (
-                <div key={workItem.id} className="py-2">
+                <div key={workItem.id} className="py-2 [overflow-wrap:anywhere]">
                   <div className="font-medium">{workItem.externalId}</div>
                   <div>{workItem.title}</div>
                   <div className="text-[var(--muted)]">{workItem.status ?? "No status"}</div>
                 </div>
               ))}
-              {workItems.length === 0 ? <div className="py-2 text-[var(--muted)]">No linked work items.</div> : null}
+              {workItems.length === 0 ? (
+                <div className="py-2 text-[var(--warning)]">No linked work items.</div>
+              ) : null}
             </div>
           </div>
 
           <div id="tests" className={`scroll-mt-4 ${panelClass} p-4`}>
-            <h2 className="font-semibold">Linked tests</h2>
+            <h2 className="font-semibold">Linked tests ({testCases.length})</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {testCases.map((testCase) => (
-                <div key={testCase.id} className="py-2">
+                <div key={testCase.id} className="py-2 [overflow-wrap:anywhere]">
                   <div className="font-medium">{testCase.name}</div>
                   <div className="text-[var(--muted)]">
                     {testCase.classname ?? "No classname"} ·{" "}
@@ -93,33 +200,39 @@ export default async function RequirementDetailPage({
                   {testCase.failureMessage ? <div className="mt-1 text-[var(--danger)]">{testCase.failureMessage}</div> : null}
                 </div>
               ))}
-              {testCases.length === 0 ? <div className="py-2 text-[var(--muted)]">No linked tests.</div> : null}
+              {testCases.length === 0 ? <div className="py-2 text-[var(--warning)]">No linked tests.</div> : null}
             </div>
           </div>
 
           <div id="findings" className={`scroll-mt-4 ${panelClass} p-4`}>
-            <h2 className="font-semibold">Findings</h2>
+            <h2 className="font-semibold">Findings ({findings.length})</h2>
             <div className="mt-2 divide-y divide-[var(--line)] text-sm">
               {findings.map((finding) => (
                 <Link
                   key={finding.id}
-                  href={`/projects/${projectId}/findings/${finding.id}`}
-                  className="group block py-2 hover:bg-[var(--background)]"
+                  href={`${base}/findings/${finding.id}?back=${encodeURIComponent(
+                    `${base}/requirements/${encodeURIComponent(requirement.externalId)}`
+                  )}`}
+                  className="group -mx-2 block px-2 py-2 hover:bg-[var(--panel-strong)]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="font-medium group-hover:text-[var(--accent-strong)]">{finding.title}</div>
-                    <span aria-hidden="true" className="text-[var(--muted)] group-hover:text-[var(--accent-strong)]">→</span>
+                    <span aria-hidden="true" className="text-[var(--muted)] group-hover:text-[var(--accent-strong)]">
+                      →
+                    </span>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <span className={`border px-1.5 py-0.5 text-xs font-medium uppercase ${severityBadgeClass[finding.severity]}`}>
                       {finding.severity}
                     </span>
-                    <span className="text-[var(--muted)]">{humanize(finding.category)}</span>
+                    <span className="text-[var(--muted)]">{sentenceLabel(finding.category)}</span>
                   </div>
-                  {finding.recommendation ? <div className="mt-1">{finding.recommendation}</div> : null}
+                  {finding.recommendation ? <div className="mt-1 text-[var(--muted)]">{finding.recommendation}</div> : null}
                 </Link>
               ))}
-              {findings.length === 0 ? <div className="py-2 text-[var(--muted)]">No findings for this requirement.</div> : null}
+              {findings.length === 0 ? (
+                <div className="py-2 text-[var(--muted)]">No findings for this requirement.</div>
+              ) : null}
             </div>
           </div>
         </aside>

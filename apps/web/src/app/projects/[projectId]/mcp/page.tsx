@@ -10,6 +10,7 @@ import {
   type McpHostPlatform,
   type McpSetupSettings
 } from "@/lib/mcp-setup";
+import { projectPageMetadata } from "@/lib/metadata";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -33,6 +34,10 @@ function parseMaxResults(value: string | undefined): number {
 
 function parsePlatform(value: string | undefined): McpHostPlatform | undefined {
   return value === "windows" || value === "posix" ? value : undefined;
+}
+
+export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
+  return projectPageMetadata(params, "MCP setup");
 }
 
 export default async function McpSetupPage({

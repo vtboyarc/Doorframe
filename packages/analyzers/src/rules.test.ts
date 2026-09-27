@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Requirement, TestCase, TraceLink, WorkItem } from "@doorframe/core";
-import { generateFindings } from "./rules";
+import { findDuplicateCandidates, generateFindings, MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT } from "./rules";
 
 const baseTime = "2026-01-01T00:00:00.000Z";
 
@@ -88,5 +88,25 @@ describe("generateFindings", () => {
     });
 
     expect(findings.map((finding) => finding.category)).toContain("closed_work_without_verification");
+  });
+});
+
+describe("findDuplicateCandidates", () => {
+  it("caps the candidates reported for one requirement so templated exports stay bounded", () => {
+    const requirements = Array.from({ length: 40 }, (_, index) =>
+      requirement({
+        id: `req_${index}`,
+        externalId: `REQ-${index}`,
+        text: "The gateway shall record the telemetry packet timestamp in the local log."
+      })
+    );
+
+    const findings = findDuplicateCandidates({ requirements, workItems: [], testCases: [], traceLinks: [] }, 0.8);
+    const perRequirement = new Map<string, number>();
+    findings.forEach((finding) => perRequirement.set(finding.entityId, (perRequirement.get(finding.entityId) ?? 0) + 1));
+
+    expect(Math.max(...perRequirement.values())).toBe(MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT);
+    expect(findings.length).toBeLessThanOrEqual(requirements.length * MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT);
+    expect(findings[0].title).toBe("REQ-0 resembles REQ-1");
   });
 });

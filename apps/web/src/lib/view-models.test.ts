@@ -10,12 +10,17 @@ import type {
 } from "@doorframe/core";
 import {
   auditEventTarget,
+  childRequirements,
+  coveragePercent,
+  dashboardStats,
   filterRequirementRows,
   findingContext,
   findingsByPriority,
+  parentRequirement,
   projectSummary,
   requirementFindings,
-  requirementRows
+  requirementRows,
+  toListRow
 } from "./view-models";
 
 const requirement: Requirement = {
@@ -144,8 +149,31 @@ describe("requirementRows", () => {
     const rows = requirementRows(projectData());
 
     expect(rows[0].failingTestCount).toBe(1);
+    expect(rows[0].passingTestCount).toBe(0);
     expect(filterRequirementRows(rows, "failed-tests")).toHaveLength(1);
     expect(filterRequirementRows(rows, "without-work")).toHaveLength(0);
+    expect(filterRequirementRows(rows, "without-tests")).toHaveLength(0);
+    expect(filterRequirementRows(rows, "without-passing-tests")).toHaveLength(1);
+  });
+});
+
+describe("dashboardStats", () => {
+  it("reports trace coverage, missing passing verification, and findings by severity", () => {
+    const data = projectData([
+      { ...finding("requirement", requirement.id), id: "a", severity: "error" as const },
+      { ...finding("requirement", requirement.id), id: "b", severity: "info" as const }
+    ]);
+    const stats = dashboardStats(data, projectSummary(data));
+
+    expect(stats.fullyTracedPercent).toBe(100);
+    expect(stats.requirementsWithoutPassingTests).toBe(1);
+    expect(stats.findingsBySeverity).toEqual({ error: 1, warning: 0, info: 1 });
+  });
+
+  it("treats an empty project as zero coverage", () => {
+    const empty: ProjectData = { ...projectData(), requirements: [], workItems: [], testCases: [], traceLinks: [] };
+
+    expect(dashboardStats(empty, projectSummary(empty)).fullyTracedPercent).toBe(0);
   });
 });
 
@@ -244,5 +272,50 @@ describe("auditEventTarget", () => {
       href: "/projects/project-1/findings",
       label: "Review findings"
     });
+  });
+});
+
+describe("requirement rows for the table", () => {
+  it("builds a lowercase search string from IDs, text, attributes, and linked records", () => {
+    const [row] = requirementRows(projectData());
+
+    expect(row.searchText).toContain("req-001");
+    expect(row.searchText).toContain("the gateway shall transmit status.");
+    expect(row.searchText).toContain("work-001");
+    expect(row.searchText).toContain("status transmission");
+  });
+
+  it("counts skipped tests separately and drops full text from the client row", () => {
+    const skipped = { ...testCase, status: "skipped" as const };
+    const [row] = requirementRows({ ...projectData(), testCases: [skipped] });
+    const listRow = toListRow(row);
+
+    expect(row.skippedTestCount).toBe(1);
+    expect(row.failingTestCount).toBe(0);
+    expect(listRow).not.toHaveProperty("text");
+    expect(listRow).not.toHaveProperty("rawAttributes");
+  });
+});
+
+describe("requirement hierarchy", () => {
+  it("finds the parent and children by external ID", () => {
+    const parent = { ...requirement, id: "req-parent", externalId: "REQ-100" };
+    const child = { ...requirement, id: "req-child", externalId: "REQ-101", parentExternalId: "REQ-100" };
+    const data = { ...projectData(), requirements: [parent, child] };
+
+    expect(childRequirements(parent, data)).toEqual([child]);
+    expect(parentRequirement(child, data)).toEqual(parent);
+    expect(parentRequirement(parent, data)).toBeNull();
+  });
+});
+
+describe("coveragePercent", () => {
+  it("never rounds a remaining gap up to 100% or real coverage down to 0%", () => {
+    expect(coveragePercent(199, 200)).toBe(99);
+    expect(coveragePercent(1, 300)).toBe(1);
+    expect(coveragePercent(33, 42)).toBe(79);
+    expect(coveragePercent(42, 42)).toBe(100);
+    expect(coveragePercent(0, 42)).toBe(0);
+    expect(coveragePercent(0, 0)).toBe(0);
   });
 });

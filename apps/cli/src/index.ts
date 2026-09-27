@@ -311,7 +311,7 @@ function renderReport(data: ReturnType<typeof buildProjectDataFromImportedRecord
       return generateTraceabilityMatrixCsv(data);
     case "html":
     default:
-      return generateHtmlTraceabilityReport(data);
+      return generateHtmlTraceabilityReport(data, { version: cliVersion() });
   }
 }
 

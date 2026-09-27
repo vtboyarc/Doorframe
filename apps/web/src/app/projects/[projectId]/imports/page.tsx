@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { ImportPanel } from "@/components/ImportPanel";
 import { PageShell } from "@/components/PageShell";
 import { getProjectData } from "@/lib/db";
+import { projectPageMetadata } from "@/lib/metadata";
+
+export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
+  return projectPageMetadata(params, "Imports");
+}
 
 export default async function ImportsPage({
   params

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getProject, getProjectData, recordAuditEvent } from "@/lib/db";
+import { getProjectData, recordAuditEvent } from "@/lib/db";
 import { auditActor } from "@/lib/audit-actor";
+import { doorframeVersion } from "@/lib/version";
 import type { ProjectData } from "@doorframe/core";
 import {
   generateHtmlTraceabilityReport,
@@ -15,7 +16,7 @@ const FORMATS: Record<string, { contentType: string; ext: string; render: (data:
   html: {
     contentType: "text/html; charset=utf-8",
     ext: "html",
-    render: (data) => generateHtmlTraceabilityReport(data)
+    render: (data) => generateHtmlTraceabilityReport(data, { version: doorframeVersion() })
   },
   md: {
     contentType: "text/markdown; charset=utf-8",
@@ -42,22 +43,29 @@ export const GET = async (request: Request, context: { params: Promise<{ project
   }
 
   const url = new URL(request.url);
-  const formatKey = url.searchParams.get("format") ?? "html";
-  const format = FORMATS[formatKey] ?? FORMATS.html;
+  const requestedFormat = url.searchParams.get("format") ?? "html";
+  const formatKey = requestedFormat in FORMATS ? requestedFormat : "html";
+  const format = FORMATS[formatKey];
   const download = url.searchParams.get("download") === "1";
+  // The in-app preview re-renders on every visit to the Reports page; only
+  // opening or downloading a report is recorded in the audit log.
+  const preview = url.searchParams.get("preview") === "1";
 
   const body = format.render(data);
-  recordAuditEvent({
-    projectId,
-    action: "report.generated",
-    actor: auditActor(),
-    summary: `Generated ${formatKey} report.`
-  });
+  if (!preview) {
+    recordAuditEvent({
+      projectId,
+      action: "report.generated",
+      actor: auditActor(),
+      summary: `${download ? "Downloaded" : "Opened"} ${formatKey.toUpperCase()} report.`
+    });
+  }
 
-  const headers: Record<string, string> = { "Content-Type": format.contentType };
+  const headers: Record<string, string> = { "Content-Type": format.contentType, "Cache-Control": "no-store" };
   if (download) {
-    const name = (getProject(projectId)?.name ?? "doorframe").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
-    headers["Content-Disposition"] = `attachment; filename="${name}-report.${format.ext}"`;
+    const slug = data.project.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "doorframe";
+    const date = new Date().toISOString().slice(0, 10);
+    headers["Content-Disposition"] = `attachment; filename="${slug}-traceability-${date}.${format.ext}"`;
   }
 
   return new NextResponse(body, { headers });

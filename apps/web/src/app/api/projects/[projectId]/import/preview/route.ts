@@ -1,38 +1,94 @@
 import { NextResponse } from "next/server";
+import {
+  detectNonCommaDelimiter,
+  inferJiraCsvMapping,
+  inferRequirementsCsvMapping,
+  readCsvPreview,
+  type CsvPreview
+} from "@doorframe/parsers";
 import { getProject } from "@/lib/db";
-import { inferJiraCsvMapping, inferRequirementsCsvMapping, readCsvHeaders } from "@doorframe/parsers";
+import { delimiterMessage, describeImportFailure, fileTooLargeMessage, NO_CSV_ROWS_MESSAGE } from "@/lib/import-messages";
+import {
+  completeMapping,
+  isCsvImportType,
+  isImportSourceType,
+  mappingFieldsFor,
+  MAX_IMPORT_FILE_BYTES,
+  type ImportErrorResponse,
+  type ImportPreviewResponse
+} from "@/lib/import-types";
 
 export const runtime = "nodejs";
 
+const PREVIEW_ROWS = 5;
+const MULTIPART_OVERHEAD_BYTES = 1024 * 1024;
+
+function errorResponse(status: number, body: ImportErrorResponse) {
+  return NextResponse.json(body, { status });
+}
+
 /**
- * Inspect an uploaded CSV: return its headers and a best-guess column mapping so
- * the import UI can pre-fill the mapping form before the user commits.
+ * Inspect an uploaded CSV with the importer's own CSV settings: return its
+ * headers, the first rows, the row count, and the column mapping the importer
+ * infers, so the form shows exactly what the import will use.
  */
 export const POST = async (request: Request, context: { params: Promise<{ projectId: string }> }) => {
   const { projectId } = await context.params;
   if (!getProject(projectId)) {
-    return NextResponse.json({ error: "Project not found." }, { status: 404 });
+    return errorResponse(404, { error: "Project not found." });
   }
 
-  const formData = await request.formData();
-  const sourceType = String(formData.get("sourceType") ?? "");
+  const declaredBytes = Number(request.headers.get("content-length") ?? 0);
+  if (declaredBytes > MAX_IMPORT_FILE_BYTES + MULTIPART_OVERHEAD_BYTES) {
+    return errorResponse(413, { error: fileTooLargeMessage(declaredBytes) });
+  }
+
+  let formData: FormData;
+  try {
+    formData = await request.formData();
+  } catch {
+    return errorResponse(400, { error: "The upload could not be read. Choose the file again and retry." });
+  }
+
+  const sourceType = formData.get("sourceType");
+  if (!isImportSourceType(sourceType) || !isCsvImportType(sourceType)) {
+    return errorResponse(400, { error: "Previews are available for Requirements CSV and Jira CSV imports." });
+  }
+
   const file = formData.get("file");
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "A file is required." }, { status: 400 });
+    return errorResponse(400, { error: "Choose a file to preview." });
   }
 
-  const text = await file.text();
-  let headers: string[];
+  if (file.size > MAX_IMPORT_FILE_BYTES) {
+    return errorResponse(413, { error: fileTooLargeMessage(file.size) });
+  }
+
+  let preview: CsvPreview;
   try {
-    headers = readCsvHeaders(text);
-  } catch {
-    return NextResponse.json({ error: "Unable to read CSV headers." }, { status: 400 });
+    preview = readCsvPreview(await file.text(), PREVIEW_ROWS);
+  } catch (error) {
+    const failure = describeImportFailure(sourceType, error);
+    return errorResponse(422, { error: failure.message, detail: failure.detail });
   }
 
-  const mapping = sourceType === "jira-csv" ? inferJiraCsvMapping(headers) : inferRequirementsCsvMapping(headers);
+  if (preview.headers.length === 0) {
+    return errorResponse(422, { error: NO_CSV_ROWS_MESSAGE });
+  }
 
-  // First few raw rows for a preview.
-  const previewLines = text.split(/\r?\n/).slice(1, 6).filter(Boolean);
+  const delimiter = detectNonCommaDelimiter(preview.headers);
+  if (delimiter) {
+    return errorResponse(422, { error: delimiterMessage(delimiter) });
+  }
 
-  return NextResponse.json({ headers, mapping, previewLines });
+  const inferred =
+    sourceType === "jira-csv" ? inferJiraCsvMapping(preview.headers) : inferRequirementsCsvMapping(preview.headers);
+  const body: ImportPreviewResponse = {
+    headers: preview.headers,
+    rows: preview.rows,
+    totalRows: preview.totalRows,
+    mapping: completeMapping(mappingFieldsFor(sourceType), inferred as Record<string, string | undefined>)
+  };
+
+  return NextResponse.json(body);
 };

@@ -1,7 +1,14 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/PageHeader";
 import { PageShell } from "@/components/PageShell";
+import { DeleteProjectPanel, ProjectNameForm } from "@/components/ProjectSettingsPanel";
 import { getProject, getRuleset } from "@/lib/db";
 import { RulesetEditor } from "@/components/RulesetEditor";
+import { projectPageMetadata } from "@/lib/metadata";
+
+export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
+  return projectPageMetadata(params, "Settings");
+}
 
 export default async function SettingsPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
@@ -14,12 +21,20 @@ export default async function SettingsPage({ params }: { params: Promise<{ proje
 
   return (
     <PageShell project={project}>
-      <h1 className="text-2xl font-semibold">Project Settings &amp; Ruleset</h1>
-      <p className="mt-1 mb-5 text-sm text-[var(--muted)]">
-        Configure requirement ID patterns, analyzer thresholds, disabled finding categories, and custom rules.
-        Saving re-runs analysis with the new ruleset.
-      </p>
-      <RulesetEditor projectId={projectId} initial={ruleset} />
+      <PageHeader
+        title="Settings"
+        description="Rename the project, tune how Doorframe analyzes it, or delete it. Saving the ruleset re-runs analysis."
+      />
+      <div className="grid grid-cols-1 gap-6">
+        <ProjectNameForm projectId={projectId} name={project.name} />
+        <section aria-labelledby="ruleset-heading">
+          <h2 id="ruleset-heading" className="mb-3 text-lg font-semibold">
+            Analysis ruleset
+          </h2>
+          <RulesetEditor projectId={projectId} initial={ruleset} />
+        </section>
+        <DeleteProjectPanel projectId={projectId} name={project.name} />
+      </div>
     </PageShell>
   );
 }

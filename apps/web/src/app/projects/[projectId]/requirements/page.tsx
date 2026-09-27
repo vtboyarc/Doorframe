@@ -1,54 +1,103 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/PageHeader";
 import { PageShell } from "@/components/PageShell";
 import { RequirementsTable } from "@/components/RequirementsTable";
 import { getProjectData } from "@/lib/db";
-import { filterRequirementRows, requirementRows } from "@/lib/view-models";
-import { panelClass } from "@/lib/ui";
+import { projectPageMetadata } from "@/lib/metadata";
+import {
+  filterRequirementRows,
+  isRequirementView,
+  requirementRows,
+  toListRow,
+  type RequirementView
+} from "@/lib/view-models";
+import { panelClass, primaryButtonClass } from "@/lib/ui";
 
-const viewLabels: Record<string, string> = {
-  "without-work": "Requirements without linked work",
-  "without-tests": "Requirements without linked tests",
-  "failed-tests": "Requirements with failed or errored tests"
-};
+export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
+  return projectPageMetadata(params, "Requirements");
+}
+
+const views: Array<{ value?: RequirementView; label: string }> = [
+  { label: "All" },
+  { value: "without-work", label: "Without work" },
+  { value: "without-tests", label: "Without tests" },
+  { value: "without-passing-tests", label: "Without a passing test" },
+  { value: "failed-tests", label: "Failed or errored tests" }
+];
 
 export default async function RequirementsPage({
   params,
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; q?: string; sort?: string }>;
 }) {
   const { projectId } = await params;
-  const { view } = await searchParams;
+  const { view: rawView, q, sort } = await searchParams;
   const data = getProjectData(projectId);
 
   if (!data) {
     notFound();
   }
 
-  const rows = filterRequirementRows(requirementRows(data), view);
-  const activeViewLabel = view ? viewLabels[view] : undefined;
+  const view = isRequirementView(rawView) ? rawView : undefined;
+  const allRows = requirementRows(data);
+  const rows = filterRequirementRows(allRows, view).map(toListRow);
+  const base = `/projects/${projectId}`;
 
   return (
     <PageShell project={data.project}>
-      <div className="mb-5">
-        <h1 className="text-2xl font-semibold">Requirements</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">
-          Sort and filter imported requirements, then open a requirement to review linked work, tests, findings, and raw attributes.
-        </p>
-      </div>
-      {activeViewLabel ? (
-        <div className={`mb-3 flex flex-wrap items-center justify-between gap-3 ${panelClass} px-4 py-3 text-sm`}>
-          <div>
-            Showing <span className="font-semibold">{rows.length}</span> matching item{rows.length === 1 ? "" : "s"}: {activeViewLabel}
-          </div>
-          <Link href={`/projects/${projectId}/requirements`} className="text-[var(--accent-strong)] hover:underline">
-            Clear view
+      <PageHeader
+        title="Requirements"
+        description="Filter and sort imported requirements, then open one to review its linked work, tests, findings, and imported attributes."
+      />
+
+      {allRows.length === 0 ? (
+        <section className={`${panelClass} p-6`}>
+          <h2 className="text-lg font-semibold">No requirements imported yet</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Import a requirements CSV, ReqIF, or ReqIFZ export to start. Work items and test results can then link to these
+            requirements by ID.
+          </p>
+          <Link href={`${base}/imports?type=requirements-csv`} className={`mt-4 ${primaryButtonClass}`}>
+            Import requirements
           </Link>
-        </div>
-      ) : null}
-      <RequirementsTable projectId={projectId} rows={rows} />
+        </section>
+      ) : (
+        <>
+          <nav aria-label="Requirement views" className="mb-3 flex flex-wrap gap-2">
+            {views.map((option) => {
+              const active = option.value === view;
+              const count = filterRequirementRows(allRows, option.value).length;
+              return (
+                <Link
+                  key={option.label}
+                  href={option.value ? `${base}/requirements?view=${option.value}` : `${base}/requirements`}
+                  aria-current={active ? "page" : undefined}
+                  className={`inline-flex min-h-9 items-center gap-2 border px-3 text-sm transition-colors ${
+                    active
+                      ? "border-[var(--accent-strong)] bg-[var(--accent)] text-white"
+                      : "border-[var(--line)] bg-[var(--panel)] text-[var(--muted)] hover:border-[var(--accent-strong)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  {option.label}
+                  <span className={`tabular-nums ${active ? "text-white" : "text-[var(--foreground)]"}`}>{count}</span>
+                </Link>
+              );
+            })}
+          </nav>
+          <RequirementsTable
+            // Remount when the view changes so the table starts from the new rows.
+            key={view ?? "all"}
+            projectId={projectId}
+            rows={rows}
+            view={view}
+            initialQuery={q ?? ""}
+            initialSort={sort}
+          />
+        </>
+      )}
     </PageShell>
   );
 }

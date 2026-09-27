@@ -1,8 +1,6 @@
 import { type Finding, type ProjectData, type Requirement, type TestCase, type WorkItem } from "@doorframe/core";
 import { escapeHtml, matrixRows, summarizeReport } from "./shared";
 
-const DOORFRAME_VERSION = "0.1.0";
-
 function text(value: string | number | undefined): string {
   return escapeHtml(String(value ?? ""));
 }
@@ -112,7 +110,12 @@ function topRiskRows(data: ProjectData): string {
   );
 }
 
-export function generateHtmlTraceabilityReport(data: ProjectData): string {
+export interface HtmlReportOptions {
+  /** Doorframe version shown in the report header. Omitted when not provided. */
+  version?: string;
+}
+
+export function generateHtmlTraceabilityReport(data: ProjectData, options: HtmlReportOptions = {}): string {
   const matrix = matrixRows(data);
   const summary = summarizeReport(data);
   const counts = severityCounts(data.findings);
@@ -197,7 +200,7 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
 <main>
 <h1>Doorframe Traceability Report</h1>
 <p class="meta">Project: ${text(data.project.name)}</p>
-<p class="meta">Generated: ${text(generatedAt)} · Doorframe version: ${DOORFRAME_VERSION}</p>
+<p class="meta">Generated: ${text(generatedAt)}${options.version ? ` · Doorframe version: ${text(options.version)}` : ""}</p>
 <p class="meta">Generated from local imported data. The report contains only data available in this Doorframe project.</p>
 
 <h2>Executive Summary</h2>

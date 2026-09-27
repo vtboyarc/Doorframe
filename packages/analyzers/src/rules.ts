@@ -229,6 +229,13 @@ export function findNonVerifiableRequirements(
     }));
 }
 
+/**
+ * Most duplicate candidates reported for any one requirement. Exports built from
+ * templates can make thousands of requirements look alike; without a cap every
+ * similar pair becomes a finding, which can exhaust memory on large imports.
+ */
+export const MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT = 5;
+
 export function findDuplicateCandidates(
   input: AnalysisInput,
   threshold: number = DEFAULT_RULESET.analyzer.jaccardThreshold
@@ -240,10 +247,13 @@ export function findDuplicateCandidates(
   }));
 
   for (let i = 0; i < tokenized.length; i += 1) {
-    for (let j = i + 1; j < tokenized.length; j += 1) {
+    let candidates = 0;
+
+    for (let j = i + 1; j < tokenized.length && candidates < MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT; j += 1) {
       const score = jaccard(tokenized[i].tokens, tokenized[j].tokens);
 
       if (score >= threshold) {
+        candidates += 1;
         findings.push({
           severity: "info",
           category: "duplicate_candidate",

@@ -13,6 +13,54 @@ export function readCsvHeaders(input: string): string[] {
   return rows[0] ?? [];
 }
 
+/** The first rows of a CSV, parsed with the same settings as the importers. */
+export interface CsvPreview {
+  headers: string[];
+  /** Up to `maxRows` data rows; cells are positional, so read them by index. */
+  rows: string[][];
+  /** Data rows in the file, not counting the header or blank rows. */
+  totalRows: number;
+}
+
+/**
+ * Parse a CSV for display before import. Uses the importer's csv-parse settings
+ * (BOM stripping, quoted multi-line cells, "" escapes, trimming) so the preview
+ * matches what will be saved. Throws the csv-parse error for malformed input.
+ */
+export function readCsvPreview(input: string, maxRows = 5): CsvPreview {
+  const records = parse(input, {
+    bom: true,
+    relax_column_count: true,
+    skip_empty_lines: true,
+    trim: true
+  }) as string[][];
+  const [headers = [], ...dataRows] = records;
+  const rows = dataRows.filter((row) => row.some((cell) => cell !== ""));
+
+  return {
+    headers,
+    rows: rows.slice(0, Math.max(0, maxRows)),
+    totalRows: rows.length
+  };
+}
+
+/**
+ * Detect a CSV saved with semicolons or tabs between columns: the comma parser
+ * then sees a single header that still contains the real separator.
+ */
+export function detectNonCommaDelimiter(headers: string[]): "semicolon" | "tab" | null {
+  if (headers.length !== 1) {
+    return null;
+  }
+
+  const [header] = headers;
+  if (header.includes("\t")) {
+    return "tab";
+  }
+
+  return header.includes(";") ? "semicolon" : null;
+}
+
 function normalizeHeader(header: string): string {
   return header.toLowerCase().replace(/[^a-z0-9]/g, "");
 }

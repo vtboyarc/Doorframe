@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "tsc -p ../../tsconfig.json --noEmit"
   },
   "dependencies": {
     "@doorframe/analyzers": "0.1.0",

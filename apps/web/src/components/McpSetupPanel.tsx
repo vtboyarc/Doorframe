@@ -132,7 +132,7 @@ export function McpSetupPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      <section className={`grid gap-4 ${panelClass} p-5 lg:grid-cols-[1fr_auto]`}>
+      <section className={`grid grid-cols-1 [&>*]:min-w-0 gap-4 ${panelClass} p-5 lg:grid-cols-[1fr_auto]`}>
         <div>
           <h1 className="text-2xl font-semibold">MCP Setup</h1>
           <p className="mt-1 max-w-3xl text-sm text-[var(--muted)]">
@@ -156,7 +156,7 @@ export function McpSetupPanel({
 
       <section className={`${panelClass} p-5`}>
         <StepHeading step={1} title="Choose your AI client" hint="Pick the tool you want to connect to Doorframe." />
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="AI client">
+        <div className="mt-4 grid grid-cols-1 [&>*]:min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="AI client">
           {mcpClientOptions.map((client) => {
             const selected = client.id === selectedClient.id;
             return (
@@ -224,7 +224,7 @@ export function McpSetupPanel({
         />
 
         {guide.kind === "unsupported" ? (
-          <div className="mt-4 grid gap-4">
+          <div className="mt-4 grid grid-cols-1 [&>*]:min-w-0 gap-4">
             <div className="border border-[var(--info)] bg-[var(--info-soft)] p-4 text-sm text-[var(--info)]">
               ChatGPT custom connectors and OpenAI API MCP flows expect a <strong>remote</strong> MCP server reachable
               over the network. Doorframe&apos;s MCP server is <strong>local stdio</strong> in this release: it runs as a
@@ -232,7 +232,7 @@ export function McpSetupPanel({
             </div>
             <div>
               <div className="text-sm font-medium">What you can do instead</div>
-              <ol className="mt-2 grid gap-2 text-sm">
+              <ol className="mt-2 grid grid-cols-1 [&>*]:min-w-0 gap-2 text-sm">
                 {guide.steps.map((step, index) => (
                   <li key={step} className="flex gap-3">
                     <span className="font-semibold text-[var(--muted)]">{index + 1}.</span>
@@ -270,7 +270,7 @@ export function McpSetupPanel({
             ) : null}
           </div>
         ) : (
-          <div className="mt-4 grid gap-5 lg:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 [&>*]:min-w-0 gap-5 lg:grid-cols-2">
             <div>
               {guide.configFile ? (
                 <div className="border border-[var(--line)] bg-[var(--background)] p-3">
@@ -281,7 +281,7 @@ export function McpSetupPanel({
                   </div>
                 </div>
               ) : null}
-              <ol className={`grid gap-3 text-sm ${guide.configFile ? "mt-4" : ""}`}>
+              <ol className={`grid grid-cols-1 [&>*]:min-w-0 gap-3 text-sm ${guide.configFile ? "mt-4" : ""}`}>
                 {guide.steps.map((step, index) => (
                   <li key={step} className="flex gap-3">
                     <span
@@ -354,11 +354,11 @@ export function McpSetupPanel({
             Data &amp; privacy options
             <span className="ml-2 font-normal text-[var(--muted)]">{dataOptionsSummary}</span>
           </summary>
-          <div className="grid gap-4 border-t border-[var(--line)] p-4">
+          <div className="grid grid-cols-1 [&>*]:min-w-0 gap-4 border-t border-[var(--line)] p-4">
             <div>
               <div className="text-sm font-medium">Data mode</div>
               <p className="mt-1 text-sm text-[var(--muted)]">How much requirement text the AI client can read.</p>
-              <div className="mt-2 grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Data mode">
+              <div className="mt-2 grid grid-cols-1 [&>*]:min-w-0 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Data mode">
                 {mcpDataModeOptions.map((candidate) => (
                   <button
                     key={candidate.id}
@@ -381,7 +381,7 @@ export function McpSetupPanel({
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 [&>*]:min-w-0 gap-4 sm:grid-cols-2">
               <label className="text-sm font-medium">
                 Max results per query
                 <input
@@ -403,7 +403,7 @@ export function McpSetupPanel({
               </label>
             </div>
 
-            <div className="grid gap-3 border border-[var(--line)] bg-[var(--background)] p-4">
+            <div className="grid grid-cols-1 [&>*]:min-w-0 gap-3 border border-[var(--line)] bg-[var(--background)] p-4">
               <label className="flex items-center gap-3 text-sm font-medium">
                 <input
                   type="checkbox"
@@ -449,9 +449,9 @@ export function McpSetupPanel({
           </form>
         </div>
 
-        <div className="mt-4 grid gap-3">
+        <div className="mt-4 grid grid-cols-1 [&>*]:min-w-0 gap-3">
           {healthCheck.checks.map((item) => (
-            <div key={item.id} className="grid gap-2 border border-[var(--line)] p-3 text-sm md:grid-cols-[160px_1fr]">
+            <div key={item.id} className="grid grid-cols-1 [&>*]:min-w-0 gap-2 border border-[var(--line)] p-3 text-sm md:grid-cols-[160px_1fr]">
               <div>
                 <span className={`inline-flex border px-2 py-1 text-xs font-semibold uppercase ${statusClass[item.status]}`}>
                   {item.status}
@@ -472,7 +472,7 @@ export function McpSetupPanel({
           <CopyButton compact text={healthCheck.suggestedQuestion} label="Copy question" />
         </div>
 
-        <dl className="mt-4 grid gap-1 text-sm text-[var(--muted)]">
+        <dl className="mt-4 grid grid-cols-1 [&>*]:min-w-0 gap-1 text-sm text-[var(--muted)]">
           <div className="flex flex-wrap gap-2">
             <dt className="font-medium text-[var(--foreground)]">Project database:</dt>
             <dd className="break-all">{projectPath}</dd>
@@ -489,11 +489,11 @@ export function McpSetupPanel({
         <p className="mt-1 text-sm text-[var(--muted)]">
           Copy one into your connected AI client to see what Doorframe MCP can answer.
         </p>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 [&>*]:min-w-0 gap-4 lg:grid-cols-2">
           {starterQuestions.map((group) => (
             <div key={group.group} className="border border-[var(--line)] p-4">
               <h3 className="font-semibold">{group.group}</h3>
-              <div className="mt-3 grid gap-2">
+              <div className="mt-3 grid grid-cols-1 [&>*]:min-w-0 gap-2">
                 {group.questions.map((question) => (
                   <div
                     key={question}

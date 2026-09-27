@@ -3,8 +3,21 @@
 import { FileSearch } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { primaryButtonClass, secondaryButtonClass } from "@/lib/ui";
 
-export function StartDemoButton() {
+/**
+ * Create a new project filled with the fictional Falcon Telemetry Gateway data
+ * and open its report. The server creates and fills the project in one request.
+ */
+export function StartDemoButton({
+  projectName,
+  label = "Open demo report",
+  variant = "primary"
+}: {
+  projectName: string;
+  label?: string;
+  variant?: "primary" | "secondary";
+}) {
   const router = useRouter();
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,31 +26,29 @@ export function StartDemoButton() {
     setIsStarting(true);
     setError(null);
 
-    const createResponse = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Falcon Telemetry Gateway Demo" })
-    });
+    try {
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: projectName, demo: true })
+      });
+      const payload = (await response.json().catch(() => ({}))) as { project?: { id: string }; error?: string };
 
-    if (!createResponse.ok) {
+      if (!response.ok || !payload.project) {
+        throw new Error(payload.error ?? "The demo could not be prepared.");
+      }
+
+      router.push(`/projects/${payload.project.id}/reports`);
+    } catch (demoError) {
       setIsStarting(false);
-      setError("Demo project could not be created.");
-      return;
+      setError(
+        demoError instanceof TypeError
+          ? "Could not reach the local Doorframe server. Check that it is still running, then try again."
+          : demoError instanceof Error
+            ? demoError.message
+            : "The demo could not be prepared."
+      );
     }
-
-    const payload = (await createResponse.json()) as { project: { id: string } };
-    const demoResponse = await fetch(`/api/projects/${payload.project.id}/demo`, {
-      method: "POST"
-    });
-
-    if (!demoResponse.ok) {
-      setIsStarting(false);
-      setError("Demo data could not be loaded.");
-      return;
-    }
-
-    router.push(`/projects/${payload.project.id}/reports`);
-    router.refresh();
   }
 
   return (
@@ -46,12 +57,17 @@ export function StartDemoButton() {
         type="button"
         onClick={startDemo}
         disabled={isStarting}
-        className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap border border-[var(--accent-strong)] bg-[var(--accent)] px-4 text-white disabled:opacity-60 sm:w-auto"
+        aria-busy={isStarting}
+        className={`w-full ${variant === "primary" ? primaryButtonClass : secondaryButtonClass}`}
       >
-        <FileSearch size={17} />
-        {isStarting ? "Preparing demo" : "Open demo report"}
+        <FileSearch size={16} aria-hidden="true" />
+        {isStarting ? "Preparing demo…" : label}
       </button>
-      {error ? <p className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="mt-2 text-sm text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { getProject } from "@/lib/db";
 import { BaselinesPanel } from "@/components/BaselinesPanel";
+import { projectPageMetadata } from "@/lib/metadata";
+
+export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
+  return projectPageMetadata(params, "Baselines");
+}
 
 export default async function BaselinesPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
