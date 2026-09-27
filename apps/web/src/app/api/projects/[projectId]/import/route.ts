@@ -10,6 +10,7 @@ import {
   describeImportFailure,
   fileTooLargeMessage,
   friendlyParserMessages,
+  isMissingColumnError,
   type FailureDescription
 } from "@/lib/import-messages";
 import { parseClientMapping, summarizeMissing } from "@/lib/import-records";
@@ -127,7 +128,11 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       (status === "empty"
         ? describeEmptyImport(sourceType, rawErrors, isCsvImportType(sourceType) ? csvDataRows(text) : undefined)
         : null);
-    const messages = friendlyParserMessages(sourceType, rawErrors);
+    // When nothing was imported, the explanation already covers missing columns.
+    const messages = friendlyParserMessages(
+      sourceType,
+      status === "imported" ? rawErrors : rawErrors.filter((error) => !isMissingColumnError(error))
+    );
     const entityType = importTypeInfo(sourceType).entityType;
 
     addImportBatch(

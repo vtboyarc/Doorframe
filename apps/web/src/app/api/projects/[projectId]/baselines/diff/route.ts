@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBaseline, getProject, getProjectData } from "@/lib/db";
-import { diffBaselines, snapshotFromProjectData } from "@doorframe/core";
+import { diffBaselines, snapshotFromProjectData, type ProjectSnapshot } from "@doorframe/core";
+import { baselineDiffDetails } from "@/lib/baseline-details";
 
 export const runtime = "nodejs";
 
@@ -20,7 +21,7 @@ export const GET = async (request: Request, context: { params: Promise<{ project
   }
 
   // 'b' may be another baseline or "current" (the live project data).
-  let bSnapshot;
+  let bSnapshot: ProjectSnapshot;
   if (!bId || bId === "current") {
     const data = getProjectData(projectId);
     if (!data) {
@@ -35,5 +36,8 @@ export const GET = async (request: Request, context: { params: Promise<{ project
     bSnapshot = b.snapshot;
   }
 
-  return NextResponse.json(diffBaselines(a.snapshot, bSnapshot));
+  return NextResponse.json({
+    ...diffBaselines(a.snapshot, bSnapshot),
+    details: baselineDiffDetails(a.snapshot, bSnapshot)
+  });
 };

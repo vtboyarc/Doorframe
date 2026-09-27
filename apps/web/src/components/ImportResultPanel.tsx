@@ -8,6 +8,7 @@ import { requestRemoveRecords } from "@/lib/import-client";
 import {
   entityCount,
   findingsSentence,
+  keepOrRemoveText,
   importedSentence,
   linksSentence,
   missingRecordsText,
@@ -105,10 +106,7 @@ function MissingRecordsBlock({ projectId, missing }: { projectId: string; missin
         <p className="mt-2 font-medium">{removedSummaryText(removal.result)}</p>
       ) : (
         <>
-          <p className="mt-1 text-[var(--muted)]">
-            Keep them if this file is a partial export. If they were deleted at the source, remove them so findings and
-            reports match the source.
-          </p>
+          <p className="mt-1 text-[var(--muted)]">{keepOrRemoveText(missing.count)}</p>
 
           {!canRemove ? (
             <p className="mt-2 text-[var(--muted)]">

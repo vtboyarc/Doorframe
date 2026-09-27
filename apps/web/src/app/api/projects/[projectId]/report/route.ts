@@ -64,7 +64,9 @@ export const GET = async (request: Request, context: { params: Promise<{ project
   const headers: Record<string, string> = { "Content-Type": format.contentType, "Cache-Control": "no-store" };
   if (download) {
     const slug = data.project.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "doorframe";
-    const date = new Date().toISOString().slice(0, 10);
+    // Local calendar date of the machine running Doorframe, not UTC.
+    const now = new Date();
+    const date = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
     headers["Content-Disposition"] = `attachment; filename="${slug}-traceability-${date}.${format.ext}"`;
   }
 

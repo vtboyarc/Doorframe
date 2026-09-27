@@ -3,19 +3,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { PageShell } from "@/components/PageShell";
-import { getProjectData } from "@/lib/db";
+import { PrintReportButton, ReportPreview } from "@/components/ReportPreview";
+import { getProject, getProjectCounts } from "@/lib/db";
 import { projectPageMetadata } from "@/lib/metadata";
-import { panelClass, primaryButtonClass, textLinkClass } from "@/lib/ui";
+import { panelClass, primaryButtonClass, secondaryButtonClass, textLinkClass } from "@/lib/ui";
 
 export function generateMetadata({ params }: { params: Promise<{ projectId: string }> }) {
   return projectPageMetadata(params, "Reports");
 }
 
+const PREVIEW_ID = "report-preview";
+
 const downloads = [
-  { format: "html", label: "HTML report", detail: "Offline, print-friendly copy of the report shown here." },
-  { format: "md", label: "Markdown", detail: "Summary and findings for wikis, tickets, or review notes." },
-  { format: "csv", label: "CSV matrix", detail: "One row per requirement for spreadsheets." },
-  { format: "json", label: "JSON", detail: "Full analyzed data. Also the input format for doorframe diff." }
+  { format: "html", label: "HTML", detail: "Offline, print-friendly report" },
+  { format: "md", label: "Markdown", detail: "For wikis, tickets, or notes" },
+  { format: "csv", label: "CSV matrix", detail: "One row per requirement" },
+  { format: "json", label: "JSON", detail: "Full data; input for doorframe diff" }
 ];
 
 export default async function ReportsPage({
@@ -24,82 +27,100 @@ export default async function ReportsPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const data = getProjectData(projectId);
+  const project = getProject(projectId);
 
-  if (!data) {
+  if (!project) {
     notFound();
   }
 
   const base = `/projects/${projectId}`;
   const reportUrl = `/api/projects/${projectId}/report`;
-  const isEmpty = data.requirements.length === 0 && data.workItems.length === 0 && data.testCases.length === 0;
+  const counts = getProjectCounts(projectId);
+  const isEmpty = counts.requirements + counts.workItems + counts.testCases === 0;
 
   return (
-    <PageShell project={data.project}>
+    <PageShell project={project}>
       <PageHeader
         title="Reports"
         description="The traceability gap report summarizes coverage, findings, missing verification, missing work, failed tests, and weak wording for a review. It is generated locally and contains only this project's data."
+        actions={
+          isEmpty ? null : (
+            <>
+              <PrintReportButton frameId={PREVIEW_ID} />
+              <a href={reportUrl} target="_blank" rel="noopener" className={primaryButtonClass}>
+                <ExternalLink size={16} aria-hidden="true" />
+                Open in new tab
+              </a>
+            </>
+          )
+        }
       />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-        <section className={`${panelClass} h-fit p-5`}>
-          <h2 className="text-lg font-semibold">Traceability report</h2>
-          {isEmpty ? (
-            <p className="mt-2 border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm">
-              This project has no imported data yet, so the report will be empty.{" "}
-              <Link href={`${base}/imports`} className={textLinkClass}>
-                Import data
-              </Link>{" "}
-              first.
-            </p>
-          ) : (
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Open it in a new tab to read or print. Use your browser&apos;s print dialog to save a PDF.
-            </p>
-          )}
-          <a href={reportUrl} target="_blank" rel="noopener" className={`mt-4 w-full ${primaryButtonClass}`}>
-            <ExternalLink size={16} aria-hidden="true" />
-            Open HTML report
-          </a>
 
-          <h3 className="mt-6 text-sm font-semibold">Download</h3>
-          <ul className="mt-2 divide-y divide-[var(--line)] border-y border-[var(--line)]">
-            {downloads.map((item) => (
-              <li key={item.format}>
-                <a
-                  href={`${reportUrl}?format=${item.format}&download=1`}
-                  className="group flex items-start gap-3 py-3 text-sm hover:bg-[var(--panel-strong)]"
-                >
-                  <Download
-                    size={16}
-                    aria-hidden="true"
-                    className="mt-0.5 shrink-0 text-[var(--muted)] group-hover:text-[var(--accent-strong)]"
-                  />
-                  <span>
-                    <span className="block font-medium group-hover:text-[var(--accent-strong)]">{item.label}</span>
-                    <span className="block text-[var(--muted)]">{item.detail}</span>
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-
-          <p className="mt-4 text-sm text-[var(--muted)]">
-            Need to show what changed since the last review?{" "}
-            <Link href={`${base}/baselines`} className={textLinkClass}>
-              Compare baselines
-            </Link>
-            .
+      {isEmpty ? (
+        <section className={`${panelClass} p-6`}>
+          <h2 className="text-lg font-semibold">No data to report yet</h2>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
+            Import a requirements export and its Jira work items and JUnit results, then come back for the traceability
+            report. To see an example first, load the fictional demo data from the dashboard.
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href={`${base}/imports`} className={primaryButtonClass}>
+              Import data
+            </Link>
+            <Link href={base} className={secondaryButtonClass}>
+              Go to dashboard
+            </Link>
+          </div>
         </section>
+      ) : (
+        <>
+          <section className={`${panelClass} mb-4 p-4`} aria-labelledby="downloads-heading">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <h2 id="downloads-heading" className="shrink-0 text-sm font-semibold">
+                Download
+              </h2>
+              <ul className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {downloads.map((item) => (
+                  <li key={item.format}>
+                    <a
+                      href={`${reportUrl}?format=${item.format}&download=1`}
+                      className="group flex h-full items-start gap-2 border border-[var(--line)] px-3 py-2 text-sm transition-colors hover:border-[var(--accent-strong)] hover:bg-[var(--panel-strong)]"
+                    >
+                      <Download
+                        size={16}
+                        aria-hidden="true"
+                        className="mt-0.5 shrink-0 text-[var(--muted)] group-hover:text-[var(--accent-strong)]"
+                      />
+                      <span>
+                        <span className="block font-medium group-hover:text-[var(--accent-strong)]">{item.label}</span>
+                        <span className="block text-xs text-[var(--muted)]">{item.detail}</span>
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <p className="mt-3 text-sm text-[var(--muted)]">
+              Showing what changed since the last review?{" "}
+              <Link href={`${base}/baselines`} className={textLinkClass}>
+                Compare baselines
+              </Link>
+              .
+            </p>
+          </section>
 
-        <section className="min-w-0" aria-label="Report preview">
-          <iframe
-            title="Traceability report preview"
-            src={`${reportUrl}?preview=1`}
-            className={`h-[75vh] min-h-[480px] w-full ${panelClass}`}
-          />
-        </section>
-      </div>
+          <div className="hidden sm:block">
+            <ReportPreview frameId={PREVIEW_ID} src={`${reportUrl}?preview=1`} />
+          </div>
+          <p className={`${panelClass} p-4 text-sm text-[var(--muted)] sm:hidden`}>
+            The report is laid out for a larger screen.{" "}
+            <a href={reportUrl} target="_blank" rel="noopener" className={textLinkClass}>
+              Open it in a new tab
+            </a>{" "}
+            to read or share it.
+          </p>
+        </>
+      )}
     </PageShell>
   );
 }

@@ -27,10 +27,9 @@ export function entityCount(entityType: ImportEntityType, count: number): string
 // Results -------------------------------------------------------------------
 
 /** "Imported 42 requirements (41 updated, 1 new) from file.csv." */
-export function importedSentence(result: Pick<
-  ImportResponse,
-  "entityType" | "recordCount" | "createdCount" | "updatedCount" | "filename"
->): string {
+export function importedSentence(
+  result: Pick<ImportResponse, "entityType" | "recordCount" | "createdCount" | "updatedCount" | "filename">
+): string {
   const parts = [
     result.updatedCount > 0 ? `${result.updatedCount.toLocaleString("en-US")} updated` : null,
     result.createdCount > 0 ? `${result.createdCount.toLocaleString("en-US")} new` : null
@@ -68,14 +67,22 @@ export function missingRecordsText(missing: MissingRecords): string {
   return more > 0 ? `${subject}: ${list}, and ${more.toLocaleString("en-US")} more.` : `${subject}: ${list}.`;
 }
 
+export function keepOrRemoveText(count: number): string {
+  return count === 1
+    ? "Keep it if this file is a partial export. If it was deleted at the source, remove it so findings and reports match the source."
+    : "Keep them if this file is a partial export. If they were deleted at the source, remove them so findings and reports match the source.";
+}
+
 export function removeMissingLabel(count: number): string {
   return count === 1 ? "Remove it" : `Remove these ${count.toLocaleString("en-US")}`;
 }
 
 export function removeConfirmText(missing: MissingRecords): string {
-  const noun = ENTITY_NOUNS[missing.entityType];
-  const what = missing.count === 1 ? `this ${noun.one}` : `these ${plural(missing.count, noun.one, noun.many)}`;
-  return `Remove ${what} and ${missing.count === 1 ? "its" : "their"} trace links from the project? This cannot be undone. Re-importing a file that contains ${missing.count === 1 ? "it" : "them"} adds ${missing.count === 1 ? "it" : "them"} back.`;
+  const one = missing.count === 1;
+  const what = one
+    ? (missing.externalIds[0] ?? `this ${ENTITY_NOUNS[missing.entityType].one}`)
+    : `these ${entityCount(missing.entityType, missing.count)}`;
+  return `Remove ${what} and ${one ? "its" : "their"} trace links from this project? Findings are recalculated. Importing a file that contains ${one ? "it" : "them"} adds ${one ? "it" : "them"} back.`;
 }
 
 export function removedSummaryText(result: RemoveRecordsResponse): string {
@@ -133,15 +140,23 @@ export function describeEmptyImport(
         return { message: NO_CSV_ROWS_MESSAGE };
       }
 
-      const missingColumn = parserErrors.find((error) => /^Missing required .* column/i.test(error));
-      if (missingColumn) {
-        return { message: `${friendlyParserMessage(sourceType, missingColumn)} Check the column mapping and try again.` };
+      const unmapped = parserErrors
+        .filter(isMissingColumnError)
+        .map((error) => /^No column is mapped to (.+)\.$/.exec(friendlyParserMessage(sourceType, error))?.[1])
+        .filter((label): label is string => Boolean(label));
+      if (unmapped.length > 0) {
+        return { message: `No column is mapped to ${unmapped.join(" or ")}. Check the column mapping and try again.` };
       }
 
       const noun = sourceType === "jira-csv" ? "work items" : "requirements";
       return { message: `No ${noun} were imported. The messages below list the rows that were skipped.` };
     }
   }
+}
+
+/** The CSV parser's "required column not found" errors; {@link describeEmptyImport} explains them. */
+export function isMissingColumnError(message: string): boolean {
+  return /^Missing required .* column/i.test(message);
 }
 
 const EMPTY_VALUE_ISSUE = /^(Too small: expected string to have >=1 characters|String must contain at least 1 character\(s\))$/;

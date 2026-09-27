@@ -1,11 +1,14 @@
 "use client";
 
+import { ArrowLeftRight } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { BaselineDiff, RequirementFieldChange } from "@doorframe/core";
+import type { BaselineDiffDetails } from "@/lib/baseline-details";
+import { sentenceLabel } from "@/lib/labels";
 import { BASELINE_LABEL_MAX_LENGTH } from "@/lib/limits";
-import { humanize } from "@/lib/severity";
-import { panelClass } from "@/lib/ui";
+import { severityBadgeClass } from "@/lib/severity";
+import { fieldClass, labelClass, panelClass, primaryButtonClass, secondaryButtonClass, textLinkClass } from "@/lib/ui";
 
 interface BaselineListItem {
   id: string;
@@ -15,13 +18,9 @@ interface BaselineListItem {
   findingCount?: number;
 }
 
-const CURRENT = "current";
+type DiffResponse = BaselineDiff & { details: BaselineDiffDetails };
 
-const buttonClass =
-  "inline-flex min-h-10 shrink-0 items-center justify-center border border-[var(--accent-strong)] bg-[var(--accent)] px-4 text-sm font-medium text-white transition hover:bg-[var(--accent-strong)] hover:text-[var(--background)] disabled:cursor-not-allowed disabled:opacity-50";
-const fieldClass =
-  "min-h-10 w-full border border-[var(--line)] bg-[var(--panel)] px-3 text-sm transition focus:border-[var(--accent-strong)]";
-const cellClass = "border-b border-[var(--line)] px-3 py-3 text-left";
+const CURRENT = "current";
 
 const fieldLabels: Record<RequirementFieldChange["field"], string> = {
   title: "Title",
@@ -33,6 +32,20 @@ const fieldLabels: Record<RequirementFieldChange["field"], string> = {
   parentExternalId: "Parent"
 };
 
+const concernClass = {
+  high: "border-[var(--danger)] bg-[var(--danger-soft)] text-[var(--danger)]",
+  medium: "border-[var(--warning)] bg-[var(--warning-soft)] text-[var(--warning)]",
+  low: "border-[var(--line-strong)] text-[var(--muted)]"
+} as const;
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
 // Compare the previous baseline with the latest one when there are two or more;
 // otherwise compare the only baseline with the current project state.
 function defaultSelection(items: BaselineListItem[]): { a: string; b: string } {
@@ -43,32 +56,45 @@ function defaultSelection(items: BaselineListItem[]): { a: string; b: string } {
   return { a: items[0]?.id ?? "", b: CURRENT };
 }
 
-function hasChanges(diff: BaselineDiff): boolean {
+function totalChanges(details: BaselineDiffDetails, diff: BaselineDiff): number {
   return (
-    diff.requirements.added.length +
-      diff.requirements.removed.length +
-      diff.requirements.modified.length +
-      diff.workItems.added.length +
-      diff.workItems.removed.length +
-      diff.testCases.added.length +
-      diff.testCases.removed.length +
-      diff.testCases.statusChanged.length +
-      diff.traceLinks.added +
-      diff.traceLinks.removed +
-      diff.findings.added +
-      diff.findings.resolved >
-    0
+    details.addedRequirements.length +
+    details.removedRequirements.length +
+    details.changedRequirements.length +
+    diff.workItems.added.length +
+    diff.workItems.removed.length +
+    diff.testCases.added.length +
+    diff.testCases.removed.length +
+    diff.testCases.statusChanged.length +
+    details.addedLinks.length +
+    details.removedLinks.length +
+    details.newFindings.length +
+    details.resolvedFindings.length
   );
 }
 
-export function BaselinesPanel({ projectId }: { projectId: string }) {
+async function errorMessage(response: Response, fallback: string): Promise<string> {
+  const body = (await response.json().catch(() => ({}))) as { error?: string };
+  return body.error ?? fallback;
+}
+
+function requestError(error: unknown, fallback: string): string {
+  if (error instanceof TypeError) {
+    return "Could not reach the local Doorframe server. Check that it is still running.";
+  }
+
+  return error instanceof Error ? error.message : fallback;
+}
+
+export function BaselinesPanel({ projectId, hasData }: { projectId: string; hasData: boolean }) {
   const [baselines, setBaselines] = useState<BaselineListItem[] | null>(null);
   const [label, setLabel] = useState("");
   const [a, setA] = useState("");
   const [b, setB] = useState(CURRENT);
-  const [diff, setDiff] = useState<BaselineDiff | null>(null);
+  const [diff, setDiff] = useState<DiffResponse | null>(null);
   const [captureMessage, setCaptureMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
+  const [compareError, setCompareError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isComparing, setIsComparing] = useState(false);
 
@@ -76,14 +102,14 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
     try {
       const response = await fetch(`/api/projects/${projectId}/baselines`, { cache: "no-store" });
       if (!response.ok) {
-        throw new Error("Baselines could not be loaded.");
+        throw new Error();
       }
 
       const items = (await response.json()) as BaselineListItem[];
       setBaselines(items);
       return items;
     } catch {
-      setError("Baselines could not be loaded. Refresh the page to try again.");
+      setCompareError("Baselines could not be loaded. Refresh the page to try again.");
       setBaselines([]);
       return [];
     }
@@ -110,24 +136,19 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
       cache: "no-store"
     })
       .then(async (response) => {
-        const body = (await response.json()) as BaselineDiff & { error?: string };
-        if (cancelled) {
-          return;
-        }
-
         if (!response.ok) {
-          setDiff(null);
-          setError(body.error ?? "The comparison could not be computed.");
-          return;
+          throw new Error(await errorMessage(response, "The comparison could not be computed."));
         }
-
-        setError(null);
-        setDiff(body);
+        const body = (await response.json()) as DiffResponse;
+        if (!cancelled) {
+          setCompareError(null);
+          setDiff(body);
+        }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (!cancelled) {
           setDiff(null);
-          setError("The comparison could not be computed.");
+          setCompareError(requestError(error, "The comparison could not be computed."));
         }
       })
       .finally(() => {
@@ -143,7 +164,7 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
 
   async function capture(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    setCaptureError(null);
     setCaptureMessage(null);
     setIsCapturing(true);
 
@@ -153,102 +174,135 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label: label.trim() })
       });
-      const body = (await response.json()) as { label?: string; error?: string };
       if (!response.ok) {
-        throw new Error(body.error ?? "The baseline could not be captured.");
+        throw new Error(
+          await errorMessage(
+            response,
+            "The baseline could not be captured. Check that the Doorframe data folder is writable and try again."
+          )
+        );
       }
 
+      const body = (await response.json()) as { label: string };
       setLabel("");
       setCaptureMessage(`Captured baseline "${body.label}".`);
       const items = await load();
       const selection = defaultSelection(items);
       setA(selection.a);
       setB(selection.b);
-    } catch (captureError) {
-      setError(captureError instanceof Error ? captureError.message : "The baseline could not be captured.");
+    } catch (error) {
+      setCaptureError(requestError(error, "The baseline could not be captured."));
     } finally {
       setIsCapturing(false);
     }
   }
 
-  const labelFor = (id: string) =>
-    id === CURRENT ? "Current state" : (baselines?.find((baseline) => baseline.id === id)?.label ?? "Baseline");
+  const byId = new Map((baselines ?? []).map((baseline) => [baseline.id, baseline]));
+  const labelFor = (id: string) => (id === CURRENT ? "Current state" : (byId.get(id)?.label ?? "Baseline"));
+  const optionLabel = (baseline: BaselineListItem) => `${baseline.label} · ${formatDate(baseline.createdAt)}`;
+  const createdAt = (id: string) =>
+    id === CURRENT ? Number.POSITIVE_INFINITY : Date.parse(byId.get(id)?.createdAt ?? "");
+  const reversed = Boolean(a) && a !== b && createdAt(a) > createdAt(b);
   const requirementHref = (externalId: string) =>
-    `/projects/${projectId}/requirements/${encodeURIComponent(externalId)}`;
+    `/projects/${projectId}/requirements/${encodeURIComponent(externalId)}?back=${encodeURIComponent(
+      `/projects/${projectId}/baselines`
+    )}`;
+  const details = diff?.details;
 
   return (
     <div className="grid grid-cols-1 gap-5">
-      <section className={`${panelClass} p-4`}>
-        <h2 className="font-semibold">Capture current state</h2>
+      <section className={`${panelClass} p-4`} aria-labelledby="capture-heading">
+        <h2 id="capture-heading" className="font-semibold">
+          Capture current state
+        </h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
-          Saves an immutable snapshot of the current requirements, work items, tests, trace links, and findings. Capture
-          one before a review, then capture another after the next import to see what changed.
+          Saves an immutable snapshot of the current requirements, work items, tests, trace links, and findings. Capture one
+          before a review, then capture another after the next import to see what changed.
         </p>
-        <form onSubmit={capture} className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <label htmlFor="baseline-label" className="sr-only">
-            Baseline label
-          </label>
-          <input
-            id="baseline-label"
-            placeholder="Label, e.g. Sprint 14 review (optional)"
-            value={label}
-            maxLength={BASELINE_LABEL_MAX_LENGTH}
-            onChange={(event) => setLabel(event.target.value)}
-            className={`flex-1 ${fieldClass}`}
-          />
-          <button type="submit" className={buttonClass} disabled={isCapturing}>
-            {isCapturing ? "Capturing…" : "Capture baseline"}
-          </button>
-        </form>
+        {hasData ? (
+          <form onSubmit={capture} className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <label htmlFor="baseline-label" className="sr-only">
+              Baseline label
+            </label>
+            <input
+              id="baseline-label"
+              placeholder="Label, e.g. Sprint 14 review (optional)"
+              value={label}
+              maxLength={BASELINE_LABEL_MAX_LENGTH}
+              onChange={(event) => {
+                setLabel(event.target.value);
+                setCaptureError(null);
+              }}
+              className={`flex-1 ${fieldClass}`}
+            />
+            <button type="submit" className={primaryButtonClass} disabled={isCapturing} aria-busy={isCapturing}>
+              {isCapturing ? "Capturing…" : "Capture baseline"}
+            </button>
+          </form>
+        ) : (
+          <p className="mt-3 border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm">
+            Import requirements before capturing a baseline.{" "}
+            <Link href={`/projects/${projectId}/imports`} className={textLinkClass}>
+              Go to Imports
+            </Link>
+          </p>
+        )}
         {captureMessage ? (
           <p role="status" className="mt-2 text-sm text-[var(--success)]">
             {captureMessage}
           </p>
         ) : null}
+        {captureError ? (
+          <p role="alert" className="mt-2 text-sm text-[var(--danger)]">
+            {captureError}
+          </p>
+        ) : null}
       </section>
 
-      <section className={`${panelClass} overflow-x-auto`} aria-label="Saved baselines">
-        <table className="w-full min-w-[520px] border-collapse text-sm">
-          <thead>
-            <tr className="text-xs uppercase text-[var(--muted)]">
-              <th className={`${cellClass} font-semibold`}>Baseline</th>
-              <th className={`${cellClass} font-semibold`}>Captured</th>
-              <th className={`${cellClass} text-right font-semibold`}>Requirements</th>
-              <th className={`${cellClass} text-right font-semibold`}>Findings</th>
-            </tr>
-          </thead>
-          <tbody>
-            {baselines === null ? (
-              <tr>
-                <td className={`${cellClass} text-[var(--muted)]`} colSpan={4}>
-                  Loading baselines…
-                </td>
+      <section className={panelClass} aria-label="Saved baselines">
+        {baselines === null ? (
+          <p className="p-4 text-sm text-[var(--muted)]">Loading baselines…</p>
+        ) : baselines.length === 0 ? (
+          <p className="p-4 text-sm text-[var(--muted)]">No baselines yet.</p>
+        ) : (
+          <table className="w-full border-collapse text-sm">
+            <thead className="hidden sm:table-header-group">
+              <tr className="text-xs uppercase text-[var(--muted)]">
+                <th className="border-b border-[var(--line)] px-3 py-3 text-left font-semibold">Baseline</th>
+                <th className="border-b border-[var(--line)] px-3 py-3 text-left font-semibold">Captured</th>
+                <th className="border-b border-[var(--line)] px-3 py-3 text-right font-semibold">Requirements</th>
+                <th className="border-b border-[var(--line)] px-3 py-3 text-right font-semibold">Findings</th>
               </tr>
-            ) : baselines.length === 0 ? (
-              <tr>
-                <td className={`${cellClass} text-[var(--muted)]`} colSpan={4}>
-                  No baselines yet. Capture the current state above to start tracking changes.
-                </td>
-              </tr>
-            ) : (
-              baselines.map((baseline) => (
-                <tr key={baseline.id}>
-                  <td className={`${cellClass} font-medium`}>{baseline.label}</td>
-                  <td className={`${cellClass} whitespace-nowrap text-[var(--muted)]`}>
-                    {new Date(baseline.createdAt).toLocaleString()}
+            </thead>
+            <tbody>
+              {baselines.map((baseline) => (
+                <tr key={baseline.id} className="border-b border-[var(--line)] last:border-b-0">
+                  <td className="px-3 py-3">
+                    <div className="font-medium [overflow-wrap:anywhere]">{baseline.label}</div>
+                    <div className="mt-0.5 text-xs text-[var(--muted)] sm:hidden">
+                      {formatDate(baseline.createdAt)} · {plural(baseline.requirementCount, "requirement")}
+                      {baseline.findingCount !== undefined ? ` · ${plural(baseline.findingCount, "finding")}` : ""}
+                    </div>
                   </td>
-                  <td className={`${cellClass} text-right tabular-nums`}>{baseline.requirementCount}</td>
-                  <td className={`${cellClass} text-right tabular-nums`}>{baseline.findingCount ?? "—"}</td>
+                  <td className="hidden whitespace-nowrap px-3 py-3 text-[var(--muted)] sm:table-cell">
+                    {formatDate(baseline.createdAt)}
+                  </td>
+                  <td className="hidden px-3 py-3 text-right tabular-nums sm:table-cell">{baseline.requirementCount}</td>
+                  <td className="hidden px-3 py-3 text-right tabular-nums sm:table-cell">{baseline.findingCount ?? "—"}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
-      <section className={`${panelClass} p-4`}>
-        <h2 className="font-semibold">Compare snapshots</h2>
-        {baselines !== null && baselines.length === 0 ? (
+      <section className={`${panelClass} p-4`} aria-labelledby="compare-heading">
+        <h2 id="compare-heading" className="font-semibold">
+          Compare snapshots
+        </h2>
+        {baselines === null ? (
+          <p className="mt-1 text-sm text-[var(--muted)]">Loading baselines…</p>
+        ) : baselines.length === 0 ? (
           <p className="mt-1 text-sm text-[var(--muted)]">
             Capture at least one baseline to compare it with the current state or with a later baseline.
           </p>
@@ -261,23 +315,35 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
               <label className="block text-sm">
                 <span className="text-[var(--muted)]">From (earlier)</span>
                 <select value={a} onChange={(event) => setA(event.target.value)} className={`mt-1 ${fieldClass}`}>
-                  {(baselines ?? []).map((baseline) => (
+                  {baselines.map((baseline) => (
                     <option key={baseline.id} value={baseline.id}>
-                      {baseline.label}
+                      {optionLabel(baseline)}
                     </option>
                   ))}
                 </select>
               </label>
-              <span aria-hidden="true" className="hidden pb-2 text-[var(--muted)] sm:block">
-                →
-              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (b !== CURRENT) {
+                    setA(b);
+                    setB(a);
+                  }
+                }}
+                disabled={b === CURRENT}
+                title={b === CURRENT ? "Current state is always the later side" : "Swap From and To"}
+                aria-label="Swap From and To"
+                className={`${secondaryButtonClass} justify-self-start px-3`}
+              >
+                <ArrowLeftRight size={16} aria-hidden="true" />
+              </button>
               <label className="block text-sm">
                 <span className="text-[var(--muted)]">To (later)</span>
                 <select value={b} onChange={(event) => setB(event.target.value)} className={`mt-1 ${fieldClass}`}>
                   <option value={CURRENT}>Current state</option>
-                  {(baselines ?? []).map((baseline) => (
+                  {baselines.map((baseline) => (
                     <option key={baseline.id} value={baseline.id}>
-                      {baseline.label}
+                      {optionLabel(baseline)}
                     </option>
                   ))}
                 </select>
@@ -286,36 +352,46 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
             {a && a === b ? (
               <p className="mt-3 text-sm text-[var(--warning)]">Choose two different snapshots to compare.</p>
             ) : null}
+            {reversed ? (
+              <p className="mt-3 text-sm text-[var(--warning)]">
+                &ldquo;From&rdquo; is newer than &ldquo;To&rdquo;, so additions appear as removals. Use the swap button to
+                reverse them.
+              </p>
+            ) : null}
+            {isComparing && !diff ? <p className="mt-3 text-sm text-[var(--muted)]">Comparing…</p> : null}
+            {compareError ? (
+              <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
+                {compareError}
+              </p>
+            ) : null}
           </>
         )}
       </section>
 
-      {error ? (
-        <p role="alert" className="border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-          {error}
-        </p>
-      ) : null}
-
-      {diff && a !== b ? (
+      {diff && details && a !== b ? (
         <section
           className={`${panelClass} p-4 text-sm transition-opacity ${isComparing ? "opacity-60" : ""}`}
-          aria-live="polite"
           aria-busy={isComparing}
+          aria-labelledby="diff-heading"
         >
-          <h2 className="font-semibold">
+          <h2 id="diff-heading" className="font-semibold [overflow-wrap:anywhere]">
             Changes from {labelFor(a)} to {labelFor(b)}
           </h2>
+          <p className="sr-only" role="status">
+            Comparison updated: {details.addedRequirements.length} added, {details.removedRequirements.length} removed,{" "}
+            {details.changedRequirements.length} changed requirements.
+          </p>
 
           <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden border border-[var(--line)] bg-[var(--line)] sm:grid-cols-4">
             {[
-              ["Requirements added", diff.requirements.added.length],
-              ["Requirements removed", diff.requirements.removed.length],
-              ["Requirements changed", diff.requirements.modified.length],
+              ["Requirements added", details.addedRequirements.length],
+              ["Requirements removed", details.removedRequirements.length],
+              ["Requirements changed", details.changedRequirements.length],
               ["Test status changes", diff.testCases.statusChanged.length],
-              ["New findings", diff.findings.added],
-              ["Resolved findings", diff.findings.resolved],
+              ["New findings", details.newFindings.length],
+              ["Resolved findings", details.resolvedFindings.length],
               ["Work items added / removed", `${diff.workItems.added.length} / ${diff.workItems.removed.length}`],
-              ["Trace links added / removed", `${diff.traceLinks.added} / ${diff.traceLinks.removed}`]
+              ["Trace links added / removed", `${details.addedLinks.length} / ${details.removedLinks.length}`]
             ].map(([name, value]) => (
               <div key={name} className="bg-[var(--panel)] p-3">
                 <dt className="text-xs text-[var(--muted)]">{name}</dt>
@@ -324,56 +400,96 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
             ))}
           </dl>
 
-          {!hasChanges(diff) ? (
+          {totalChanges(details, diff) === 0 ? (
             <p className="mt-4 text-[var(--muted)]">No differences between these snapshots.</p>
           ) : null}
 
-          {diff.requirements.modified.length > 0 ? (
+          {details.changedRequirements.length > 0 ? (
             <div className="mt-6">
               <h3 className="font-semibold">Changed requirements</h3>
               <ul className="mt-2 grid gap-3">
-                {diff.requirements.modified.map((modified) => (
-                  <li key={modified.externalId} className="border border-[var(--line)] p-3">
-                    <Link href={requirementHref(modified.externalId)} className="font-medium text-[var(--accent-strong)] hover:underline">
-                      {modified.externalId}
-                    </Link>
-                    <dl className="mt-2 grid gap-2">
-                      {modified.changes.map((change) => (
-                        <div key={change.field} className="grid gap-1 sm:grid-cols-[140px_1fr]">
-                          <dt className="text-xs uppercase text-[var(--muted)]">{fieldLabels[change.field]}</dt>
-                          <dd className="grid gap-1">
-                            <div className="border-l-2 border-l-[var(--danger)] bg-[var(--danger-soft)] px-2 py-1">
-                              <span className="sr-only">Before: </span>
-                              {change.before || <span className="text-[var(--muted)]">(empty)</span>}
-                            </div>
-                            <div className="border-l-2 border-l-[var(--success)] bg-[var(--success-soft)] px-2 py-1">
-                              <span className="sr-only">After: </span>
-                              {change.after || <span className="text-[var(--muted)]">(empty)</span>}
-                            </div>
+                {details.changedRequirements.map((changed) => (
+                  <li key={changed.externalId} className="border border-[var(--line)] p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link href={requirementHref(changed.externalId)} className={`font-medium ${textLinkClass}`}>
+                        {changed.externalId}
+                      </Link>
+                      <span className="[overflow-wrap:anywhere]">{changed.title}</span>
+                      <span
+                        className={`border px-1.5 py-0.5 text-xs font-medium uppercase ${concernClass[changed.concern]}`}
+                      >
+                        {changed.concern} concern
+                      </span>
+                    </div>
+                    <dl className="mt-3 grid gap-3">
+                      {changed.changes.map((change) => (
+                        <div key={change.field} className="grid gap-1 sm:grid-cols-[140px_minmax(0,1fr)]">
+                          <dt className={labelClass}>{fieldLabels[change.field]}</dt>
+                          <dd className="[overflow-wrap:anywhere]">
+                            {change.wordDiff ? (
+                              <p className="leading-7">
+                                {change.wordDiff.map((token, index) => (
+                                  <span key={index}>
+                                    {token.type === "removed" ? (
+                                      <del className="bg-[var(--danger-soft)] px-0.5 text-[var(--danger)]">
+                                        {token.value}
+                                      </del>
+                                    ) : token.type === "added" ? (
+                                      <ins className="bg-[var(--success-soft)] px-0.5 text-[var(--success)] no-underline">
+                                        {token.value}
+                                      </ins>
+                                    ) : (
+                                      token.value
+                                    )}{" "}
+                                  </span>
+                                ))}
+                              </p>
+                            ) : (
+                              <p>
+                                <span className="text-[var(--muted)] line-through">{change.before || "(empty)"}</span>
+                                <span aria-hidden="true"> → </span>
+                                <span className="sr-only"> changed to </span>
+                                <span className="font-medium">{change.after || "(empty)"}</span>
+                              </p>
+                            )}
                           </dd>
                         </div>
                       ))}
                     </dl>
+                    {changed.affectedWorkItems.length > 0 || changed.affectedTests.length > 0 ? (
+                      <p className="mt-3 text-[var(--muted)] [overflow-wrap:anywhere]">
+                        <span className="font-medium text-[var(--foreground)]">Re-check:</span>{" "}
+                        {[...changed.affectedWorkItems, ...changed.affectedTests].join(", ")}
+                      </p>
+                    ) : null}
+                    {changed.recommendations.length > 0 ? (
+                      <ul className="mt-2 list-inside list-disc text-[var(--muted)]">
+                        {changed.recommendations.map((recommendation) => (
+                          <li key={recommendation}>{recommendation}</li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </li>
                 ))}
               </ul>
             </div>
           ) : null}
 
-          {diff.requirements.added.length > 0 || diff.requirements.removed.length > 0 ? (
+          {details.addedRequirements.length > 0 || details.removedRequirements.length > 0 ? (
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div>
                 <h3 className="font-semibold">Added requirements</h3>
-                {diff.requirements.added.length > 0 ? (
-                  <ul className="mt-2 flex flex-wrap gap-2">
-                    {diff.requirements.added.map((externalId) => (
-                      <li key={externalId}>
-                        <Link
-                          href={requirementHref(externalId)}
-                          className="inline-block border border-[var(--success)] px-2 py-0.5 text-[var(--success)] hover:underline"
-                        >
-                          {externalId}
-                        </Link>
+                {details.addedRequirements.length > 0 ? (
+                  <ul className="mt-2 grid gap-1">
+                    {details.addedRequirements.map((requirement) => (
+                      <li key={requirement.externalId} className="[overflow-wrap:anywhere]">
+                        <span className="mr-1 font-mono text-[var(--success)]" aria-hidden="true">
+                          +
+                        </span>
+                        <Link href={requirementHref(requirement.externalId)} className={textLinkClass}>
+                          {requirement.externalId}
+                        </Link>{" "}
+                        <span className="text-[var(--muted)]">{requirement.title}</span>
                       </li>
                     ))}
                   </ul>
@@ -383,11 +499,14 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
               </div>
               <div>
                 <h3 className="font-semibold">Removed requirements</h3>
-                {diff.requirements.removed.length > 0 ? (
-                  <ul className="mt-2 flex flex-wrap gap-2">
-                    {diff.requirements.removed.map((externalId) => (
-                      <li key={externalId} className="border border-[var(--danger)] px-2 py-0.5 text-[var(--danger)]">
-                        {externalId}
+                {details.removedRequirements.length > 0 ? (
+                  <ul className="mt-2 grid gap-1">
+                    {details.removedRequirements.map((requirement) => (
+                      <li key={requirement.externalId} className="[overflow-wrap:anywhere]">
+                        <span className="mr-1 font-mono text-[var(--danger)]" aria-hidden="true">
+                          −
+                        </span>
+                        {requirement.externalId} <span className="text-[var(--muted)]">{requirement.title}</span>
                       </li>
                     ))}
                   </ul>
@@ -398,12 +517,44 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
             </div>
           ) : null}
 
+          {details.newFindings.length > 0 || details.resolvedFindings.length > 0 ? (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {(
+                [
+                  ["New findings", details.newFindings],
+                  ["Resolved findings", details.resolvedFindings]
+                ] as const
+              ).map(([heading, items]) => (
+                <div key={heading}>
+                  <h3 className="font-semibold">{heading}</h3>
+                  {items.length > 0 ? (
+                    <ul className="mt-2 grid gap-2">
+                      {items.map((finding) => (
+                        <li key={`${finding.category}-${finding.title}`} className="[overflow-wrap:anywhere]">
+                          <span
+                            className={`mr-2 border px-1.5 py-0.5 text-xs font-medium uppercase ${severityBadgeClass[finding.severity]}`}
+                          >
+                            {finding.severity}
+                          </span>
+                          {finding.title}
+                          <span className="text-[var(--muted)]"> · {sentenceLabel(finding.category)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-[var(--muted)]">None.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           {diff.testCases.statusChanged.length > 0 ? (
             <div className="mt-6">
               <h3 className="font-semibold">Test status changes</h3>
               <ul className="mt-2 grid gap-1">
                 {diff.testCases.statusChanged.map((change) => (
-                  <li key={change.externalId} className="break-words">
+                  <li key={change.externalId} className="[overflow-wrap:anywhere]">
                     <span className="font-medium">{change.externalId}</span>: {change.before} → {change.after}
                   </li>
                 ))}
@@ -411,28 +562,26 @@ export function BaselinesPanel({ projectId }: { projectId: string }) {
             </div>
           ) : null}
 
-          {Object.keys(diff.findings.byCategory).length > 0 ? (
-            <div className="mt-6 overflow-x-auto">
-              <h3 className="font-semibold">Findings by category</h3>
-              <table className="mt-2 w-full border-collapse">
-                <thead>
-                  <tr className="text-xs uppercase text-[var(--muted)]">
-                    <th className={`${cellClass} font-semibold`}>Category</th>
-                    <th className={`${cellClass} text-right font-semibold`}>New</th>
-                    <th className={`${cellClass} text-right font-semibold`}>Resolved</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(diff.findings.byCategory).map(([category, change]) => (
-                    <tr key={category}>
-                      <td className={`${cellClass} capitalize`}>{humanize(category)}</td>
-                      <td className={`${cellClass} text-right tabular-nums`}>{change.added}</td>
-                      <td className={`${cellClass} text-right tabular-nums`}>{change.removed}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {details.addedLinks.length > 0 || details.removedLinks.length > 0 ? (
+            <details className="mt-6 border border-[var(--line)]">
+              <summary className="px-3 py-2 font-medium">
+                Trace link changes ({details.addedLinks.length} added, {details.removedLinks.length} removed)
+              </summary>
+              <ul className="grid gap-1 border-t border-[var(--line)] p-3 font-mono text-xs">
+                {details.addedLinks.map((link) => (
+                  <li key={`added-${link}`} className="[overflow-wrap:anywhere]">
+                    <span className="text-[var(--success)]">+ </span>
+                    {link}
+                  </li>
+                ))}
+                {details.removedLinks.map((link) => (
+                  <li key={`removed-${link}`} className="[overflow-wrap:anywhere]">
+                    <span className="text-[var(--danger)]">− </span>
+                    {link}
+                  </li>
+                ))}
+              </ul>
+            </details>
           ) : null}
         </section>
       ) : null}

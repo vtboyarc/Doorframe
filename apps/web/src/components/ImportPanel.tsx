@@ -330,64 +330,63 @@ function MappingFields({
   const missing = new Set(check.missingRequired);
 
   return (
-    <fieldset className="mt-5 min-w-0 border-t border-[var(--line)] pt-4" disabled={disabled}>
-      <legend className="sr-only">Column mapping</legend>
-      <h3 aria-hidden="true" className="text-sm font-medium">
-        Column mapping
-      </h3>
-      <p className="mt-1 text-xs text-[var(--muted)]">
-        Pre-filled from the file headers, as the importer reads them. Fields marked Required must be mapped.
-      </p>
-      <div className="mt-3 space-y-3">
-        {fields.map((field) => {
-          const id = `${baseId}-map-${field.key}`;
-          return (
-            <div key={field.key} className="min-w-0">
-              <label htmlFor={id} className="flex items-baseline justify-between gap-2 text-sm">
-                <span className="text-[var(--foreground)]">{field.label}</span>
-                {field.required ? <span className="text-xs font-medium text-[var(--warning)]">Required</span> : null}
-              </label>
-              <select
-                id={id}
-                value={mapping[field.key] ?? ""}
-                onChange={(event) => onChange(field.key, event.target.value)}
-                aria-required={field.required || undefined}
-                aria-invalid={missing.has(field.label) || undefined}
-                className={`mt-1 ${fieldClass}`}
-              >
-                <option value="">{field.required ? "Choose a column" : (field.emptyLabel ?? "Not imported")}</option>
-                {headers.map((header, index) => (
-                  <option key={index} value={header} disabled={header === ""}>
-                    {header || `Column ${index + 1} (no name)`}
-                  </option>
-                ))}
-              </select>
-            </div>
-          );
-        })}
-      </div>
-
-      {sourceType === "jira-csv" ? (
-        <p className="mt-3 text-xs text-[var(--muted)]">
-          Requirement IDs are also detected in the summary, description, and label, component, fix version, custom
-          field, requirement, or trace columns.
+    <div className="mt-5 border-t border-[var(--line)] pt-4">
+      <fieldset className="min-w-0" disabled={disabled}>
+        <legend className="text-sm font-medium">Column mapping</legend>
+        <p className="mt-1 text-xs text-[var(--muted)]">
+          Pre-filled from the file headers, as the importer reads them. Fields marked Required must be mapped.
         </p>
-      ) : null}
+        <div className="mt-3 space-y-3">
+          {fields.map((field) => {
+            const id = `${baseId}-map-${field.key}`;
+            return (
+              <div key={field.key} className="min-w-0">
+                <label htmlFor={id} className="flex items-baseline justify-between gap-2 text-sm">
+                  <span className="text-[var(--foreground)]">{field.label}</span>
+                  {field.required ? <span className="text-xs font-medium text-[var(--warning)]">Required</span> : null}
+                </label>
+                <select
+                  id={id}
+                  value={mapping[field.key] ?? ""}
+                  onChange={(event) => onChange(field.key, event.target.value)}
+                  aria-required={field.required || undefined}
+                  aria-invalid={missing.has(field.label) || undefined}
+                  className={`mt-1 ${fieldClass}`}
+                >
+                  <option value="">{field.required ? "Choose a column" : (field.emptyLabel ?? "Not imported")}</option>
+                  {headers.map((header, index) => (
+                    <option key={index} value={header} disabled={header === ""}>
+                      {header || `Column ${index + 1} (no name)`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+        </div>
 
-      {check.sharedColumns.length > 0 ? (
-        <ul className="mt-3 space-y-1 text-xs">
-          {check.sharedColumns.map((shared) => (
-            <li
-              key={shared.column}
-              className={`break-words ${shared.includesRequired ? "text-[var(--danger)]" : "text-[var(--warning)]"}`}
-            >
-              {shared.fields.join(" and ")} both use the column “{shared.column}”.
-              {shared.includesRequired ? " Choose a different column for one of them." : ""}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </fieldset>
+        {sourceType === "jira-csv" ? (
+          <p className="mt-3 text-xs text-[var(--muted)]">
+            Requirement IDs are also detected in the summary, description, and label, component, fix version, custom
+            field, requirement, or trace columns.
+          </p>
+        ) : null}
+
+        {check.sharedColumns.length > 0 ? (
+          <ul className="mt-3 space-y-1 text-xs">
+            {check.sharedColumns.map((shared) => (
+              <li
+                key={shared.column}
+                className={`break-words ${shared.includesRequired ? "text-[var(--danger)]" : "text-[var(--warning)]"}`}
+              >
+                {shared.fields.join(" and ")} both use the column “{shared.column}”.
+                {shared.includesRequired ? " Choose a different column for one of them." : ""}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </fieldset>
+    </div>
   );
 }
 

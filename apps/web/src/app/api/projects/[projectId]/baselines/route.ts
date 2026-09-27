@@ -50,6 +50,11 @@ export const POST = async (request: Request, context: { params: Promise<{ projec
     label = `Baseline ${now.toISOString().slice(0, 16).replace("T", " ")} UTC`;
   }
 
+  const existing = listBaselines(projectId).some((baseline) => baseline.label.toLowerCase() === label.toLowerCase());
+  if (existing) {
+    return NextResponse.json({ error: `A baseline named "${label}" already exists. Choose another label.` }, { status: 409 });
+  }
+
   const baseline = createBaseline(projectId, label);
   if (!baseline) {
     return NextResponse.json({ error: "Unable to create baseline." }, { status: 500 });
