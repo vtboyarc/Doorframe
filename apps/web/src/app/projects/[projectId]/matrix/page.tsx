@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { matrixRows } from "@doorframe/reporting";
 import { PageHeader } from "@/components/PageHeader";
 import { PageShell } from "@/components/PageShell";
+import { RestoredScrollBox } from "@/components/RestoredScrollBox";
 import { getProjectData } from "@/lib/db";
 import { projectPageMetadata } from "@/lib/metadata";
 import { testStatusClass } from "@/lib/severity";
@@ -66,7 +67,7 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
           </Link>
         </section>
       ) : (
-        <div className={`${panelClass} ${tableScrollClass}`}>
+        <RestoredScrollBox className={`${panelClass} ${tableScrollClass}`}>
           <table className="w-full min-w-[880px] border-collapse text-sm print:min-w-0">
             <caption className="sr-only">Traceability matrix</caption>
             <thead>
@@ -137,7 +138,7 @@ export default async function MatrixPage({ params }: { params: Promise<{ project
               ))}
             </tbody>
           </table>
-        </div>
+        </RestoredScrollBox>
       )}
     </PageShell>
   );

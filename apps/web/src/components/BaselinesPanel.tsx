@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import type { BaselineDiff, RequirementFieldChange } from "@doorframe/core";
 import type { BaselineDiffDetails } from "@/lib/baseline-details";
+import { baselinesUrl, CURRENT_STATE, defaultSelection, selectionFromParams } from "@/lib/baseline-selection";
 import { sentenceLabel } from "@/lib/labels";
 import { BASELINE_LABEL_MAX_LENGTH } from "@/lib/limits";
 import { severityBadgeClass } from "@/lib/severity";
 import { fieldClass, labelClass, panelClass, primaryButtonClass, secondaryButtonClass, textLinkClass } from "@/lib/ui";
+import { useUrlState } from "@/lib/use-url-state";
 
 interface BaselineListItem {
   id: string;
@@ -19,8 +21,6 @@ interface BaselineListItem {
 }
 
 type DiffResponse = BaselineDiff & { details: BaselineDiffDetails };
-
-const CURRENT = "current";
 
 const fieldLabels: Record<RequirementFieldChange["field"], string> = {
   title: "Title",
@@ -40,16 +40,6 @@ const concernClass = {
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-}
-
-// Compare the previous baseline with the latest one when there are two or more;
-// otherwise compare the only baseline with the current project state.
-function defaultSelection(items: BaselineListItem[]): { a: string; b: string } {
-  if (items.length >= 2) {
-    return { a: items[1].id, b: items[0].id };
-  }
-
-  return { a: items[0]?.id ?? "", b: CURRENT };
 }
 
 function totalChanges(details: BaselineDiffDetails, diff: BaselineDiff): number {
@@ -86,7 +76,7 @@ export function BaselinesPanel({ projectId, hasData }: { projectId: string; hasD
   const [baselines, setBaselines] = useState<BaselineListItem[] | null>(null);
   const [label, setLabel] = useState("");
   const [a, setA] = useState("");
-  const [b, setB] = useState(CURRENT);
+  const [b, setB] = useState(CURRENT_STATE);
   const [diff, setDiff] = useState<DiffResponse | null>(null);
   const [captureMessage, setCaptureMessage] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
@@ -111,13 +101,25 @@ export function BaselinesPanel({ projectId, hasData }: { projectId: string; hasD
     }
   }, [projectId]);
 
+  // Start from the comparison named in the URL (?a=&b=), so browser Back and "Back to baselines"
+  // return to it; otherwise compare the two latest snapshots.
   useEffect(() => {
     void load().then((items) => {
-      const selection = defaultSelection(items);
+      const selection = selectionFromParams(items, new URLSearchParams(window.location.search));
       setA(selection.a);
       setB(selection.b);
     });
   }, [load]);
+
+  // Keep the selection in the URL once the baselines are loaded, and follow the URL when it
+  // changes from outside (the Baselines tab, browser Back or Forward).
+  useUrlState(baselines ? baselinesUrl(projectId, { a, b }) : null, (params) => {
+    if (baselines) {
+      const selection = selectionFromParams(baselines, params);
+      setA(selection.a);
+      setB(selection.b);
+    }
+  });
 
   // Re-run the comparison whenever the selection changes.
   useEffect(() => {
@@ -194,14 +196,14 @@ export function BaselinesPanel({ projectId, hasData }: { projectId: string; hasD
   }
 
   const byId = new Map((baselines ?? []).map((baseline) => [baseline.id, baseline]));
-  const labelFor = (id: string) => (id === CURRENT ? "Current state" : (byId.get(id)?.label ?? "Baseline"));
+  const labelFor = (id: string) => (id === CURRENT_STATE ? "Current state" : (byId.get(id)?.label ?? "Baseline"));
   const optionLabel = (baseline: BaselineListItem) => `${baseline.label} · ${formatDate(baseline.createdAt)}`;
   const createdAt = (id: string) =>
-    id === CURRENT ? Number.POSITIVE_INFINITY : Date.parse(byId.get(id)?.createdAt ?? "");
+    id === CURRENT_STATE ? Number.POSITIVE_INFINITY : Date.parse(byId.get(id)?.createdAt ?? "");
   const reversed = Boolean(a) && a !== b && createdAt(a) > createdAt(b);
   const requirementHref = (externalId: string) =>
     `/projects/${projectId}/requirements/${encodeURIComponent(externalId)}?back=${encodeURIComponent(
-      `/projects/${projectId}/baselines`
+      baselinesUrl(projectId, { a, b })
     )}`;
   const details = diff?.details;
 
@@ -315,13 +317,13 @@ export function BaselinesPanel({ projectId, hasData }: { projectId: string; hasD
               <button
                 type="button"
                 onClick={() => {
-                  if (b !== CURRENT) {
+                  if (b !== CURRENT_STATE) {
                     setA(b);
                     setB(a);
                   }
                 }}
-                disabled={b === CURRENT}
-                title={b === CURRENT ? "Current state is always the later side" : "Swap From and To"}
+                disabled={b === CURRENT_STATE}
+                title={b === CURRENT_STATE ? "Current state is always the later side" : "Swap From and To"}
                 aria-label="Swap From and To"
                 className={`${secondaryButtonClass} justify-self-start px-3`}
               >
@@ -330,7 +332,7 @@ export function BaselinesPanel({ projectId, hasData }: { projectId: string; hasD
               <label className="block text-sm">
                 <span className="text-[var(--muted)]">To (later)</span>
                 <select value={b} onChange={(event) => setB(event.target.value)} className={`mt-1 ${fieldClass}`}>
-                  <option value={CURRENT}>Current state</option>
+                  <option value={CURRENT_STATE}>Current state</option>
                   {baselines.map((baseline) => (
                     <option key={baseline.id} value={baseline.id}>
                       {optionLabel(baseline)}
@@ -381,18 +383,22 @@ export function BaselinesPanel({ projectId, hasData }: { projectId: string; hasD
             {details.changedRequirements.length} changed requirements.
           </p>
 
+          {/* Each value sits at the bottom of its tile, so values in a row line up when a long name wraps. */}
           <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden border border-[var(--line)] bg-[var(--line)] sm:grid-cols-4">
             {[
               ["Requirements added", details.addedRequirements.length],
               ["Requirements removed", details.removedRequirements.length],
               ["Requirements changed", details.changedRequirements.length],
-              ["Test status changes", diff.testCases.statusChanged.length],
+              [
+                "Tests added / removed / status changed",
+                `${diff.testCases.added.length} / ${diff.testCases.removed.length} / ${diff.testCases.statusChanged.length}`
+              ],
               ["New findings", details.newFindings.length],
               ["Resolved findings", details.resolvedFindings.length],
               ["Work items added / removed", `${diff.workItems.added.length} / ${diff.workItems.removed.length}`],
               ["Trace links added / removed", `${details.addedLinks.length} / ${details.removedLinks.length}`]
             ].map(([name, value]) => (
-              <div key={name} className="bg-[var(--panel)] p-3">
+              <div key={name} className="flex flex-col justify-between bg-[var(--panel)] p-3">
                 <dt className="text-xs text-[var(--muted)]">{name}</dt>
                 <dd className="mt-1 text-xl font-semibold tabular-nums">{value}</dd>
               </div>

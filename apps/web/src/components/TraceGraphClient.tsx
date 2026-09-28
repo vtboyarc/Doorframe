@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
@@ -40,6 +40,8 @@ import {
   type TraceGraphView
 } from "@/lib/trace-graph";
 import { chipCountClass, fieldClass, labelClass, panelClass } from "@/lib/ui";
+import { traceGraphUrl } from "@/lib/url-state";
+import { useUrlState } from "@/lib/use-url-state";
 
 type TraceNodeData = TraceGraphNode & {
   /** The requirement the view is focused on. */
@@ -237,25 +239,6 @@ function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-/** Keep ?focus= and ?view= in the address bar without a server navigation. */
-function useUrlState(focusLabel: string | undefined, view: TraceGraphView, defaultViewValue: TraceGraphView) {
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete("focus");
-    url.searchParams.delete("view");
-    if (focusLabel) {
-      url.searchParams.set("focus", focusLabel);
-    }
-    if (view !== defaultViewValue) {
-      url.searchParams.set("view", view);
-    }
-    const next = `${url.pathname}${url.search}${url.hash}`;
-    if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
-      window.history.replaceState(null, "", next);
-    }
-  }, [focusLabel, view, defaultViewValue]);
-}
-
 export function TraceGraphClient({
   nodes,
   edges,
@@ -289,7 +272,18 @@ export function TraceGraphClient({
   const [startArea, setStartArea] = useState<Rect | undefined>(undefined);
 
   const focused = requirements.find((node) => node.id === focusId) ?? null;
-  useUrlState(focused?.label, view, startingView);
+
+  // Keep ?focus= and ?view= in the address bar without a server navigation, and follow the
+  // address when it changes from outside (the Trace graph tab, browser Back or Forward).
+  const pathname = usePathname();
+  const url = useMemo(
+    () => traceGraphUrl(pathname, { focus: focused?.label, view, defaultView: startingView }),
+    [pathname, focused?.label, view, startingView]
+  );
+  useUrlState(url, (params) => {
+    setView(initialView(params.get("view") ?? undefined, nodes));
+    setFocusId(requirements.find((node) => node.label === params.get("focus"))?.id ?? "");
+  });
 
   const visible = useMemo(() => subgraph(graph, visibleNodeIds(graph, view, focusId)), [graph, view, focusId]);
   const graphLayout = useMemo(() => layout(visible.nodes, visible.edges), [visible]);

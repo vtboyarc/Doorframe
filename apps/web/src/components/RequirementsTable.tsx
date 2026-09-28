@@ -13,7 +13,10 @@ import {
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useRestoredScroll } from "@/lib/use-restored-scroll";
+import { useUrlState } from "@/lib/use-url-state";
+import { parseSort, requirementListUrl } from "@/lib/url-state";
 import type { RequirementListRow } from "@/lib/view-models";
 import { fieldClass, panelClass, secondaryButtonClass, tableScrollClass, textLinkClass } from "@/lib/ui";
 
@@ -23,19 +26,6 @@ const PAGE_SIZE = 200;
 // Searches the precomputed per-row text (IDs, title, text, attributes, linked work and tests).
 const searchRow: FilterFn<RequirementListRow> = (row, _columnId, value) =>
   row.original.searchText.includes(String(value).trim().toLowerCase());
-
-function parseSort(value: string | undefined): SortingState {
-  if (!value) {
-    return [];
-  }
-
-  return [{ id: value.replace(/^-/, ""), desc: value.startsWith("-") }];
-}
-
-function serializeSort(sorting: SortingState): string | undefined {
-  const [first] = sorting;
-  return first ? `${first.desc ? "-" : ""}${first.id}` : undefined;
-}
 
 function Missing() {
   return (
@@ -65,21 +55,22 @@ export function RequirementsTable({
   const [globalFilter, setGlobalFilter] = useState(() => searchParams.get("q") ?? initialQuery);
   const [sorting, setSorting] = useState<SortingState>(() => parseSort(searchParams.get("sort") ?? initialSort));
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const scrollBox = useRef<HTMLDivElement>(null);
 
-  // Keep the filter and sort in the URL so "Back to requirements" returns to the same list.
-  const listUrl = useMemo(() => {
-    const params = new URLSearchParams();
-    if (view) params.set("view", view);
-    if (globalFilter.trim()) params.set("q", globalFilter.trim());
-    const sort = serializeSort(sorting);
-    if (sort) params.set("sort", sort);
-    const query = params.toString();
-    return `/projects/${projectId}/requirements${query ? `?${query}` : ""}`;
-  }, [projectId, view, globalFilter, sorting]);
+  // Keep the filter and sort in the URL so "Back to requirements" returns to the same list, and
+  // follow the URL when it changes from outside (the Requirements tab, browser Back or Forward).
+  const listUrl = useMemo(
+    () => requirementListUrl(projectId, { view, query: globalFilter, sorting }),
+    [projectId, view, globalFilter, sorting]
+  );
+  useUrlState(listUrl, (params) => {
+    setGlobalFilter(params.get("q") ?? "");
+    setSorting(parseSort(params.get("sort")));
+    setVisibleCount(PAGE_SIZE);
+  });
 
-  useEffect(() => {
-    window.history.replaceState(null, "", listUrl);
-  }, [listUrl]);
+  // The table scrolls inside its own box, which the browser does not restore on Back.
+  useRestoredScroll(scrollBox, { count: visibleCount, restoreCount: setVisibleCount });
 
   const detailHref = (externalId: string, hash = "") =>
     `/projects/${projectId}/requirements/${encodeURIComponent(externalId)}?back=${encodeURIComponent(listUrl)}${hash}`;
@@ -198,7 +189,7 @@ export function RequirementsTable({
           {rows.length === 1 ? "" : "s"}
         </div>
       </div>
-      <div className={tableScrollClass}>
+      <div ref={scrollBox} className={tableScrollClass}>
         <table className="w-full min-w-[880px] border-collapse text-sm print:min-w-0">
           <caption className="sr-only">Requirements</caption>
           <thead>

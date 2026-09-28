@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } f
 import { DEFAULT_RULESET, type FindingCategory, type Ruleset } from "@doorframe/core";
 import { FINDING_CATEGORIES } from "@/lib/findings";
 import { sentenceLabel } from "@/lib/labels";
+import { clearRulesetDraft, readRulesetDraft, writeRulesetDraft } from "@/lib/ruleset-draft";
 import {
   formValuesFromRuleset,
   NON_VERIFIABLE_SIGNAL_COUNT,
@@ -13,6 +14,7 @@ import {
   type RulesetFormField,
   type RulesetFormValues
 } from "@/lib/ruleset-form";
+import { sessionStore } from "@/lib/session-store";
 import { fieldClass, panelClass, primaryButtonClass, secondaryButtonClass, textLinkClass } from "@/lib/ui";
 
 const monoFieldClass = `${fieldClass} py-2 font-mono`;
@@ -35,7 +37,13 @@ function rowsFor(value: string, min: number, max = 16): number {
   return Math.min(max, Math.max(min, value.split("\n").length + 1));
 }
 
-type Status = { tone: "success" | "error"; text: ReactNode } | null;
+type Status = { tone: "success" | "error" | "info"; text: ReactNode } | null;
+
+const statusToneClass = {
+  success: "text-[var(--success)]",
+  error: "text-[var(--danger)]",
+  info: "text-[var(--info)]"
+} as const;
 
 function Field({
   id,
@@ -79,6 +87,26 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
 
   const dirty = useMemo(() => JSON.stringify(values) !== JSON.stringify(saved), [values, saved]);
 
+  // Browser Back leaves the page without any prompt, so keep unsaved edits in this tab's
+  // sessionStorage and bring them back on the next visit. This effect must stay above the one
+  // that stores the draft: that one removes the draft on the first render, and the restored
+  // values are stored again on the next.
+  useEffect(() => {
+    const draft = readRulesetDraft(sessionStore(), projectId, saved);
+    if (draft) {
+      setValues(draft);
+      setStatus({
+        tone: "info",
+        text: "Restored unsaved changes from earlier in this tab. Save the ruleset to apply them, or discard them."
+      });
+    }
+    // Only when the editor opens.
+  }, []);
+
+  useEffect(() => {
+    writeRulesetDraft(sessionStore(), projectId, saved, values);
+  }, [projectId, saved, values]);
+
   // Warn before leaving the page with unsaved edits: beforeunload covers reloads and closing the
   // tab; in-app links navigate on the client, so ask before following one.
   useEffect(() => {
@@ -98,7 +126,9 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
       if (destination.pathname === window.location.pathname && destination.search === window.location.search) {
         return;
       }
-      if (!window.confirm("You have unsaved ruleset changes. Leave this page and discard them?")) {
+      if (window.confirm("You have unsaved ruleset changes. Leave this page and discard them?")) {
+        clearRulesetDraft(sessionStore(), projectId);
+      } else {
         // Stop the click before Next.js's link handler sees it.
         event.preventDefault();
         event.stopPropagation();
@@ -110,7 +140,7 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
       window.removeEventListener("beforeunload", warn);
       window.removeEventListener("click", confirmLinkClick, true);
     };
-  }, [dirty]);
+  }, [dirty, projectId]);
 
   const id = (field: string) => `${baseId}-${field}`;
   const describedBy = (field: RulesetFormField) =>
@@ -403,10 +433,7 @@ export function RulesetEditor({ projectId, initial }: { projectId: string; initi
         </button>
         {dirty && !status ? <span className="text-sm text-[var(--warning)]">Unsaved changes</span> : null}
         {status ? (
-          <p
-            role={status.tone === "error" ? "alert" : "status"}
-            className={`text-sm ${status.tone === "error" ? "text-[var(--danger)]" : "text-[var(--success)]"}`}
-          >
+          <p role={status.tone === "error" ? "alert" : "status"} className={`text-sm ${statusToneClass[status.tone]}`}>
             {status.text}
           </p>
         ) : null}
