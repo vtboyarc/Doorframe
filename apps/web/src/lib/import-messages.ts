@@ -109,6 +109,10 @@ export function jiraExportWarning(column: string): string {
   return `This file looks like a Jira export: it has an “${column}” column. Imported as Requirements CSV, each Jira issue would be saved as a requirement. Jira work items belong in a Jira CSV import.`;
 }
 
+export function requirementExportWarning(column: string): string {
+  return `This file looks like a requirements export: it has a “${column}” column and no Jira issue columns. Imported as Jira CSV, each row would be saved as a work item.`;
+}
+
 /** Why an empty Requirements CSV import of a Jira-shaped file saved nothing. */
 export function jiraExportEmptyMessage(column: string): string {
   return `No requirements were imported. This file looks like a Jira export (it has an “${column}” column). Choose Jira CSV as the import type and import it again.`;

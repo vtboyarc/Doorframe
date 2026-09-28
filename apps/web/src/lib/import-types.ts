@@ -262,6 +262,37 @@ export function jiraExportColumn(headers: string[]): string | null {
   return null;
 }
 
+/** Normalized column names that only requirement exports (DOORS, spreadsheets) use, in order of preference. */
+const REQUIREMENT_EXPORT_COLUMNS = [
+  "verificationmethod",
+  "requirementid",
+  "reqid",
+  "requirementtext",
+  "objectidentifier",
+  "absolutenumber"
+];
+
+/**
+ * The column that marks a CSV as a requirements export, such as "Verification
+ * Method", or null. Files that also have a Jira column are not flagged. The
+ * imports page uses it to warn before a requirements file is saved as work items.
+ */
+export function requirementExportColumn(headers: string[]): string | null {
+  if (jiraExportColumn(headers)) {
+    return null;
+  }
+
+  const normalized = headers.map((header) => ({ header, key: header.toLowerCase().replace(/[^a-z0-9]/g, "") }));
+  for (const column of REQUIREMENT_EXPORT_COLUMNS) {
+    const match = normalized.find((entry) => entry.key === column);
+    if (match) {
+      return match.header;
+    }
+  }
+
+  return null;
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;

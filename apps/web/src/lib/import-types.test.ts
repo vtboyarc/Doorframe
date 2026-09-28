@@ -10,6 +10,7 @@ import {
   jiraExportColumn,
   JIRA_MAPPING_FIELDS,
   REQUIREMENT_MAPPING_FIELDS,
+  requirementExportColumn,
   sourceTypeForFile
 } from "./import-types";
 
@@ -98,5 +99,22 @@ describe("jiraExportColumn", () => {
     expect(jiraExportColumn(["ID", "Title", "Text", "Status", "Type", "Priority", "Verification Method", "Parent ID"])).toBeNull();
     expect(jiraExportColumn(["Requirement ID", "Description", "Issue notes"])).toBeNull();
     expect(jiraExportColumn([])).toBeNull();
+  });
+});
+
+describe("requirementExportColumn", () => {
+  it("flags requirement exports that have no Jira columns", () => {
+    expect(requirementExportColumn(["ID", "Title", "Text", "Status", "Verification Method", "Parent ID"])).toBe(
+      "Verification Method"
+    );
+    expect(requirementExportColumn(["Object Identifier", "Object Text"])).toBe("Object Identifier");
+  });
+
+  it("leaves Jira exports and plain work-item lists alone", () => {
+    expect(requirementExportColumn(["Issue key", "Summary", "Verification Method"])).toBeNull();
+    expect(
+      requirementExportColumn(["Issue key", "Summary", "Description", "Custom field (Requirement IDs)"])
+    ).toBeNull();
+    expect(requirementExportColumn(["ID", "Title", "State", "Requirement IDs"])).toBeNull();
   });
 });

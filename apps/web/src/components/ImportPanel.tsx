@@ -6,7 +6,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { ImportResultPanel } from "@/components/ImportResultPanel";
 import { importBlockedReason, requestImport, requestPreview, type PreviewState } from "@/lib/import-client";
-import { fileTooLargeMessage, jiraExportWarning, plural, type FailureDescription } from "@/lib/import-messages";
+import {
+  fileTooLargeMessage,
+  jiraExportWarning,
+  plural,
+  requirementExportWarning,
+  type FailureDescription
+} from "@/lib/import-messages";
 import {
   checkMapping,
   completeMapping,
@@ -17,6 +23,7 @@ import {
   isCsvImportType,
   jiraExportColumn,
   mappingFieldsFor,
+  requirementExportColumn,
   MAX_IMPORT_FILE_BYTES,
   sourceTypeForFile,
   type ColumnMapping,
@@ -56,6 +63,9 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
   const jiraColumn =
     sourceType === "requirements-csv" && preview.status === "ready" ? jiraExportColumn(preview.preview.headers) : null;
   const jiraConfirmed = file !== null && confirmedRequirementsFile === file;
+  // The reverse mix-up only warns: plain ID/Title work-item lists are valid Jira CSV input.
+  const requirementColumn =
+    sourceType === "jira-csv" && preview.status === "ready" ? requirementExportColumn(preview.preview.headers) : null;
   const reason = importBlockedReason({
     file,
     tooLarge,
@@ -267,6 +277,26 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
               }}
               onConfirm={(confirmed) => setConfirmedRequirementsFile(confirmed ? file : null)}
             />
+          ) : null}
+
+          {requirementColumn ? (
+            <div className="mt-4 border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm">
+              <p role="alert" className="break-words">
+                {requirementExportWarning(requirementColumn)}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSourceType("requirements-csv");
+                  setFailure(null);
+                  typeSelectRef.current?.focus();
+                }}
+                disabled={isImporting}
+                className={`mt-3 ${secondaryButtonClass}`}
+              >
+                Switch to Requirements CSV
+              </button>
+            </div>
           ) : null}
 
           {isCsv && preview.status === "ready" ? (

@@ -9,6 +9,7 @@ import {
   importSummaryText,
   jiraExportEmptyMessage,
   jiraExportWarning,
+  requirementExportWarning,
   missingRecordsText,
   NO_CSV_ROWS_MESSAGE,
   removedSummaryText,
@@ -183,6 +184,7 @@ describe("Jira export messages", () => {
     expect(jiraExportWarning("Issue key")).toMatch(/looks like a Jira export: it has an “Issue key” column/);
     expect(jiraExportWarning("Issue key")).toMatch(/Jira CSV import/);
     expect(jiraExportEmptyMessage("Issue key")).toMatch(/^No requirements were imported\..*Choose Jira CSV/);
+    expect(requirementExportWarning("Verification Method")).toMatch(/requirements export: it has a “Verification Method” column/);
   });
 
   it("explains an empty Requirements CSV import of a Jira export", () => {
