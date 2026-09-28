@@ -44,6 +44,7 @@ import {
 import {
   canReturnFullText,
   dataPolicy,
+  MAX_RESULTS_LIMIT,
   normalizeDoorframeMcpOptions,
   resultLimit,
   shouldHideRawText,
@@ -551,7 +552,7 @@ export function searchRequirementsData(
   const data = projectDb.loadProjectData();
   const query = normalize(filters.query);
   const status = normalize(filters.status);
-  const limit = resultLimit(filters.limit, options, 20, 100);
+  const limit = resultLimit(filters.limit, options, 20, MAX_RESULTS_LIMIT);
   const facts = buildRequirementFacts(data);
 
   const matched = facts.filter((fact) => {
@@ -740,10 +741,11 @@ export function listFindingsData(
     category?: string;
     entityType?: EntityType | "traceLink";
     limit?: number;
-  }
+  },
+  options: Partial<DoorframeMcpOptions> = {}
 ) {
   const data = projectDb.loadProjectData();
-  const limit = clampLimit(filters.limit, 25, 100);
+  const limit = resultLimit(filters.limit, options, 25, MAX_RESULTS_LIMIT);
   const coreSeverity = filters.severity ? fromPublicSeverity(filters.severity) : undefined;
   const findings = data.findings
     .filter((finding) => !coreSeverity || finding.severity === coreSeverity)
@@ -801,7 +803,7 @@ export function getTraceabilityGapsData(
 ) {
   const data = projectDb.loadProjectData();
   const gapType = filters.gapType ?? "all";
-  const limit = resultLimit(filters.limit, options, 25, 100);
+  const limit = resultLimit(filters.limit, options, 25, MAX_RESULTS_LIMIT);
   const filtered = allTraceabilityGaps(data)
     .filter((gap) => gapType === "all" || gap.gapType === gapType)
     .filter((gap) => !filters.severity || gap.severity === filters.severity);
@@ -873,7 +875,7 @@ export function getReviewRiskSummaryData(
   options: Partial<DoorframeMcpOptions> = {}
 ) {
   const reviewType = args.reviewType ?? "general";
-  const limit = resultLimit(args.limit, options, 10, 100);
+  const limit = resultLimit(args.limit, options, 10, MAX_RESULTS_LIMIT);
   const data = projectDb.loadProjectData();
   const gaps = getTraceabilityGapsData(projectDb, { gapType: "all", limit }, options).gaps;
   const affectedRequirements = Array.from(
@@ -965,13 +967,14 @@ export function formatTraceLinksForRequirementText(result: ReturnType<typeof get
 
 export function findOrphanItemsData(
   projectDb: ProjectDb,
-  options: {
+  filters: {
     entityType: "requirements" | "workItems" | "testCases" | "all";
     limit?: number;
-  }
+  },
+  options: Partial<DoorframeMcpOptions> = {}
 ) {
   const data = projectDb.loadProjectData();
-  const limit = clampLimit(options.limit, 25, 100);
+  const limit = resultLimit(filters.limit, options, 25, MAX_RESULTS_LIMIT);
   const isLinked = (entityType: EntityType, entityId: string) =>
     data.traceLinks.some(
       (link) =>
@@ -979,7 +982,7 @@ export function findOrphanItemsData(
         (link.targetType === entityType && link.targetId === entityId)
     );
   const items = [
-    ...(options.entityType === "requirements" || options.entityType === "all"
+    ...(filters.entityType === "requirements" || filters.entityType === "all"
       ? data.requirements
           .filter((requirement) => !isLinked("requirement", requirement.id))
           .map((requirement) => ({
@@ -990,7 +993,7 @@ export function findOrphanItemsData(
             status: requirement.status
           }))
       : []),
-    ...(options.entityType === "workItems" || options.entityType === "all"
+    ...(filters.entityType === "workItems" || filters.entityType === "all"
       ? data.workItems
           .filter((workItem) => !isLinked("workItem", workItem.id))
           .map((workItem) => ({
@@ -1001,7 +1004,7 @@ export function findOrphanItemsData(
             status: workItem.status
           }))
       : []),
-    ...(options.entityType === "testCases" || options.entityType === "all"
+    ...(filters.entityType === "testCases" || filters.entityType === "all"
       ? data.testCases
           .filter((testCase) => !isLinked("testCase", testCase.id))
           .map((testCase) => ({
@@ -1602,7 +1605,7 @@ export function listChangedRequirementsData(
   options: Partial<DoorframeMcpOptions> = {}
 ) {
   const comparison = resolveBaselineComparison(projectDb, args);
-  const limit = resultLimit(args.limit, options, 25, 100);
+  const limit = resultLimit(args.limit, options, 25, MAX_RESULTS_LIMIT);
   const requestedType = args.changeType ?? "all";
   const includeUnconcernedChanges = !args.concernLevel;
   const items = [
@@ -1753,7 +1756,7 @@ export function getStaleTraceCandidatesData(
   options: Partial<DoorframeMcpOptions> = {}
 ) {
   const comparison = resolveBaselineComparison(projectDb, args);
-  const limit = resultLimit(args.limit, options, 25, 100);
+  const limit = resultLimit(args.limit, options, 25, MAX_RESULTS_LIMIT);
   const candidates = buildStaleTraceCandidates(comparison).filter(
     (candidate) => !args.concernLevel || candidate.requirement.concern === args.concernLevel
   );
@@ -1850,7 +1853,7 @@ export function getReviewBriefData(
   } = {},
   options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const limit = resultLimit(args.limit, options, 10, 100);
+  const limit = resultLimit(args.limit, options, 10, MAX_RESULTS_LIMIT);
   const projectSummary = getProjectSummaryData(projectDb);
   const baselineSummary = getBaselineDiffSummaryData(projectDb, args, options);
   const changedRequirements = listChangedRequirementsData(projectDb, { ...args, changeType: "changed", limit }, options);
@@ -1985,7 +1988,11 @@ export function registerDoorframeTools(
       return undefined;
     }
 
-    cachedProject ??= projectDb.loadProjectData().project;
+    if (!cachedProject) {
+      // The audit log records only the project id and name, not the whole project row.
+      const { id, name } = projectDb.loadProjectData().project;
+      cachedProject = { id, name };
+    }
     return cachedProject;
   };
 
@@ -2060,7 +2067,7 @@ export function registerDoorframeTools(
     },
     (args) =>
       safeTool("list_findings", auditProject(), options, args, () => {
-        const data = listFindingsData(projectDb, args);
+        const data = listFindingsData(projectDb, args, options);
         return toolResult(formatFindingsText(data), data);
       })
   );
@@ -2256,7 +2263,7 @@ export function registerDoorframeTools(
     },
     (args) =>
       safeTool("find_orphan_items", auditProject(), options, args, () => {
-        const data = findOrphanItemsData(projectDb, args);
+        const data = findOrphanItemsData(projectDb, args, options);
         return toolResult(formatOrphanItemsText(data), data);
       })
   );

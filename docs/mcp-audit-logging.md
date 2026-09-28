@@ -33,4 +33,6 @@ If no audit log path is provided, Doorframe MCP does not write an MCP audit log.
 
 The log is a local artifact. Protect it the same way you protect other project review artifacts.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
 Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”

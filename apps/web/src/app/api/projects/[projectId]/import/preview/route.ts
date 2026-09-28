@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { decodeUpload } from "@/lib/import-encoding";
 import {
-  detectNonCommaDelimiter,
+  detectCsvDelimiter,
   inferJiraCsvMapping,
   inferRequirementsCsvMapping,
   readCsvPreview,
@@ -65,9 +65,20 @@ export const POST = async (request: Request, context: { params: Promise<{ projec
     return errorResponse(413, { error: fileTooLargeMessage(file.size) });
   }
 
+  const decoded = decodeUpload(new Uint8Array(await file.arrayBuffer()));
+  if (decoded.error) {
+    return errorResponse(422, { error: decoded.error });
+  }
+
+  // Checked before the comma parse, which fails first on quoted cells in semicolon files.
+  const delimiter = detectCsvDelimiter(decoded.text);
+  if (delimiter) {
+    return errorResponse(422, { error: delimiterMessage(delimiter) });
+  }
+
   let preview: CsvPreview;
   try {
-    preview = readCsvPreview(decodeUpload(new Uint8Array(await file.arrayBuffer())).text, PREVIEW_ROWS);
+    preview = readCsvPreview(decoded.text, PREVIEW_ROWS);
   } catch (error) {
     const failure = describeImportFailure(sourceType, error);
     return errorResponse(422, { error: failure.message, detail: failure.detail });
@@ -77,18 +88,14 @@ export const POST = async (request: Request, context: { params: Promise<{ projec
     return errorResponse(422, { error: NO_CSV_ROWS_MESSAGE });
   }
 
-  const delimiter = detectNonCommaDelimiter(preview.headers);
-  if (delimiter) {
-    return errorResponse(422, { error: delimiterMessage(delimiter) });
-  }
-
   const inferred =
     sourceType === "jira-csv" ? inferJiraCsvMapping(preview.headers) : inferRequirementsCsvMapping(preview.headers);
   const body: ImportPreviewResponse = {
     headers: preview.headers,
     rows: preview.rows,
     totalRows: preview.totalRows,
-    mapping: completeMapping(mappingFieldsFor(sourceType), inferred as Record<string, string | undefined>)
+    mapping: completeMapping(mappingFieldsFor(sourceType), inferred as Record<string, string | undefined>),
+    ...(decoded.warning ? { encodingWarning: decoded.warning } : {})
   };
 
   return NextResponse.json(body);

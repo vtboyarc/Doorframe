@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { Finding, ProjectSnapshot, Requirement, TestCase, TraceLink, WorkItem } from "@doorframe/core";
+import { diffBaselines, type Finding, type ProjectSnapshot, type Requirement, type TestCase, type TraceLink, type WorkItem } from "@doorframe/core";
 import { generateBaselineDiffHtmlReport } from "@doorframe/reporting";
-import { baselineDiffDetails, baselineDiffReport } from "./baseline-details";
+import { baselineDiffDetails, baselineDiffReport, baselineRecordChanges } from "./baseline-details";
 
 const time = "2026-01-01T00:00:00.000Z";
 
@@ -91,13 +91,57 @@ describe("baselineDiffReport", () => {
     };
     const to: ProjectSnapshot = { ...from, requirements: [requirement("b1", "REQ-1", "New <text>"), requirement("b2", "REQ-2", "Added")] };
 
-    const report = baselineDiffReport(from, to, "Review 1", "Current project data");
-    expect(report).toMatchObject({ baselineAName: "Review 1", baselineBName: "Current project data" });
+    const report = baselineDiffReport(from, to, "Review 1", "Current state");
+    expect(report).toMatchObject({ baselineAName: "Review 1", baselineBName: "Current state" });
     expect(report.summary).toMatchObject({ added: 1, changed: 1, deleted: 0 });
 
-    const html = generateBaselineDiffHtmlReport(report);
-    expect(html).toContain("Baseline A: Review 1");
+    const html = generateBaselineDiffHtmlReport(report, {
+      projectName: "Falcon Telemetry Gateway",
+      recordChanges: baselineRecordChanges(diffBaselines(from, to), baselineDiffDetails(from, to))
+    });
+    expect(html).toContain("Project: Falcon Telemetry Gateway");
+    expect(html).toContain("Changes from Review 1 to Current state");
     expect(html).toContain("&lt;text&gt;");
     expect(html).not.toMatch(/<(script|link)\b|https?:\/\//i);
+  });
+});
+
+describe("baselineRecordChanges", () => {
+  it("collects the findings, link, work item, and test changes the Baselines page shows", () => {
+    const from: ProjectSnapshot = {
+      requirements: [requirement("a1", "REQ-1", "Same")],
+      workItems: [{ ...work, id: "w-old", externalId: "FG-10" }],
+      testCases: [
+        { ...test, id: "t-a", externalId: "T.two", status: "failed" },
+        { ...test, id: "t-b", externalId: "T.gone" }
+      ],
+      traceLinks: [link("l1", "a1", "workItem", "w-old", "implements")],
+      findings: [finding("REQ-1 has no linked work item")]
+    };
+    const to: ProjectSnapshot = {
+      requirements: [requirement("b1", "REQ-1", "Same")],
+      workItems: [
+        { ...work, id: "w-new", externalId: "FG-9" },
+        { ...work, id: "w-2", externalId: "FG-2" }
+      ],
+      testCases: [
+        { ...test, id: "t-c", externalId: "T.two", status: "passed" },
+        { ...test, id: "t-d", externalId: "T.new" }
+      ],
+      traceLinks: [link("l2", "b1", "workItem", "w-new", "implements")],
+      findings: [finding("REQ-9 needs review", "weak_wording")]
+    };
+
+    const changes = baselineRecordChanges(diffBaselines(from, to), baselineDiffDetails(from, to));
+
+    expect(changes.workItemsAdded).toEqual(["FG-2", "FG-9"]);
+    expect(changes.workItemsRemoved).toEqual(["FG-10"]);
+    expect(changes.testsAdded).toEqual(["T.new"]);
+    expect(changes.testsRemoved).toEqual(["T.gone"]);
+    expect(changes.testStatusChanges).toEqual([{ externalId: "T.two", before: "failed", after: "passed" }]);
+    expect(changes.addedLinks).toEqual(["REQ-1 → FG-9 (implements)"]);
+    expect(changes.removedLinks).toEqual(["REQ-1 → FG-10 (implements)"]);
+    expect(changes.newFindings).toEqual([{ category: "weak_wording", severity: "warning", title: "REQ-9 needs review" }]);
+    expect(changes.resolvedFindings.map((item) => item.title)).toEqual(["REQ-1 has no linked work item"]);
   });
 });

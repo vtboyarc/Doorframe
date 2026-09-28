@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { Requirement, TestCase, TraceLink, WorkItem } from "@doorframe/core";
 import {
+  canReachThreshold,
+  findClosedWorkWithoutVerification,
   findDuplicateCandidates,
+  findMissingVerification,
+  findMissingWorkTrace,
+  findPossibleStaleLinks,
   generateFindings,
   isClosedWith,
   isDraftOrChangedWith,
+  jaccard,
   MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT
 } from "./rules";
 
@@ -114,6 +120,92 @@ describe("findDuplicateCandidates", () => {
     expect(Math.max(...perRequirement.values())).toBe(MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT);
     expect(findings.length).toBeLessThanOrEqual(requirements.length * MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT);
     expect(findings[0].title).toBe("REQ-0 resembles REQ-1");
+  });
+
+  it("reports a pair whose similarity is exactly the threshold, and skips it just above", () => {
+    const requirements = [
+      requirement({ id: "req_a", externalId: "REQ-A", text: "alpha bravo charlie delta echo" }),
+      requirement({ id: "req_b", externalId: "REQ-B", text: "alpha bravo charlie delta" })
+    ];
+    const input = { requirements, workItems: [], testCases: [], traceLinks: [] };
+
+    const atThreshold = findDuplicateCandidates(input, 0.8);
+    expect(atThreshold.map((finding) => finding.title)).toEqual(["REQ-A resembles REQ-B"]);
+    expect(atThreshold[0].description).toBe("The normalized requirement text is 80% similar.");
+    expect(findDuplicateCandidates(input, 0.81)).toEqual([]);
+  });
+
+  it("keeps the zero-threshold behavior for requirements without comparable words", () => {
+    const requirements = [
+      requirement({ id: "req_a", externalId: "REQ-A", text: "" }),
+      requirement({ id: "req_b", externalId: "REQ-B", text: "ok" })
+    ];
+
+    const findings = findDuplicateCandidates({ requirements, workItems: [], testCases: [], traceLinks: [] }, 0);
+    expect(findings.map((finding) => finding.description)).toEqual(["The normalized requirement text is 0% similar."]);
+  });
+});
+
+describe("jaccard", () => {
+  it("divides shared tokens by all distinct tokens", () => {
+    expect(jaccard(new Set(["a", "b", "c"]), new Set(["b", "c", "d"]))).toBe(0.5);
+    expect(jaccard(new Set(["a", "b"]), new Set(["a", "b"]))).toBe(1);
+    expect(jaccard(new Set(), new Set(["a"]))).toBe(0);
+  });
+
+  it("never exceeds the size bound used to skip pairs", () => {
+    expect(canReachThreshold(4, 5, 0.8)).toBe(true);
+    expect(canReachThreshold(4, 5, 0.81)).toBe(false);
+    // 7 < 0.28 * 25 in floating point, so a multiplied bound would wrongly skip this exact match.
+    expect(canReachThreshold(7, 25, 0.28)).toBe(true);
+    const tokens = (count: number) => new Set(Array.from({ length: count }, (_, index) => `t${index}`));
+    expect(jaccard(tokens(7), tokens(25))).toBe(0.28);
+    expect(canReachThreshold(9, 3, 0.34)).toBe(false);
+    expect(canReachThreshold(0, 0, 0.5)).toBe(true);
+    expect(canReachThreshold(0, 3, 0)).toBe(true);
+  });
+});
+
+describe("trace link direction", () => {
+  const linkedFromOtherSide = {
+    requirements: [
+      requirement({ id: "req_1", externalId: "REQ-1", status: "Draft", text: "The system shall display an error within 2 seconds.", verificationMethod: "Test" }),
+      requirement({ id: "req_2", externalId: "REQ-2", status: "Approved", text: "The system shall log the error within 2 seconds.", verificationMethod: "Test" })
+    ],
+    workItems: [workItem({ status: "Done" })],
+    testCases: [testCase({ id: "test_1", status: "passed" }), testCase({ id: "test_2", status: "failed" })],
+    traceLinks: [
+      traceLink({ id: "l1", sourceType: "workItem", sourceId: "work_1", targetType: "requirement", targetId: "req_1", linkType: "implements" }),
+      traceLink({ id: "l2", sourceType: "requirement", sourceId: "req_2", targetType: "workItem", targetId: "work_1", linkType: "implements" }),
+      traceLink({ id: "l3", sourceType: "testCase", sourceId: "test_1", targetType: "requirement", targetId: "req_1" }),
+      traceLink({ id: "l4", sourceType: "requirement", sourceId: "req_2", targetType: "testCase", targetId: "test_2" }),
+      traceLink({ id: "l5", sourceType: "requirement", sourceId: "req_1", targetType: "requirement", targetId: "req_2", linkType: "parent" })
+    ]
+  };
+
+  it("treats links recorded in either direction as the same trace", () => {
+    expect(findMissingWorkTrace(linkedFromOtherSide)).toEqual([]);
+    expect(findMissingVerification(linkedFromOtherSide).map((finding) => finding.title)).toEqual([
+      "REQ-2 has no passing linked test evidence"
+    ]);
+
+    const closed = findClosedWorkWithoutVerification(linkedFromOtherSide);
+    expect(closed).toHaveLength(1);
+    expect(closed[0].description).toBe("Closed work is linked to requirements without passing test evidence: REQ-2.");
+
+    expect(findPossibleStaleLinks(linkedFromOtherSide).map((finding) => finding.title)).toEqual([
+      "ENG-1 may be stale for REQ-1"
+    ]);
+  });
+
+  it("ignores links to records that are not in the project", () => {
+    const input = {
+      ...linkedFromOtherSide,
+      traceLinks: [traceLink({ id: "l9", sourceType: "workItem", sourceId: "work_1", targetType: "requirement", targetId: "req_missing" })]
+    };
+
+    expect(findClosedWorkWithoutVerification(input)).toEqual([]);
+    expect(findPossibleStaleLinks(input)).toEqual([]);
   });
 });
 

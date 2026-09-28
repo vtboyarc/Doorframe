@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { ImportResultPanel } from "@/components/ImportResultPanel";
-import { requestImport, requestPreview } from "@/lib/import-client";
-import { fileTooLargeMessage, plural, type FailureDescription } from "@/lib/import-messages";
+import { importBlockedReason, requestImport, requestPreview, type PreviewState } from "@/lib/import-client";
+import { fileTooLargeMessage, jiraExportWarning, plural, type FailureDescription } from "@/lib/import-messages";
 import {
   checkMapping,
   completeMapping,
@@ -15,6 +15,7 @@ import {
   IMPORT_TYPES,
   importTypeInfo,
   isCsvImportType,
+  jiraExportColumn,
   mappingFieldsFor,
   MAX_IMPORT_FILE_BYTES,
   sourceTypeForFile,
@@ -24,56 +25,16 @@ import {
   type ImportSourceType,
   type MappingCheck
 } from "@/lib/import-types";
-import { fieldClass, panelClass, primaryButtonClass, textLinkClass } from "@/lib/ui";
-
-type PreviewState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "ready"; preview: ImportPreviewResponse }
-  | { status: "error"; failure: FailureDescription };
+import { fieldClass, panelClass, primaryButtonClass, secondaryButtonClass, textLinkClass } from "@/lib/ui";
 
 const fileInputClass =
   "mt-2 block w-full min-w-0 text-sm text-[var(--muted)] file:mr-3 file:border file:border-[var(--line-strong)] file:bg-[var(--panel-strong)] file:px-3 file:py-1.5 file:text-sm file:text-[var(--foreground)] hover:file:border-[var(--accent-strong)] disabled:opacity-50";
-
-/** Why the Import button is disabled, or null when it is enabled. */
-function blockedReason(input: {
-  file: File | null;
-  tooLarge: boolean;
-  isCsv: boolean;
-  preview: PreviewState;
-  check: MappingCheck;
-}): string | null {
-  if (!input.file) {
-    return "Choose a file to import.";
-  }
-
-  if (input.tooLarge) {
-    return "This file is too large to import here.";
-  }
-
-  if (!input.isCsv) {
-    return null;
-  }
-
-  if (input.preview.status === "loading") {
-    return "Reading the file…";
-  }
-
-  if (input.preview.status !== "ready") {
-    return "Fix the problem with this file, or choose another file.";
-  }
-
-  if (input.check.missingRequired.length > 0) {
-    return `Map ${input.check.missingRequired.join(" and ")} to continue.`;
-  }
-
-  return input.check.canImport ? null : "Required fields need their own column.";
-}
 
 export function ImportPanel({ projectId, initialType }: { projectId: string; initialType: ImportSourceType }) {
   const router = useRouter();
   const baseId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typeSelectRef = useRef<HTMLSelectElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [sourceType, setSourceType] = useState<ImportSourceType>(initialType);
   const [file, setFile] = useState<File | null>(null);
@@ -83,6 +44,8 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
   const [failure, setFailure] = useState<FailureDescription | null>(null);
   const [result, setResult] = useState<ImportResponse | null>(null);
   const [resultKey, setResultKey] = useState(0);
+  // The file the user confirmed holds requirements despite its Jira columns.
+  const [confirmedRequirementsFile, setConfirmedRequirementsFile] = useState<File | null>(null);
 
   const typeInfo = importTypeInfo(sourceType);
   const isCsv = isCsvImportType(sourceType);
@@ -90,7 +53,17 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
   const tooLarge = file ? file.size > MAX_IMPORT_FILE_BYTES : false;
   const mappingCheck = useMemo(() => checkMapping(fields, mapping), [fields, mapping]);
   const typeHint = file ? fileTypeHint(file.name, sourceType) : null;
-  const reason = blockedReason({ file, tooLarge, isCsv, preview, check: mappingCheck });
+  const jiraColumn =
+    sourceType === "requirements-csv" && preview.status === "ready" ? jiraExportColumn(preview.preview.headers) : null;
+  const jiraConfirmed = file !== null && confirmedRequirementsFile === file;
+  const reason = importBlockedReason({
+    file,
+    tooLarge,
+    isCsv,
+    preview,
+    check: mappingCheck,
+    jiraUnconfirmed: jiraColumn !== null && !jiraConfirmed
+  });
   const canSubmit = reason === null && !isImporting;
   const settingsHref = `/projects/${encodeURIComponent(projectId)}/settings`;
 
@@ -217,10 +190,12 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
             Import type
           </label>
           <select
+            ref={typeSelectRef}
             id={`${baseId}-type`}
             value={sourceType}
             onChange={(event) => {
               setSourceType(event.target.value as ImportSourceType);
+              setConfirmedRequirementsFile(null);
               setFailure(null);
             }}
             disabled={isImporting}
@@ -277,6 +252,23 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
             {tooLarge && file ? <p className="text-[var(--danger)]">{fileTooLargeMessage(file.size)}</p> : null}
           </div>
 
+          {jiraColumn ? (
+            <JiraExportWarning
+              baseId={baseId}
+              column={jiraColumn}
+              confirmed={jiraConfirmed}
+              disabled={isImporting}
+              onSwitch={() => {
+                setSourceType("jira-csv");
+                setConfirmedRequirementsFile(null);
+                setFailure(null);
+                // The warning and its button go away, so keep keyboard focus on the type that changed.
+                typeSelectRef.current?.focus();
+              }}
+              onConfirm={(confirmed) => setConfirmedRequirementsFile(confirmed ? file : null)}
+            />
+          ) : null}
+
           {isCsv && preview.status === "ready" ? (
             <MappingFields
               baseId={baseId}
@@ -325,6 +317,49 @@ export function ImportPanel({ projectId, initialType }: { projectId: string; ini
         </form>
 
         <PreviewPanel baseId={baseId} typeLabel={typeInfo.label} isCsv={isCsv} file={file} preview={preview} />
+      </div>
+    </div>
+  );
+}
+
+/** Shown when a Requirements CSV file has Jira columns: offers Jira CSV, or an explicit confirmation. */
+function JiraExportWarning({
+  baseId,
+  column,
+  confirmed,
+  disabled,
+  onSwitch,
+  onConfirm
+}: {
+  baseId: string;
+  column: string;
+  confirmed: boolean;
+  disabled: boolean;
+  onSwitch: () => void;
+  onConfirm: (confirmed: boolean) => void;
+}) {
+  const checkboxId = `${baseId}-jira-confirm`;
+
+  return (
+    <div className="mt-4 border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm">
+      <p role="alert" className="break-words">
+        {jiraExportWarning(column)}
+      </p>
+      <button type="button" onClick={onSwitch} disabled={disabled} className={`mt-3 ${secondaryButtonClass}`}>
+        Switch to Jira CSV
+      </button>
+      <div className="mt-3 flex items-start gap-2">
+        <input
+          id={checkboxId}
+          type="checkbox"
+          checked={confirmed}
+          disabled={disabled}
+          onChange={(event) => onConfirm(event.target.checked)}
+          className="mt-0.5"
+        />
+        <label htmlFor={checkboxId} className="text-xs">
+          This file holds requirements. Import it as Requirements CSV anyway.
+        </label>
       </div>
     </div>
   );
@@ -489,6 +524,9 @@ function PreviewTable({ preview }: { preview: ImportPreviewResponse }) {
         {caption}
         {preview.totalRows > 0 ? ` · ${plural(preview.headers.length, "column")}` : ""}
       </p>
+      {preview.encodingWarning ? (
+        <p className="mt-1 break-words text-xs text-[var(--warning)]">{preview.encodingWarning}</p>
+      ) : null}
       {repeated.length > 0 ? (
         <p className="mt-1 break-words text-xs text-[var(--warning)]">
           Repeated column names: {repeated.join(", ")}. The importer reads the last column with each repeated name.

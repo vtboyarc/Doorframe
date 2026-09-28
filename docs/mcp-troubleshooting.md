@@ -2,6 +2,10 @@
 
 Use the MCP Setup page inside the Doorframe web app first. It generates the local stdio command, client config, and health-check results for the current project.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
 ## Doorframe Web App Runs, But AI Client Cannot See MCP Tools
 
 Likely causes:
@@ -100,7 +104,7 @@ Fix:
 - Import requirements, work items, and test data.
 - Re-run analysis.
 - Create baselines before asking baseline-diff or stale-trace questions.
-- Run the MCP health check.
+- Run the MCP health check, then click **Run tool checks** on the MCP Setup page.
 
 ## Summary Mode Hides More Text Than Expected
 
@@ -112,13 +116,14 @@ Use standard mode for short excerpts. Use detailed mode only when your organizat
 
 ## Audit Log Cannot Be Written
 
-Audit logging is off by default. If enabled, the MCP server must be able to write to the parent directory of the JSONL file.
+Audit logging is off by default. If enabled, the MCP server creates any missing folders in the path and appends to the JSONL file.
 
 Fix:
 
-- Use an absolute local path.
-- Confirm the parent directory exists.
+- Use an absolute local path to a file, not a folder.
+- Confirm the nearest existing parent folder is writable, or the file itself if it already exists.
 - Confirm the user running the AI client can write there.
+- On Windows, avoid `"`, `&`, `|`, `<`, `>`, `^`, `%`, `!`, `$`, and backticks in the path. The MCP Setup page leaves the audit log out of the generated command until the path is changed.
 - Do not point the audit log at a protected system directory.
 
 Audit logs are sanitized metadata only. Do not configure audit logging to capture raw project text.

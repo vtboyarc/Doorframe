@@ -55,6 +55,35 @@ describe("parseRequirementsCsv", () => {
     expect(result.errors.join("\n")).toContain("duplicate requirement ID REQ-1");
   });
 
+  it("does not import a Jira export as requirements through inferred columns", () => {
+    const result = parseRequirementsCsv(
+      "Summary,Issue key,Issue id,Parent id,Issue Type,Status,Description,Custom field (Requirement IDs)\nImplement panel,FTG-101,10001,,Story,Done,Shows status,REQ-001\n",
+      {}
+    );
+
+    expect(result.records).toEqual([]);
+    expect(result.errors).toEqual(["Missing required requirements CSV column for requirement ID."]);
+  });
+
+  it("imports the Falcon requirement baselines from inferred columns", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const read = (name: string) =>
+      readFile(new URL(`../../../examples/falcon-telemetry-gateway/${name}`, import.meta.url), "utf8");
+    const baselineA = parseRequirementsCsv(await read("sample-requirements-baseline-a.csv"), {});
+    const baselineB = parseRequirementsCsv(await read("sample-requirements-baseline-b.csv"), {});
+
+    expect(baselineA.errors).toEqual([]);
+    expect(baselineA.records).toHaveLength(42);
+    expect(baselineA.records[0]).toMatchObject({
+      externalId: "REQ-001",
+      title: "Sensor status display",
+      status: "Approved",
+      verificationMethod: "Test"
+    });
+    expect(baselineB.errors).toEqual([]);
+    expect(baselineB.records).toHaveLength(42);
+  });
+
   it("returns a helpful error when required columns are missing", () => {
     const result = parseRequirementsCsv("Name,Description\nLogin,The system shall log in users.\n", {});
 
@@ -119,5 +148,61 @@ describe("parseJUnitXml", () => {
 
     expect(result.records.map((record) => record.status)).toEqual(["skipped", "errored"]);
     expect(result.records[1]?.failureMessage).toBe("runner error");
+  });
+
+  it("treats empty skipped, failure, and error elements as results, not passes", () => {
+    // jest-junit, mocha-junit-reporter, and Surefire write bare elements like these.
+    const xml = `<testsuite name="doorframe">
+      <testcase classname="gateway logs errors REQ-1" name="gateway logs errors REQ-1"><skipped/></testcase>
+      <testcase classname="gateway status REQ-2" name="gateway status REQ-2"><failure/></testcase>
+      <testcase classname="gateway alerts REQ-3" name="gateway alerts REQ-3"><error/></testcase>
+      <testcase classname="gateway frames REQ-4" name="gateway frames REQ-4"><failure></failure></testcase>
+      <testcase classname="gateway ports REQ-5" name="gateway ports REQ-5"><skipped></skipped></testcase>
+      <testcase classname="gateway ok REQ-6" name="gateway ok REQ-6"></testcase>
+    </testsuite>`;
+
+    const result = parseJUnitXml(xml);
+
+    expect(result.errors).toEqual([]);
+    expect(result.records.map((record) => record.status)).toEqual([
+      "skipped",
+      "failed",
+      "errored",
+      "failed",
+      "skipped",
+      "passed"
+    ]);
+    expect(result.records[1]?.failureMessage).toBeUndefined();
+  });
+
+  it("keeps a failure whose body is falsy once parsed, such as 0", () => {
+    const xml = `<testsuite name="doorframe">
+      <testcase classname="Counters" name="REQ-7 counts frames"><failure>0</failure></testcase>
+      <testcase classname="Counters" name="REQ-8 counts errors"><error>0</error></testcase>
+    </testsuite>`;
+
+    const result = parseJUnitXml(xml);
+
+    expect(result.records.map((record) => record.status)).toEqual(["failed", "errored"]);
+    expect(result.records[0]?.failureMessage).toBe("0");
+    expect(result.records[1]?.failureMessage).toBe("0");
+  });
+
+  it("keeps the statuses of the Falcon sample report", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const xml = await readFile(
+      new URL("../../../examples/falcon-telemetry-gateway/sample-junit.xml", import.meta.url),
+      "utf8"
+    );
+
+    const result = parseJUnitXml(xml);
+    const counts = result.records.reduce<Record<string, number>>((totals, record) => {
+      totals[record.status] = (totals[record.status] ?? 0) + 1;
+      return totals;
+    }, {});
+
+    expect(result.errors).toEqual([]);
+    expect(result.records).toHaveLength(58);
+    expect(counts).toEqual({ passed: 54, failed: 2, skipped: 1, errored: 1 });
   });
 });

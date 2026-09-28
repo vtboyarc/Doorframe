@@ -1,5 +1,5 @@
 import { type ProjectData } from "@doorframe/core";
-import { matrixRows, summarizeReport } from "./shared";
+import { matrixRows, summarizeReportFromRows } from "./shared";
 
 function cell(value: string): string {
   return value.replace(/\|/g, "\\|").replace(/\n/g, " ").trim();
@@ -8,7 +8,7 @@ function cell(value: string): string {
 /** Render a project's traceability data as a Markdown report. */
 export function generateMarkdownTraceabilityReport(data: ProjectData): string {
   const matrix = matrixRows(data);
-  const summary = summarizeReport(data);
+  const summary = summarizeReportFromRows(data, matrix);
   const lines: string[] = [];
 
   lines.push("# Doorframe Traceability Report");

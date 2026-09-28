@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { diffBaselines, snapshotFromProjectData, type ProjectSnapshot } from "@doorframe/core";
 import { generateBaselineDiffHtmlReport } from "@doorframe/reporting";
 import { auditActor } from "@/lib/audit-actor";
-import { baselineDiffDetails, baselineDiffReport } from "@/lib/baseline-details";
+import { baselineDiffDetails, baselineDiffReport, baselineRecordChanges } from "@/lib/baseline-details";
 import { getBaseline, getProject, getProjectData, recordAuditEvent } from "@/lib/db";
 import { reportFilename } from "@/lib/report-filename";
 
 export const runtime = "nodejs";
 
-const CURRENT_LABEL = "Current project data";
+/** Matches the "Current state" option on the Baselines page. */
+const CURRENT_LABEL = "Current state";
 
 /**
  * Compare baseline `a` with baseline `b`, or with the current project data when `b` is omitted or
@@ -57,9 +58,15 @@ export const GET = async (request: Request, context: { params: Promise<{ project
     bLabel = b.label;
   }
 
+  const diff = diffBaselines(a.snapshot, bSnapshot);
+  const details = baselineDiffDetails(a.snapshot, bSnapshot);
+
   if (format === "html") {
     const download = url.searchParams.get("download") === "1";
-    const html = generateBaselineDiffHtmlReport(baselineDiffReport(a.snapshot, bSnapshot, a.label, bLabel));
+    const html = generateBaselineDiffHtmlReport(baselineDiffReport(a.snapshot, bSnapshot, a.label, bLabel), {
+      projectName: project.name,
+      recordChanges: baselineRecordChanges(diff, details)
+    });
     recordAuditEvent({
       projectId,
       action: "report.generated",
@@ -74,8 +81,5 @@ export const GET = async (request: Request, context: { params: Promise<{ project
     return new NextResponse(html, { headers });
   }
 
-  return NextResponse.json({
-    ...diffBaselines(a.snapshot, bSnapshot),
-    details: baselineDiffDetails(a.snapshot, bSnapshot)
-  });
+  return NextResponse.json({ ...diff, details });
 };

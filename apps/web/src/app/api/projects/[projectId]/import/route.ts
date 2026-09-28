@@ -1,4 +1,4 @@
-import { detectNonCommaDelimiter, readCsvHeaders, readCsvPreview } from "@doorframe/parsers";
+import { detectCsvDelimiter, readCsvPreview, type CsvPreview } from "@doorframe/parsers";
 import { NextResponse } from "next/server";
 import { addImportBatch, getFindings, getProject, getRuleset, recordAuditEvent, runImportTransaction } from "@/lib/db";
 import { auditActor } from "@/lib/audit-actor";
@@ -21,6 +21,7 @@ import {
   importTypeInfo,
   isCsvImportType,
   isImportSourceType,
+  jiraExportColumn,
   MAX_IMPORT_FILE_BYTES,
   type ImportErrorResponse,
   type ImportResponse,
@@ -37,13 +38,23 @@ function errorResponse(status: number, body: ImportErrorResponse) {
   return NextResponse.json(body, { status });
 }
 
-/** Data rows in a CSV, or undefined when the file cannot be read as CSV. */
-function csvDataRows(text: string): number | undefined {
+/** Headers and data row count of a CSV, or undefined when the file cannot be read as CSV. */
+function csvShape(text: string): CsvPreview | undefined {
   try {
-    return readCsvPreview(text, 0).totalRows;
+    return readCsvPreview(text, 0);
   } catch {
     return undefined;
   }
+}
+
+/** Why an import saved nothing, for a file that was read without a parse failure. */
+function describeEmptyFile(sourceType: ImportSourceType, parserErrors: string[], text: string) {
+  if (!isCsvImportType(sourceType)) {
+    return describeEmptyImport(sourceType, parserErrors);
+  }
+
+  const shape = csvShape(text);
+  return describeEmptyImport(sourceType, parserErrors, shape?.totalRows, shape ? jiraExportColumn(shape.headers) : null);
 }
 
 function csvDelimiterProblem(sourceType: ImportSourceType, text: string): string | null {
@@ -51,13 +62,9 @@ function csvDelimiterProblem(sourceType: ImportSourceType, text: string): string
     return null;
   }
 
-  try {
-    const delimiter = detectNonCommaDelimiter(readCsvHeaders(text));
-    return delimiter ? delimiterMessage(delimiter) : null;
-  } catch {
-    // Malformed CSV is reported by the parser with a plain-language message.
-    return null;
-  }
+  // A raw scan of the header row, so quoted cells in a semicolon file cannot hide the separator.
+  const delimiter = detectCsvDelimiter(text);
+  return delimiter ? delimiterMessage(delimiter) : null;
 }
 
 function auditSummary(status: ImportStatus, recordCount: number, filename: string, sourceType: ImportSourceType): string {
@@ -100,7 +107,12 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
   const buffer = Buffer.from(await file.arrayBuffer());
   // ReqIFZ is a zip archive and is read from the buffer; everything else is text.
-  const decoded = sourceType === "reqifz" ? { text: "", warning: undefined } : decodeUpload(buffer);
+  const decoded = sourceType === "reqifz" ? { text: "", warning: undefined, error: undefined } : decodeUpload(buffer);
+  // NUL characters in a CSV end up inside IDs and cells. The XML parsers read past a stray NUL
+  // (for example in captured test output), so JUnit and ReqIF files import as before.
+  if (decoded.error && isCsvImportType(sourceType)) {
+    return errorResponse(422, { error: decoded.error });
+  }
   const text = decoded.text;
 
   const delimiterProblem = csvDelimiterProblem(sourceType, text);
@@ -131,11 +143,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         parsed && parsed.records.length > 0 ? saveParsedImport(projectId, parsed) : null;
       const recordCount = saved?.recordCount ?? 0;
       const status: ImportStatus = failure ? "failed" : recordCount > 0 ? "imported" : "empty";
-      const explanation =
-        failure ??
-        (status === "empty"
-          ? describeEmptyImport(sourceType, rawErrors, isCsvImportType(sourceType) ? csvDataRows(text) : undefined)
-          : null);
+      const explanation = failure ?? (status === "empty" ? describeEmptyFile(sourceType, rawErrors, text) : null);
       // When nothing was imported, the explanation already covers missing columns.
       const messages = [
         ...(decoded.warning ? [decoded.warning] : []),

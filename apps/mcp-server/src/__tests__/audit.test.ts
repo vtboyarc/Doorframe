@@ -1,8 +1,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
+import { openReadOnlyProjectDatabase } from "@doorframe/storage";
 import { sanitizeParameters, writeAuditLogEntry } from "../audit";
+import { createDoorframeMcpServer } from "../server";
+import { createDemoProjectDb } from "./fixtures";
 
 describe("Doorframe MCP audit logging", () => {
   it("writes sanitized JSONL metadata without raw query text", () => {
@@ -47,5 +52,27 @@ describe("Doorframe MCP audit logging", () => {
     expect(entry.parameters.requirementId).toBe("REQ-001");
     expect(entry.parameters.query).toEqual({ provided: true, length: "raw requirement phrase".length });
     expect(lines[0]).not.toContain("raw requirement phrase");
+  });
+
+  it("records only the project id and name for a registered tool call", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "doorframe-mcp-audit-"));
+    const auditLogPath = path.join(dir, "audit.jsonl");
+    const server = createDoorframeMcpServer(openReadOnlyProjectDatabase(createDemoProjectDb()), { auditLogPath });
+    const client = new Client({ name: "doorframe-test-client", version: "0.0.0" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+    try {
+      await client.callTool({ name: "get_project_summary", arguments: {} });
+    } finally {
+      await client.close();
+    }
+
+    const entry = JSON.parse(fs.readFileSync(auditLogPath, "utf8").trim().split("\n")[0]) as {
+      project: Record<string, unknown>;
+      toolName: string;
+    };
+    expect(entry.toolName).toBe("get_project_summary");
+    expect(Object.keys(entry.project).sort()).toEqual(["id", "name"]);
   });
 });

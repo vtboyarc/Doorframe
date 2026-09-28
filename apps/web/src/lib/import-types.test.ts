@@ -7,6 +7,7 @@ import {
   fileTypeHint,
   formatFileSize,
   isImportSourceType,
+  jiraExportColumn,
   JIRA_MAPPING_FIELDS,
   REQUIREMENT_MAPPING_FIELDS,
   sourceTypeForFile
@@ -77,5 +78,25 @@ describe("small helpers", () => {
     expect(isImportSourceType(["jira-csv"])).toBe(false);
     expect(entityTypeForSource("junit-xml")).toBe("testCase");
     expect(entityTypeForSource("demo")).toBeNull();
+  });
+});
+
+describe("jiraExportColumn", () => {
+  it("finds the Issue key column of a Jira export, however it is spelled", () => {
+    expect(
+      jiraExportColumn(["Summary", "Issue key", "Issue id", "Parent id", "Issue Type", "Status", "Description"])
+    ).toBe("Issue key");
+    expect(jiraExportColumn(["ISSUE_KEY", "Summary"])).toBe("ISSUE_KEY");
+  });
+
+  it("falls back to other Jira-only columns", () => {
+    expect(jiraExportColumn(["Summary", "Issue id", "Description"])).toBe("Issue id");
+    expect(jiraExportColumn(["Key", "Summary", "Issue Type"])).toBe("Issue Type");
+  });
+
+  it("returns null for requirements files", () => {
+    expect(jiraExportColumn(["ID", "Title", "Text", "Status", "Type", "Priority", "Verification Method", "Parent ID"])).toBeNull();
+    expect(jiraExportColumn(["Requirement ID", "Description", "Issue notes"])).toBeNull();
+    expect(jiraExportColumn([])).toBeNull();
   });
 });

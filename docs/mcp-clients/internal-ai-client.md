@@ -18,3 +18,7 @@ The internal client is responsible for model access, chat UI, authentication, pr
 Use summary mode or `--hide-raw-text` when the client should receive IDs, titles, counts, categories, and summaries without raw requirement text.
 
 Only connect Doorframe MCP to project data if your organization has approved the AI client and model for that data.
+
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”

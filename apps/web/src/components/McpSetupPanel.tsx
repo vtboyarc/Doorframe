@@ -1,9 +1,15 @@
 "use client";
 
-import { Clipboard, ClipboardCheck, ClipboardX, ExternalLink, RefreshCw, ShieldAlert } from "lucide-react";
+import { Clipboard, ClipboardCheck, ClipboardX, ExternalLink, Play, RefreshCw, ShieldAlert } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { McpHealthCheckResult, McpHealthStatus } from "@/lib/mcp-health";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type {
+  McpHealthCheckItem,
+  McpHealthCheckResult,
+  McpHealthStatus,
+  McpToolCheckResult,
+  McpToolCheckSettings
+} from "@/lib/mcp-health";
 import {
   buildMcpDoctorCommandText,
   clampMaxResults,
@@ -15,6 +21,7 @@ import {
   mcpDataModeOptions,
   pathStyle,
   starterQuestions,
+  unsafeAuditLogPathCharacters,
   type McpClientId,
   type McpDataMode,
   type McpHostPlatform,
@@ -167,6 +174,48 @@ function detectBrowserPlatform(): McpHostPlatform {
   return /windows/i.test(navigator.userAgent) ? "windows" : "posix";
 }
 
+function CheckList({ checks }: { checks: McpHealthCheckItem[] }) {
+  return (
+    <ul className="mt-4 grid gap-2">
+      {checks.map((item) => (
+        <li key={item.id} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 border border-[var(--line)] p-3 text-sm">
+          <span
+            className={`inline-flex h-fit w-14 justify-center border px-2 py-0.5 text-xs font-semibold uppercase ${statusClass[item.status]}`}
+          >
+            {item.status}
+          </span>
+          <div className="min-w-0">
+            <div className="font-medium">{item.label}</div>
+            <div className="mt-0.5 text-[var(--muted)] [overflow-wrap:anywhere]">{item.detail}</div>
+            {item.fix ? <div className="mt-1 [overflow-wrap:anywhere]">Fix: {item.fix}</div> : null}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+type ToolCheckState =
+  | { status: "idle" }
+  | { status: "running"; previous?: McpToolCheckResult }
+  | { status: "done"; result: McpToolCheckResult }
+  | { status: "error"; message: string; previous?: McpToolCheckResult };
+
+async function fetchToolChecks(projectId: string, settings: McpToolCheckSettings): Promise<McpToolCheckResult> {
+  const query = new URLSearchParams({
+    mode: settings.mode,
+    maxResults: String(settings.maxResults),
+    hideRawText: settings.hideRawText ? "true" : "false"
+  });
+  const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/mcp-health?${query}`, { cache: "no-store" });
+  const body = (await response.json().catch(() => null)) as { toolChecks?: McpToolCheckResult; error?: string } | null;
+  if (!response.ok || !body?.toolChecks) {
+    throw new Error(body?.error ?? `The server answered with status ${response.status}.`);
+  }
+
+  return body.toolChecks;
+}
+
 export function McpSetupPanel({
   projectId,
   projectPath,
@@ -191,6 +240,9 @@ export function McpSetupPanel({
   const [platform, setPlatform] = useState<McpHostPlatform>(initialSettings.platform ?? "posix");
   // The OS the current checks were run for; auto-detection does not make them stale.
   const [checkedPlatform, setCheckedPlatform] = useState<McpHostPlatform>(initialSettings.platform ?? "posix");
+  // MCP tool checks run only when asked; toolRequest ignores answers from superseded runs.
+  const [toolChecks, setToolChecks] = useState<ToolCheckState>({ status: "idle" });
+  const toolRequest = useRef(0);
   const maxResults = clampMaxResults(maxResultsInput);
 
   // The browser usually runs on the machine that will launch the MCP server,
@@ -238,24 +290,60 @@ export function McpSetupPanel({
   const databaseStyle = pathStyle(projectPath);
   const platformMismatch = !isDockerPath && databaseStyle !== "unknown" && databaseStyle !== platform;
   const auditPathMissing = generated.warnings.includes("audit-log-path-missing");
+  const auditPathInvalid = generated.warnings.includes("audit-log-path-invalid");
+  const auditPathError = auditPathMissing || auditPathInvalid;
+  const unsafeAuditCharacters = auditPathInvalid ? unsafeAuditLogPathCharacters(auditLogPath.trim(), platform) : [];
   const dataOptionsSummary = [
     `${mcpDataModeOptions.find((option) => option.id === mode)?.label ?? mode} mode`,
     `max ${maxResults} results`,
     hideRawText ? "raw text hidden" : null,
-    auditLogEnabled ? (auditPathMissing ? "audit log: path needed" : "audit log on") : null
+    auditLogEnabled ? (auditPathMissing ? "audit log: path needed" : auditPathInvalid ? "audit log: path not usable" : "audit log on") : null
   ]
     .filter(Boolean)
     .join(" · ");
+  // The page-render checks cover the database, install, and audit log path, so only those
+  // options (and the client OS) make them stale. Data options affect the tool checks.
   const checkIsStale =
-    mode !== initialSettings.mode ||
-    maxResults !== initialSettings.maxResults ||
-    hideRawText !== initialSettings.hideRawText ||
     auditLogEnabled !== initialSettings.auditLogEnabled ||
     auditLogPath.trim() !== (initialSettings.auditLogPath ?? "").trim() ||
     platform !== checkedPlatform;
+
+  const toolResult =
+    toolChecks.status === "done" ? toolChecks.result : toolChecks.status === "idle" ? undefined : toolChecks.previous;
+  const toolChecksRunning = toolChecks.status === "running";
+  const toolChecksStale =
+    toolResult !== undefined &&
+    (toolResult.settings.mode !== mode ||
+      toolResult.settings.maxResults !== maxResults ||
+      toolResult.settings.hideRawText !== hideRawText);
+
+  async function runToolChecks() {
+    if (toolChecksRunning) {
+      return;
+    }
+
+    const requestId = ++toolRequest.current;
+    setToolChecks({ status: "running", previous: toolResult });
+    try {
+      const result = await fetchToolChecks(projectId, { mode, maxResults, hideRawText });
+      if (requestId === toolRequest.current) {
+        setToolChecks({ status: "done", result });
+      }
+    } catch (error) {
+      if (requestId === toolRequest.current) {
+        setToolChecks({
+          status: "error",
+          message: error instanceof Error ? error.message : "The tool checks could not run.",
+          previous: toolResult
+        });
+      }
+    }
+  }
+
+  const ready = healthCheck.ready && (toolResult === undefined || toolChecksStale || toolResult.ready);
   const readiness = isDockerPath
     ? { label: "Setup limited in Docker", className: statusClass.warn }
-    : healthCheck.ready
+    : ready
       ? { label: "Project data ready", className: statusClass.pass }
       : { label: "Needs attention", className: statusClass.fail };
 
@@ -376,7 +464,8 @@ export function McpSetupPanel({
                   aria-describedby="mcp-max-results-help"
                 />
                 <p id="mcp-max-results-help" className="mt-1 text-xs text-[var(--muted)]">
-                  Caps list answers. Between 1 and {MAX_RESULTS_LIMIT}; default 25.
+                  Caps how many items the MCP list tools return in one answer, such as findings, gaps, and search results.
+                  Between 1 and {MAX_RESULTS_LIMIT}; default 25.
                 </p>
               </div>
               <label className="flex items-start gap-3 border border-[var(--line-strong)] p-3 text-sm">
@@ -413,18 +502,30 @@ export function McpSetupPanel({
               </label>
               <input
                 id="mcp-audit-path"
-                className={`${fieldClass} disabled:cursor-not-allowed disabled:opacity-50 ${auditPathMissing ? "border-[var(--danger)]" : ""}`}
+                className={`${fieldClass} disabled:cursor-not-allowed disabled:opacity-50 ${auditPathError ? "border-[var(--danger)]" : ""}`}
                 type="text"
                 value={auditLogPath}
                 placeholder={platform === "windows" ? "C:\\doorframe\\mcp-audit.jsonl" : "/absolute/path/to/doorframe-mcp-audit.jsonl"}
                 disabled={!auditLogEnabled}
-                aria-invalid={auditPathMissing ? true : undefined}
-                aria-describedby={auditPathMissing ? "mcp-audit-path-error" : undefined}
+                aria-invalid={auditPathError ? true : undefined}
+                aria-describedby={auditPathError ? "mcp-audit-path-error" : undefined}
                 onChange={(event) => setAuditLogPath(event.target.value)}
               />
               {auditPathMissing ? (
                 <p id="mcp-audit-path-error" className="text-sm text-[var(--danger)]">
                   Enter an absolute file path. Audit logging is not in the config until you do.
+                </p>
+              ) : null}
+              {auditPathInvalid ? (
+                <p id="mcp-audit-path-error" className="text-sm text-[var(--danger)] [overflow-wrap:anywhere]">
+                  This path contains characters that cannot go into a {platformLabels[platform]} command:{" "}
+                  {unsafeAuditCharacters.map((character, index) => (
+                    <span key={character}>
+                      {index > 0 ? ", " : ""}
+                      {character.length === 1 ? <code>{character}</code> : character}
+                    </span>
+                  ))}
+                  . Choose another path. Audit logging is not in the config until you do.
                 </p>
               ) : null}
             </div>
@@ -529,9 +630,11 @@ export function McpSetupPanel({
                 <CopyButton text={generated.configText} label={guide.kind === "command" ? "Copy command" : "Copy config"} />
               </div>
               <p className="mt-2 text-xs text-[var(--muted)]">Data options: {dataOptionsSummary}</p>
-              {auditPathMissing ? (
+              {auditPathError ? (
                 <p className="mt-2 border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-sm text-[var(--danger)]">
-                  Audit logging is checked but has no file path, so this config does not write an audit log.
+                  {auditPathMissing
+                    ? "Audit logging is checked but has no file path, so this config does not write an audit log."
+                    : "The audit log path cannot be used in this command, so this config does not write an audit log."}
                 </p>
               ) : null}
               {platformMismatch ? (
@@ -595,22 +698,57 @@ export function McpSetupPanel({
           <p className="mt-3 text-sm text-[var(--warning)]">Options changed since these checks ran. Re-run to update them.</p>
         ) : null}
 
-        <ul className="mt-4 grid gap-2">
-          {healthCheck.checks.map((item) => (
-            <li key={item.id} className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 border border-[var(--line)] p-3 text-sm">
-              <span
-                className={`inline-flex h-fit w-14 justify-center border px-2 py-0.5 text-xs font-semibold uppercase ${statusClass[item.status]}`}
-              >
-                {item.status}
-              </span>
-              <div className="min-w-0">
-                <div className="font-medium">{item.label}</div>
-                <div className="mt-0.5 text-[var(--muted)] [overflow-wrap:anywhere]">{item.detail}</div>
-                {item.fix ? <div className="mt-1 [overflow-wrap:anywhere]">Fix: {item.fix}</div> : null}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <CheckList checks={healthCheck.checks} />
+
+        <div className="mt-4 border border-[var(--line)] p-4 text-sm" aria-busy={toolChecksRunning}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="font-medium">MCP tool checks</div>
+              <p className="mt-0.5 text-[var(--muted)]">
+                Calls read-only MCP tools on this project with the data options above: project summary, review brief, stale
+                trace candidates (when the project has two baselines), and requirement search in summary mode. On large
+                projects this can take a minute, and other Doorframe pages may respond slowly until it finishes.
+              </p>
+            </div>
+            {/* aria-disabled rather than disabled, so keyboard focus stays on the button while the checks run. */}
+            <button
+              type="button"
+              className={`${secondaryButtonClass} aria-disabled:cursor-wait aria-disabled:opacity-70`}
+              onClick={runToolChecks}
+              aria-disabled={toolChecksRunning || undefined}
+            >
+              {toolChecksRunning ? (
+                <RefreshCw aria-hidden="true" size={16} className="animate-spin" />
+              ) : (
+                <Play aria-hidden="true" size={16} />
+              )}
+              {toolChecksRunning ? "Running tool checks…" : toolResult ? "Run tool checks again" : "Run tool checks"}
+            </button>
+          </div>
+          <p className="sr-only" aria-live="polite">
+            {toolChecksRunning
+              ? "Running MCP tool checks."
+              : toolChecks.status === "done"
+                ? `MCP tool checks finished: ${toolChecks.result.ready ? "no failures" : "some checks failed"}.`
+                : ""}
+          </p>
+          {toolChecksRunning ? (
+            <p className="mt-3 text-[var(--muted)]">Running the MCP tools on the Doorframe server…</p>
+          ) : null}
+          {toolChecks.status === "error" ? (
+            <p role="alert" className="mt-3 border border-[var(--danger)] bg-[var(--danger-soft)] p-3 text-[var(--danger)] [overflow-wrap:anywhere]">
+              The tool checks could not run: {toolChecks.message}
+            </p>
+          ) : null}
+          {toolChecksStale && !toolChecksRunning ? (
+            <p className="mt-3 text-[var(--warning)]">Data options changed since the tool checks ran. Run them again to update.</p>
+          ) : null}
+          {toolResult ? (
+            <div className={toolChecksRunning ? "opacity-60" : undefined}>
+              <CheckList checks={toolResult.checks} />
+            </div>
+          ) : null}
+        </div>
 
         {guide.kind !== "unsupported" ? (
           <div className="mt-4 border border-[var(--line)] bg-[var(--background)] p-4 text-sm">

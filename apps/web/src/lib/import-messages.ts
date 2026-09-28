@@ -104,6 +104,16 @@ export function delimiterMessage(kind: "semicolon" | "tab"): string {
   return `This file appears to use ${separator} between columns. Save it as comma-separated CSV (UTF-8) and try again.`;
 }
 
+/** Shown on the imports page when a Requirements CSV file has a Jira column such as "Issue key". */
+export function jiraExportWarning(column: string): string {
+  return `This file looks like a Jira export: it has an “${column}” column. Imported as Requirements CSV, each Jira issue would be saved as a requirement. Jira work items belong in a Jira CSV import.`;
+}
+
+/** Why an empty Requirements CSV import of a Jira-shaped file saved nothing. */
+export function jiraExportEmptyMessage(column: string): string {
+  return `No requirements were imported. This file looks like a Jira export (it has an “${column}” column). Choose Jira CSV as the import type and import it again.`;
+}
+
 export function fileTooLargeMessage(bytes?: number): string {
   const size = bytes ? `This file is ${formatFileSize(bytes)}. ` : "";
   return `${size}The web app imports files up to ${formatFileSize(MAX_IMPORT_FILE_BYTES)}. Split the export, or generate the report from very large exports with the Doorframe CLI (doorframe analyze).`;
@@ -111,12 +121,14 @@ export function fileTooLargeMessage(bytes?: number): string {
 
 /**
  * Explain an import that finished without saving any record. `csvDataRows` is
- * the number of data rows in a CSV file, when known.
+ * the number of data rows in a CSV file, when known. `jiraColumn` is a Jira
+ * column such as "Issue key" found in a Requirements CSV file, when there is one.
  */
 export function describeEmptyImport(
   sourceType: ImportSourceType,
   parserErrors: string[],
-  csvDataRows?: number
+  csvDataRows?: number,
+  jiraColumn?: string | null
 ): FailureDescription {
   const xmlError = parserErrors.find((error) => /ReqIF XML parse failed/i.test(error));
 
@@ -138,6 +150,10 @@ export function describeEmptyImport(
     case "jira-csv": {
       if (csvDataRows === 0) {
         return { message: NO_CSV_ROWS_MESSAGE };
+      }
+
+      if (sourceType === "requirements-csv" && jiraColumn) {
+        return { message: jiraExportEmptyMessage(jiraColumn) };
       }
 
       const unmapped = parserErrors

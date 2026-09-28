@@ -6,8 +6,10 @@ import {
   countCreatedAndUpdated,
   missingExternalIds,
   parseClientMapping,
+  parseRemoveRecordsRequest,
   summarizeMissing
 } from "./import-records";
+import { MAX_REMOVABLE_RECORDS } from "./import-types";
 
 describe("countCreatedAndUpdated", () => {
   it("splits imported IDs into new and updated records", () => {
@@ -135,5 +137,38 @@ describe("blankUnmappedJiraFields", () => {
       assignee: undefined,
       requirementIds: ["REQ-001"]
     });
+  });
+});
+
+describe("parseRemoveRecordsRequest", () => {
+  it("accepts IDs longer than 500 characters, such as parameterized JUnit test IDs", () => {
+    const fields = Array.from({ length: 30 }, (_, index) => `field${index}=value${index}`).join(",");
+    const longId = `com.example.gateway.telemetry.ParameterizedFrameDecoderTests.testDecodesTelemetryFrame[${fields}]`;
+
+    expect(longId.length).toBeGreaterThan(500);
+    expect(parseRemoveRecordsRequest({ entityType: "testCase", externalIds: [longId, "short.test"] })).toEqual({
+      entityType: "testCase",
+      externalIds: [longId, "short.test"]
+    });
+  });
+
+  it("keeps IDs exactly as sent so they match the stored IDs", () => {
+    expect(parseRemoveRecordsRequest({ entityType: "requirement", externalIds: [" REQ-1 "] })?.externalIds).toEqual([
+      " REQ-1 "
+    ]);
+  });
+
+  it("rejects malformed requests", () => {
+    expect(parseRemoveRecordsRequest(null)).toBeNull();
+    expect(parseRemoveRecordsRequest({ entityType: "baseline", externalIds: ["REQ-1"] })).toBeNull();
+    expect(parseRemoveRecordsRequest({ entityType: "requirement", externalIds: [] })).toBeNull();
+    expect(parseRemoveRecordsRequest({ entityType: "requirement", externalIds: [""] })).toBeNull();
+    expect(parseRemoveRecordsRequest({ entityType: "requirement", externalIds: [42] })).toBeNull();
+    expect(
+      parseRemoveRecordsRequest({
+        entityType: "requirement",
+        externalIds: Array.from({ length: MAX_REMOVABLE_RECORDS + 1 }, (_, index) => `REQ-${index}`)
+      })
+    ).toBeNull();
   });
 });

@@ -19,6 +19,8 @@ Doorframe MCP is narrower:
 
 ## Boundary
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
 Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
 
 Use careful language: approved AI client, approved data, organization-approved environment, local/internal deployment, read-only local context, and controlled traceability context.

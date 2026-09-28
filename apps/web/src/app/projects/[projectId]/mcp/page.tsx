@@ -6,8 +6,8 @@ import { runMcpHealthCheck } from "@/lib/mcp-health";
 import {
   clampMaxResults,
   mcpClientOptions,
+  parseMcpDataMode,
   type McpClientId,
-  type McpDataMode,
   type McpHostPlatform,
   type McpSetupSettings
 } from "@/lib/mcp-setup";
@@ -23,10 +23,6 @@ function firstParam(searchParams: SearchParams, key: string): string | undefined
 
 function parseClientId(value: string | undefined): McpClientId {
   return mcpClientOptions.some((client) => client.id === value) ? (value as McpClientId) : "claude-desktop";
-}
-
-function parseMode(value: string | undefined): McpDataMode {
-  return value === "summary" || value === "standard" || value === "detailed" ? value : "standard";
 }
 
 function parsePlatform(value: string | undefined): McpHostPlatform | undefined {
@@ -59,7 +55,7 @@ export default async function McpSetupPage({
     clientId: parseClientId(firstParam(resolvedSearchParams, "client")),
     projectPath,
     projectId,
-    mode: parseMode(firstParam(resolvedSearchParams, "mode")),
+    mode: parseMcpDataMode(firstParam(resolvedSearchParams, "mode")),
     maxResults: clampMaxResults(firstParam(resolvedSearchParams, "maxResults")),
     hideRawText: firstParam(resolvedSearchParams, "hideRawText") === "true",
     auditLogEnabled: firstParam(resolvedSearchParams, "auditLogEnabled") === "true",
@@ -72,13 +68,12 @@ export default async function McpSetupPage({
       process.env.DOORFRAME_CLI_VERSION?.trim() ||
       (process.env.NODE_ENV === "production" ? doorframeVersion() : undefined)
   };
+  // Only fast checks run here. The MCP tool checks are slow on large projects, so the panel
+  // runs them on request through /api/projects/[projectId]/mcp-health.
   const healthCheck = runMcpHealthCheck({
     projectPath,
     projectData: data,
     baselines,
-    mode: initialSettings.mode,
-    maxResults: initialSettings.maxResults,
-    hideRawText: initialSettings.hideRawText,
     auditLogEnabled: initialSettings.auditLogEnabled,
     auditLogPath: initialSettings.auditLogPath,
     platform: initialSettings.platform

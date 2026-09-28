@@ -41,7 +41,8 @@ export function readProjectSummaryResource(projectDb: ProjectDb): ReadResourceRe
 }
 
 export function readProjectFindingsResource(projectDb: ProjectDb): ReadResourceResult {
-  const findings = listFindingsData(projectDb, { limit: 50 });
+  // This resource keeps a fixed cap of 50 findings; --max-results caps the list_findings tool.
+  const findings = listFindingsData(projectDb, { limit: 50 }, { maxResults: 50 });
   return jsonResource(projectFindingsUri, {
     ...findings,
     readableText: formatFindingsText(findings)

@@ -86,6 +86,10 @@ Doorframe itself does not include an AI model and does not call OpenAI, Anthropi
 
 Run Doorframe, open a project in your browser, go to **MCP Setup**, pick an approved AI client, run the health check, and copy the generated local stdio config.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
 ## Local, internal, and air-gapped use
 
 Doorframe is designed to run locally by default. It has no telemetry and does not call external AI providers.
@@ -181,6 +185,8 @@ Doorframe includes an optional read-only stdio MCP server for local Doorframe SQ
 Run Doorframe, open it in your browser, and configure MCP from the project settings. The MCP Setup page generates the exact command your AI client needs to launch the local Doorframe MCP server.
 
 The MCP server is not an AI client and does not call AI providers. It exposes scoped local context such as traceability gaps, changed requirements, stale trace candidates, and review-brief facts. Data returned by MCP may enter the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
 
 Advanced users can still run the generated command manually, for example `npx -y doorframe@0.1.17 mcp --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25`. To validate the same stdio connection from a terminal, run `npx -y doorframe@0.1.17 mcp doctor --project /absolute/path/to/doorframe.sqlite --project-id project_123`.
 

@@ -183,10 +183,12 @@ This matches what the MCP Setup page generates. If Doorframe is installed global
 - `--mode summary` returns IDs, titles, counts, categories, and summaries. It hides raw requirement text, work item descriptions, and test failure messages.
 - `--mode standard` is the default. It returns short excerpts when useful and caps result sets.
 - `--mode detailed` allows full requirement text in detail tools while still using narrow read-only tools.
-- `--max-results <number>` sets the global result cap for supported tools.
+- `--max-results <number>` sets the global result cap for supported tools, from 1 to 100. Larger values act as 100.
 - `--hide-raw-text` hides raw requirement text even when another mode would return excerpts or detail text.
 
 Data minimization applies to `search_requirements`, `get_requirement_detail`, `list_changed_requirements`, `get_requirement_change_detail`, `get_stale_trace_candidates`, and `get_review_brief`.
+
+`--max-results` caps the lists returned by `search_requirements`, `list_findings`, `get_traceability_gaps`, `get_review_risk_summary`, `find_orphan_items`, `list_changed_requirements`, `get_stale_trace_candidates`, and `get_review_brief`. The stale trace and review brief resources follow it too. The findings, traceability matrix, and review prep resources keep fixed caps (50 findings, 100 matrix rows, and 20 items per gap list).
 
 ## Audit Logging
 
@@ -200,7 +202,9 @@ The audit log records timestamp, project ID/name when available, tool name, sani
 
 ## Health Check
 
-The MCP Setup page includes a health check for the current project. It verifies that the project exists, the database path is readable, requirements exist, findings or analyzers are available, the MCP data adapters work, summary mode hides raw requirement text, baseline data is available when baseline tools are relevant, and any configured audit log path is writable.
+The MCP Setup page includes a health check for the current project. It verifies that the project exists, the database path is readable, requirements exist, how many findings the latest analysis stored, baseline data is available when baseline tools are relevant, and any configured audit log path is writable.
+
+The **Run tool checks** button then calls read-only MCP tool adapters (project summary, review brief, stale trace candidates when the project has two baselines, and requirement search) with the chosen data options, and confirms that summary mode hides raw requirement text. These run only when asked because they can take a minute on large projects.
 
 If something fails, use the fix shown on the page or see [MCP troubleshooting](./mcp-troubleshooting.md).
 

@@ -43,3 +43,7 @@ Use the MCP Setup page instead of hand-building this when possible. It includes 
 Doorframe MCP is local stdio in this release. The AI client must be able to launch the local `npx -y doorframe@0.1.17 mcp ...` process.
 
 On Windows, launch npx through `cmd` (`"command": "cmd"`, args starting with `"/c", "npx"`) — the MCP Setup page generates this automatically on Windows. See [Windows: spawn npx ENOENT](../mcp-troubleshooting.md#windows-spawn-npx-enoent).
+
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”

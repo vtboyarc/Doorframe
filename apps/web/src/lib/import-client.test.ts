@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileCopy, requestJson } from "./import-client";
+import { importBlockedReason, readFileCopy, requestJson, type ImportFormState } from "./import-client";
 import { SERVER_UNREACHABLE_MESSAGE } from "./import-messages";
 
 const init: RequestInit = { method: "POST" };
@@ -49,5 +49,43 @@ describe("readFileCopy", () => {
       arrayBuffer: () => Promise.reject(new DOMException("The file changed.", "NotReadableError"))
     } as unknown as Blob;
     expect(await readFileCopy(changed)).toBeNull();
+  });
+});
+
+describe("importBlockedReason", () => {
+  const ready: ImportFormState = {
+    file: { size: 100 },
+    tooLarge: false,
+    isCsv: true,
+    preview: { status: "ready", preview: { headers: ["ID", "Text"], rows: [], totalRows: 1, mapping: {} } },
+    check: { missingRequired: [], sharedColumns: [], canImport: true }
+  };
+
+  it("allows an import once the file is read and mapped", () => {
+    expect(importBlockedReason(ready)).toBeNull();
+    expect(importBlockedReason({ ...ready, jiraUnconfirmed: false })).toBeNull();
+  });
+
+  it("blocks a Jira-shaped Requirements CSV until the user switches type or confirms", () => {
+    const jira = { ...ready, jiraUnconfirmed: true, check: { ...ready.check, missingRequired: ["Requirement ID"], canImport: false } };
+
+    expect(importBlockedReason(jira)).toBe("Switch to Jira CSV, or confirm that this file holds requirements.");
+    expect(importBlockedReason({ ...jira, jiraUnconfirmed: false })).toBe("Map Requirement ID to continue.");
+  });
+
+  it("explains the other blocked states", () => {
+    expect(importBlockedReason({ ...ready, file: null })).toBe("Choose a file to import.");
+    expect(importBlockedReason({ ...ready, tooLarge: true })).toBe("This file is too large to import here.");
+    expect(importBlockedReason({ ...ready, preview: { status: "loading" } })).toBe("Reading the file…");
+    expect(importBlockedReason({ ...ready, preview: { status: "error", failure: { message: "x" } } })).toMatch(
+      /Fix the problem/
+    );
+    expect(importBlockedReason({ ...ready, isCsv: false, preview: { status: "idle" } })).toBeNull();
+    expect(
+      importBlockedReason({
+        ...ready,
+        check: { missingRequired: [], sharedColumns: [{ column: "ID", fields: ["Requirement ID", "Text"], includesRequired: true }], canImport: false }
+      })
+    ).toBe("Required fields need their own column.");
   });
 });

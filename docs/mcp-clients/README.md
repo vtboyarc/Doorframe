@@ -21,6 +21,8 @@ Doorframe MCP gives an approved AI client a narrow, read-only way to query the l
 
 Only connect Doorframe MCP to project data if your organization has approved the AI client and model for that data.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
 Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
 
 Client guides:

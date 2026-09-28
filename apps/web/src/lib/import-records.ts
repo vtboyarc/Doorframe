@@ -1,9 +1,11 @@
 import type { ParsedRequirement, ParsedWorkItem } from "@doorframe/parsers";
+import { z } from "zod";
 import {
   MAX_REMOVABLE_RECORDS,
   type ColumnMapping,
   type ImportEntityType,
-  type MissingRecords
+  type MissingRecords,
+  type RemoveRecordsRequest
 } from "./import-types";
 import { compareExternalIds } from "./sort";
 
@@ -55,6 +57,23 @@ export function summarizeMissing(
   }
 
   return { entityType, count: missingIds.length, externalIds: missingIds.slice(0, limit) };
+}
+
+/**
+ * IDs are matched exactly against stored external IDs, so they are neither
+ * trimmed nor length-capped: imports accept IDs of any length (a JUnit ID is
+ * `classname.name`, and parameterized test names can run past 500 characters).
+ * The list itself is capped at {@link MAX_REMOVABLE_RECORDS}.
+ */
+const removeRecordsRequestSchema = z.object({
+  entityType: z.enum(["requirement", "workItem", "testCase"]),
+  externalIds: z.array(z.string().min(1)).min(1).max(MAX_REMOVABLE_RECORDS)
+});
+
+/** Validate the body of a "remove missing records" request; null when it is malformed. */
+export function parseRemoveRecordsRequest(body: unknown): RemoveRecordsRequest | null {
+  const parsed = removeRecordsRequestSchema.safeParse(body);
+  return parsed.success ? parsed.data : null;
 }
 
 /** Read the mapping form field defensively: only string values survive. */

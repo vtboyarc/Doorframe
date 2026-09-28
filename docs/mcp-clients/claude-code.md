@@ -27,4 +27,8 @@ On Windows, the MCP Setup page generates the command with npx launched through `
 
 Claude Code also supports JSON-based MCP setup. Use the MCP Setup page to avoid path and option mistakes.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
 Reference: [Claude Code MCP docs](https://code.claude.com/docs/en/mcp).

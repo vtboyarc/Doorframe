@@ -1,5 +1,5 @@
 import { snapshotFromProjectData, type ProjectData, type ProjectSnapshot } from "@doorframe/core";
-import { matrixRows, summarizeReport } from "./shared";
+import { matrixRows, summarizeReportFromRows } from "./shared";
 
 export interface JsonReport {
   generatedAt: string;
@@ -31,7 +31,8 @@ export interface JsonReport {
  * portable export format and is the input consumed by `doorframe diff`.
  */
 export function buildJsonReport(data: ProjectData): JsonReport {
-  const summary = summarizeReport(data);
+  const matrix = matrixRows(data);
+  const summary = summarizeReportFromRows(data, matrix);
   return {
     generatedAt: new Date().toISOString(),
     project: { id: data.project.id, name: data.project.name },
@@ -46,7 +47,7 @@ export function buildJsonReport(data: ProjectData): JsonReport {
       requirementsWithoutPassingTests: summary.requirementsWithoutPassingTests,
       failingTests: summary.failingTests
     },
-    matrix: matrixRows(data).map((row) => ({
+    matrix: matrix.map((row) => ({
       requirementId: row.requirement.externalId,
       title: row.requirement.title,
       status: row.requirement.status,

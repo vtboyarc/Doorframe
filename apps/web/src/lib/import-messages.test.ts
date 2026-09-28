@@ -7,6 +7,8 @@ import {
   fileTooLargeMessage,
   friendlyParserMessage,
   importSummaryText,
+  jiraExportEmptyMessage,
+  jiraExportWarning,
   missingRecordsText,
   NO_CSV_ROWS_MESSAGE,
   removedSummaryText,
@@ -173,5 +175,24 @@ describe("other messages", () => {
     expect(fileTooLargeMessage()).toMatch(/doorframe analyze/);
     expect(unexpectedResponseMessage(413)).toMatch(/up to 25\.0 MB/);
     expect(unexpectedResponseMessage(500)).toMatch(/HTTP 500/);
+  });
+});
+
+describe("Jira export messages", () => {
+  it("names the Jira column and the right import type", () => {
+    expect(jiraExportWarning("Issue key")).toMatch(/looks like a Jira export: it has an “Issue key” column/);
+    expect(jiraExportWarning("Issue key")).toMatch(/Jira CSV import/);
+    expect(jiraExportEmptyMessage("Issue key")).toMatch(/^No requirements were imported\..*Choose Jira CSV/);
+  });
+
+  it("explains an empty Requirements CSV import of a Jira export", () => {
+    const errors = ["Missing required requirements CSV column for requirement ID."];
+
+    expect(describeEmptyImport("requirements-csv", errors, 31, "Issue key").message).toBe(
+      jiraExportEmptyMessage("Issue key")
+    );
+    expect(describeEmptyImport("requirements-csv", errors, 0, "Issue key").message).toBe(NO_CSV_ROWS_MESSAGE);
+    expect(describeEmptyImport("requirements-csv", errors, 31, null).message).toMatch(/No column is mapped to Requirement ID/);
+    expect(describeEmptyImport("jira-csv", [], 31, "Issue key").message).toMatch(/No work items were imported/);
   });
 });

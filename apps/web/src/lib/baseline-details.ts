@@ -5,7 +5,8 @@ import {
   type BaselineDiffTestContext,
   type BaselineDiffWorkItemContext
 } from "@doorframe/analyzers";
-import type { Finding, FindingCategory, FindingSeverity, ProjectSnapshot, TraceLink } from "@doorframe/core";
+import type { BaselineDiff, Finding, FindingCategory, FindingSeverity, ProjectSnapshot, TraceLink } from "@doorframe/core";
+import type { BaselineDiffRecordChanges } from "@doorframe/reporting";
 import { compareFindings } from "./findings";
 import { compareExternalIds } from "./sort";
 
@@ -137,5 +138,26 @@ export function baselineDiffDetails(from: ProjectSnapshot, to: ProjectSnapshot):
     resolvedFindings: toFindingRefs(from.findings.filter((finding) => !toFindings.has(findingKey(finding)))),
     addedLinks: [...toLinks].filter((label) => !fromLinks.has(label)).sort(compareExternalIds),
     removedLinks: [...fromLinks].filter((label) => !toLinks.has(label)).sort(compareExternalIds)
+  };
+}
+
+/**
+ * Findings, trace link, work item, and test changes for the downloadable diff report, so the file
+ * covers the same changes as the Baselines page.
+ */
+export function baselineRecordChanges(diff: BaselineDiff, details: BaselineDiffDetails): BaselineDiffRecordChanges {
+  const sorted = (ids: string[]) => [...ids].sort(compareExternalIds);
+  return {
+    newFindings: details.newFindings,
+    resolvedFindings: details.resolvedFindings,
+    addedLinks: details.addedLinks,
+    removedLinks: details.removedLinks,
+    workItemsAdded: sorted(diff.workItems.added),
+    workItemsRemoved: sorted(diff.workItems.removed),
+    testsAdded: sorted(diff.testCases.added),
+    testsRemoved: sorted(diff.testCases.removed),
+    testStatusChanges: [...diff.testCases.statusChanged].sort((left, right) =>
+      compareExternalIds(left.externalId, right.externalId)
+    )
   };
 }

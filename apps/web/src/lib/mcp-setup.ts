@@ -32,7 +32,7 @@ export interface McpSetupSettings {
   packageVersion?: string;
 }
 
-export type McpConfigWarning = "audit-log-path-missing";
+export type McpConfigWarning = "audit-log-path-missing" | "audit-log-path-invalid";
 
 export interface GeneratedMcpConfig {
   clientId: McpClientId;
@@ -47,9 +47,10 @@ export interface GeneratedMcpConfig {
 }
 
 export const MAX_RESULTS_DEFAULT = 25;
-export const MAX_RESULTS_LIMIT = 500;
+/** Matches MAX_RESULTS_LIMIT in apps/mcp-server/src/options.ts: no MCP tool returns more than this. */
+export const MAX_RESULTS_LIMIT = 100;
 
-/** Max results as the MCP server accepts it: a whole number from 1 to 500, 25 when unset or invalid. */
+/** Max results as the MCP server applies it: a whole number from 1 to 100, 25 when unset or invalid. */
 export function clampMaxResults(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(String(value ?? "").trim() || Number.NaN);
   if (!Number.isFinite(parsed) || parsed < 1) {
@@ -57,6 +58,39 @@ export function clampMaxResults(value: unknown): number {
   }
 
   return Math.min(Math.floor(parsed), MAX_RESULTS_LIMIT);
+}
+
+/**
+ * Characters that would break the copied command or config for each client OS.
+ * Everywhere: double quotes and control characters such as CR and LF.
+ * Windows adds cmd.exe operators and escapes (& | < > ^ % !), PowerShell expansion
+ * characters ($ and backtick), and ? and *, which Windows file names cannot contain.
+ */
+const unsafeAuditLogPathPatterns: Record<McpHostPlatform, RegExp> = {
+  posix: /[\u0000-\u001f\u007f"]/g,
+  windows: /[\u0000-\u001f\u007f"&|<>^%!$`?*]/g
+};
+
+function describeUnsafeCharacter(character: string): string {
+  if (character === "\r" || character === "\n") {
+    return "line break";
+  }
+
+  return /[\u0000-\u001f\u007f]/.test(character) ? "control character" : character;
+}
+
+/**
+ * Characters in an audit log path that cannot be written safely into the generated command
+ * for the client OS, described for display. Empty when the path is safe to use.
+ */
+export function unsafeAuditLogPathCharacters(auditLogPath: string, platform: McpHostPlatform = "posix"): string[] {
+  const matches = auditLogPath.match(unsafeAuditLogPathPatterns[platform]) ?? [];
+  return Array.from(new Set(matches.map(describeUnsafeCharacter)));
+}
+
+/** A data mode from a query string; anything unknown becomes the default, "standard". */
+export function parseMcpDataMode(value: string | undefined): McpDataMode {
+  return value === "summary" || value === "standard" || value === "detailed" ? value : "standard";
 }
 
 /** Whether a filesystem path is written for Windows or for macOS/Linux. */
@@ -130,7 +164,7 @@ export const mcpDataModeOptions: McpDataModeOption[] = [
   {
     id: "summary",
     label: "Summary",
-    detail: "Counts, IDs, and statuses only. Raw requirement text is never returned."
+    detail: "IDs, titles, counts, and finding summaries. Raw requirement text is never returned."
   },
   {
     id: "standard",
@@ -315,12 +349,35 @@ export const starterQuestions = [
   }
 ] as const;
 
+/** The trimmed audit log path when it can go into the generated command, otherwise undefined. */
+function usableAuditLogPath(settings: McpSetupSettings): string | undefined {
+  const auditLogPath = settings.auditLogEnabled ? settings.auditLogPath?.trim() : undefined;
+  if (!auditLogPath || unsafeAuditLogPathCharacters(auditLogPath, settings.platform).length > 0) {
+    return undefined;
+  }
+
+  return auditLogPath;
+}
+
+function configWarnings(settings: McpSetupSettings): McpConfigWarning[] {
+  const auditLogPath = settings.auditLogPath?.trim();
+  if (!settings.auditLogEnabled) {
+    return [];
+  }
+
+  if (!auditLogPath) {
+    return ["audit-log-path-missing"];
+  }
+
+  return unsafeAuditLogPathCharacters(auditLogPath, settings.platform).length > 0 ? ["audit-log-path-invalid"] : [];
+}
+
 export function normalizeMcpSettings(settings: McpSetupSettings): McpSetupSettings {
   return {
     ...settings,
     projectId: settings.projectId.trim(),
     maxResults: clampMaxResults(settings.maxResults),
-    auditLogPath: settings.auditLogEnabled ? settings.auditLogPath?.trim() : undefined,
+    auditLogPath: usableAuditLogPath(settings),
     packageVersion: settings.packageVersion?.trim() || undefined
   };
 }
@@ -438,8 +495,7 @@ export function generateMcpConfig(settings: McpSetupSettings): GeneratedMcpConfi
   const commandText = commandToText(command, args, normalized.platform ?? "posix");
   const packageSpec = resolveMcpPackageSpec(normalized);
   const packageNote = normalized.packageVersion ? ` This config pins ${packageSpec}.` : "";
-  const warnings: McpConfigWarning[] =
-    settings.auditLogEnabled && !settings.auditLogPath?.trim() ? ["audit-log-path-missing"] : [];
+  const warnings = configWarnings(settings);
 
   if (normalized.clientId === "chatgpt") {
     return {

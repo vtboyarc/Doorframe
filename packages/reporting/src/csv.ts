@@ -1,11 +1,23 @@
 import { type ProjectData } from "@doorframe/core";
 import { matrixRows } from "./shared";
 
-function csvCell(value: string): string {
-  if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+/**
+ * Characters that make Excel, LibreOffice, and similar tools read a cell as a formula when it
+ * starts with them. Imported titles, statuses, and test names come from other tools' exports,
+ * so they are not trusted.
+ */
+const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
+
+/**
+ * Format one CSV cell. A cell that would start a formula gets a leading apostrophe so spreadsheet
+ * tools show it as text, and cells containing quotes, commas, or line breaks are quoted.
+ */
+export function csvCell(value: string): string {
+  const safe = FORMULA_TRIGGER.test(value) ? `'${value}` : value;
+  if (/[",\r\n]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safe;
 }
 
 /** Render the traceability matrix as CSV (one row per requirement). */

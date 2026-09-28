@@ -10,6 +10,7 @@ import type {
   ImportPreviewResponse,
   ImportResponse,
   ImportSourceType,
+  MappingCheck,
   RemoveRecordsResponse
 } from "./import-types";
 
@@ -127,4 +128,58 @@ export function requestRemoveRecords(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ entityType, externalIds })
   });
+}
+
+// Form state ----------------------------------------------------------------
+
+export type PreviewState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; preview: ImportPreviewResponse }
+  | { status: "error"; failure: FailureDescription };
+
+export interface ImportFormState {
+  file: { size: number } | null;
+  tooLarge: boolean;
+  isCsv: boolean;
+  preview: PreviewState;
+  check: MappingCheck;
+  /**
+   * True while a Requirements CSV file looks like a Jira export and the user has
+   * neither switched to Jira CSV nor confirmed it holds requirements.
+   */
+  jiraUnconfirmed?: boolean;
+}
+
+/** Why the Import button is disabled, or null when it is enabled. */
+export function importBlockedReason(input: ImportFormState): string | null {
+  if (!input.file) {
+    return "Choose a file to import.";
+  }
+
+  if (input.tooLarge) {
+    return "This file is too large to import here.";
+  }
+
+  if (!input.isCsv) {
+    return null;
+  }
+
+  if (input.preview.status === "loading") {
+    return "Reading the file…";
+  }
+
+  if (input.preview.status !== "ready") {
+    return "Fix the problem with this file, or choose another file.";
+  }
+
+  if (input.jiraUnconfirmed) {
+    return "Switch to Jira CSV, or confirm that this file holds requirements.";
+  }
+
+  if (input.check.missingRequired.length > 0) {
+    return `Map ${input.check.missingRequired.join(" and ")} to continue.`;
+  }
+
+  return input.check.canImport ? null : "Required fields need their own column.";
 }

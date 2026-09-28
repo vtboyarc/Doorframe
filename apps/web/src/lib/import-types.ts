@@ -241,6 +241,27 @@ export function fileTypeHint(filename: string, sourceType: ImportSourceType): st
   return `This is ${actual}, but ${info.label} imports expect ${expected}. Check the import type.`;
 }
 
+/** Normalized column names (lowercase letters and digits) that Jira CSV exports use, in order of preference. */
+const JIRA_EXPORT_COLUMNS = ["issuekey", "issueid", "issuetype"];
+
+/**
+ * The column that marks a CSV as a Jira export, such as "Issue key", or null
+ * when there is none. The imports page uses it to stop a Jira export from being
+ * saved as requirements.
+ */
+export function jiraExportColumn(headers: string[]): string | null {
+  const normalized = headers.map((header) => ({ header, key: header.toLowerCase().replace(/[^a-z0-9]/g, "") }));
+
+  for (const column of JIRA_EXPORT_COLUMNS) {
+    const match = normalized.find((entry) => entry.key === column);
+    if (match) {
+      return match.header;
+    }
+  }
+
+  return null;
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -261,6 +282,8 @@ export interface ImportPreviewResponse {
   rows: string[][];
   totalRows: number;
   mapping: ColumnMapping;
+  /** Set when the file was not UTF-8 and was read with another encoding; the import repeats it. */
+  encodingWarning?: string;
 }
 
 /**
