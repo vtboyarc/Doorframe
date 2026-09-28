@@ -1,7 +1,9 @@
 /** Categories of auditable actions recorded against a project. */
 export type AuditAction =
   | "project.created"
+  | "project.renamed"
   | "import.completed"
+  | "records.removed"
   | "analysis.rerun"
   | "baseline.created"
   | "ruleset.updated"

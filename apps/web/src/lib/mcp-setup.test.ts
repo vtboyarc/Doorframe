@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildMcpDoctorCommandText,
+  clampMaxResults,
   dockerMcpLimitationText,
   generateMcpConfig,
   getMcpClientGuide,
+  MAX_RESULTS_LIMIT,
   mcpClientOptions,
+  mcpDataModeOptions,
+  pathStyle,
+  unsafeAuditLogPathCharacters,
   type McpSetupSettings
 } from "./mcp-setup";
+import { MAX_RESULTS_LIMIT as SERVER_MAX_RESULTS_LIMIT } from "../../../mcp-server/src/options";
 
 const baseSettings: McpSetupSettings = {
   clientId: "generic",
@@ -213,5 +220,139 @@ describe("MCP client setup guides", () => {
   it("names workspace config files for Cursor and VS Code", () => {
     expect(getMcpClientGuide("cursor", "posix").configFile?.path).toBe(".cursor/mcp.json");
     expect(getMcpClientGuide("vscode", "posix").configFile?.path).toBe(".vscode/mcp.json");
+  });
+});
+
+describe("MCP setup helpers", () => {
+  it("clamps max results the same way everywhere", () => {
+    expect(clampMaxResults("")).toBe(25);
+    expect(clampMaxResults("0")).toBe(25);
+    expect(clampMaxResults(Number.NaN)).toBe(25);
+    expect(clampMaxResults("12.7")).toBe(12);
+    expect(clampMaxResults(9000)).toBe(100);
+    expect(clampMaxResults("101")).toBe(100);
+    expect(generateMcpConfig({ ...baseSettings, maxResults: 0 }).args).toContain("25");
+  });
+
+  it("recognizes Windows and POSIX database paths", () => {
+    expect(pathStyle("C:\\Users\\alice\\doorframe.sqlite")).toBe("windows");
+    expect(pathStyle("\\\\server\\share\\doorframe.sqlite")).toBe("windows");
+    expect(pathStyle("/home/alice/.doorframe/doorframe.sqlite")).toBe("posix");
+    expect(pathStyle("doorframe.sqlite")).toBe("unknown");
+  });
+
+  it("builds a doctor command with the same project and data options", () => {
+    const text = buildMcpDoctorCommandText({ ...baseSettings, mode: "summary", hideRawText: true, packageVersion: "1.2.3" });
+
+    expect(text).toBe(
+      "npx -y doorframe@1.2.3 mcp doctor --project /Users/alice/.doorframe/doorframe.sqlite --project-id project_alpha --mode summary --max-results 25 --hide-raw-text"
+    );
+  });
+
+  it("warns when audit logging is on but no path was entered", () => {
+    const generated = generateMcpConfig({ ...baseSettings, auditLogEnabled: true, auditLogPath: "  " });
+
+    expect(generated.warnings).toEqual(["audit-log-path-missing"]);
+    expect(generated.args).not.toContain("--audit-log");
+    expect(generateMcpConfig({ ...baseSettings, auditLogEnabled: true, auditLogPath: "/tmp/audit.jsonl" }).warnings).toEqual([]);
+  });
+
+  it("offers the same max results range the MCP server applies", () => {
+    expect(MAX_RESULTS_LIMIT).toBe(SERVER_MAX_RESULTS_LIMIT);
+  });
+
+  it("describes summary mode as including titles and finding summaries", () => {
+    const summary = mcpDataModeOptions.find((option) => option.id === "summary");
+
+    expect(summary?.detail).toContain("titles");
+    expect(summary?.detail).toContain("finding summaries");
+    expect(summary?.detail).not.toContain("only");
+  });
+
+  it("uses a Windows-style Cursor config path for Windows clients", () => {
+    expect(getMcpClientGuide("cursor", "windows").configFile?.path).toBe(".cursor\\mcp.json");
+  });
+});
+
+describe("MCP audit log path validation", () => {
+  const injectedWindowsPath = 'C:\\logs\\a" & calc & "b.jsonl';
+
+  it("keeps a Windows path with a double quote out of the command and JSON configs", () => {
+    for (const clientId of ["claude-code", "claude-desktop", "cursor", "vscode", "internal", "generic"] as const) {
+      const generated = generateMcpConfig({
+        ...baseSettings,
+        clientId,
+        platform: "windows",
+        auditLogEnabled: true,
+        auditLogPath: injectedWindowsPath
+      });
+
+      expect(generated.warnings).toEqual(["audit-log-path-invalid"]);
+      expect(generated.args).not.toContain("--audit-log");
+      expect(generated.configText).not.toContain("--audit-log");
+      expect(generated.configText).not.toContain("calc");
+      expect(generated.commandText).not.toContain("calc");
+    }
+  });
+
+  it("rejects line breaks and double quotes on every OS", () => {
+    for (const platform of ["posix", "windows"] as const) {
+      const lineBreak = generateMcpConfig({
+        ...baseSettings,
+        platform,
+        auditLogEnabled: true,
+        auditLogPath: "/tmp/audit\n.jsonl"
+      });
+      expect(lineBreak.warnings).toEqual(["audit-log-path-invalid"]);
+      expect(lineBreak.args).not.toContain("--audit-log");
+
+      expect(unsafeAuditLogPathCharacters('/tmp/a"b.jsonl', platform)).toEqual(['"']);
+      expect(unsafeAuditLogPathCharacters("/tmp/a\r\nb.jsonl", platform)).toEqual(["line break"]);
+      expect(unsafeAuditLogPathCharacters("/tmp/a\tb.jsonl", platform)).toEqual(["control character"]);
+    }
+  });
+
+  it("rejects cmd.exe and PowerShell special characters only for Windows clients", () => {
+    expect(unsafeAuditLogPathCharacters("C:\\logs\\a&b|c^d%e!f$g`h.jsonl", "windows")).toEqual([
+      "&",
+      "|",
+      "^",
+      "%",
+      "!",
+      "$",
+      "`"
+    ]);
+    expect(unsafeAuditLogPathCharacters("C:\\logs\\<a>?*.jsonl", "windows")).toEqual(["<", ">", "?", "*"]);
+    expect(unsafeAuditLogPathCharacters("/tmp/a&b $HOME `x`.jsonl", "posix")).toEqual([]);
+  });
+
+  it("accepts ordinary paths with spaces and quotes them for the chosen OS", () => {
+    expect(unsafeAuditLogPathCharacters("C:\\Users\\Alice Smith\\logs (old)\\audit.jsonl", "windows")).toEqual([]);
+
+    const windows = generateMcpConfig({
+      ...baseSettings,
+      clientId: "claude-code",
+      platform: "windows",
+      auditLogEnabled: true,
+      auditLogPath: "C:\\Users\\Alice Smith\\audit.jsonl"
+    });
+    expect(windows.warnings).toEqual([]);
+    expect(windows.configText).toContain('--audit-log "C:\\Users\\Alice Smith\\audit.jsonl"');
+
+    const posix = generateMcpConfig({
+      ...baseSettings,
+      clientId: "claude-code",
+      auditLogEnabled: true,
+      auditLogPath: "/tmp/it's $HOME.jsonl"
+    });
+    expect(posix.warnings).toEqual([]);
+    expect(posix.configText).toContain("--audit-log '/tmp/it'\\''s $HOME.jsonl'");
+  });
+
+  it("does not flag an unsafe path while audit logging is off", () => {
+    const generated = generateMcpConfig({ ...baseSettings, platform: "windows", auditLogPath: injectedWindowsPath });
+
+    expect(generated.warnings).toEqual([]);
+    expect(generated.args).not.toContain("--audit-log");
   });
 });

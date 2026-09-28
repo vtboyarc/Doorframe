@@ -1,114 +1,127 @@
 import Link from "next/link";
 import type { ProjectSummary } from "@doorframe/core";
+import type { DashboardStats } from "@/lib/view-models";
 import { panelClass } from "@/lib/ui";
 
-type Metric = {
-  key: keyof ProjectSummary;
+type GapMetric = {
   label: string;
-  href: (projectId: string) => string;
-  // When set, a non-zero value is a gap and is highlighted in that tone.
-  gap?: "warning" | "error";
+  value: number;
+  href: string;
+  tone: "warning" | "error";
 };
 
-const heroMetrics: Metric[] = [
-  { key: "totalRequirements", label: "Requirements", href: (id) => `/projects/${id}/requirements` },
-  { key: "linkedRequirements", label: "Linked", href: (id) => `/projects/${id}/matrix` },
-  { key: "totalFindings", label: "Gaps", href: (id) => `/projects/${id}/findings` }
-];
-
-const supportingMetrics: Metric[] = [
-  { key: "totalWorkItems", label: "Work items", href: (id) => `/projects/${id}/matrix` },
-  { key: "totalTests", label: "Tests", href: (id) => `/projects/${id}/matrix` },
-  { key: "totalTraceLinks", label: "Trace links", href: (id) => `/projects/${id}/matrix` },
-  {
-    key: "requirementsWithoutWork",
-    label: "Requirements without work",
-    href: (id) => `/projects/${id}/requirements?view=without-work`,
-    gap: "warning"
-  },
-  {
-    key: "requirementsWithoutTests",
-    label: "Requirements without tests",
-    href: (id) => `/projects/${id}/requirements?view=without-tests`,
-    gap: "warning"
-  },
-  {
-    key: "weakRequirements",
-    label: "Weak requirements",
-    href: (id) => `/projects/${id}/findings?category=weak_wording`,
-    gap: "warning"
-  },
-  {
-    key: "failedTestsLinkedToRequirements",
-    label: "Requirements with failed or errored tests",
-    href: (id) => `/projects/${id}/requirements?view=failed-tests`,
-    gap: "error"
-  }
-];
-
 const tones = {
-  warning: { bar: "border-l-4 border-l-[var(--warning)]", num: "text-[var(--warning)]" },
-  error: { bar: "border-l-4 border-l-[var(--danger)]", num: "text-[var(--danger)]" }
+  warning: { bar: "border-l-[var(--warning)]", num: "text-[var(--warning)]" },
+  error: { bar: "border-l-[var(--danger)]", num: "text-[var(--danger)]" }
 } as const;
+
+const heroLinkClass =
+  "group block p-5 transition-colors hover:bg-[var(--panel-strong)] focus-visible:outline-offset-[-2px]";
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
 
 export function MetricGrid({
   projectId,
-  summary
+  summary,
+  stats
 }: {
   projectId: string;
   summary: ProjectSummary;
+  stats: DashboardStats;
 }) {
+  const base = `/projects/${projectId}`;
+  const { error, warning, info } = stats.findingsBySeverity;
+  const findingTone = error > 0 ? "text-[var(--danger)]" : warning > 0 ? "text-[var(--warning)]" : "";
+  const gaps: GapMetric[] = [
+    {
+      label: "Requirements without linked work",
+      value: summary.requirementsWithoutWork,
+      href: `${base}/requirements?view=without-work`,
+      tone: "warning"
+    },
+    {
+      label: "Requirements without a passing test",
+      value: stats.requirementsWithoutPassingTests,
+      href: `${base}/requirements?view=without-passing-tests`,
+      tone: "error"
+    },
+    {
+      label: "Requirements with failed or errored tests",
+      value: summary.failedTestsLinkedToRequirements,
+      href: `${base}/requirements?view=failed-tests`,
+      tone: "error"
+    },
+    {
+      label: "Weak wording findings",
+      value: summary.weakRequirements,
+      href: `${base}/findings?category=weak_wording`,
+      tone: "warning"
+    }
+  ];
+
   return (
     <section aria-label="Project metrics" className="grid gap-4">
-      <div className={`grid overflow-hidden rounded-lg ${panelClass} sm:grid-cols-3`}>
-        {heroMetrics.map(({ key, label, href }) => {
-          const value = summary[key];
-          const highlighted = key === "totalFindings";
-
-          return (
-            <Link
-              key={key}
-              href={href(projectId)}
-              aria-label={`${label}: ${value}. Open details.`}
-              className="group border-b border-[var(--line)] p-5 transition last:border-b-0 hover:bg-[var(--panel-strong)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--accent)] sm:border-b-0 sm:border-r sm:last:border-r-0"
-            >
-              <div className={`text-5xl font-semibold leading-none ${highlighted ? "text-[var(--accent-strong)]" : ""}`}>
-                {value}
-              </div>
-              <div className="mt-4 text-sm uppercase text-[var(--muted)]">{label}</div>
-            </Link>
-          );
-        })}
+      <div className={`grid grid-cols-3 divide-x divide-[var(--line)] ${panelClass}`}>
+        <Link href={`${base}/requirements`} className={heroLinkClass}>
+          <div className="text-5xl font-semibold leading-none tabular-nums">{summary.totalRequirements}</div>
+          <div className="mt-3 text-sm font-medium uppercase tracking-wide text-[var(--muted)]">Requirements</div>
+          <div className="mt-1 text-sm text-[var(--muted)]">Imported and analyzed</div>
+        </Link>
+        <Link href={`${base}/matrix`} className={heroLinkClass}>
+          <div className="text-5xl font-semibold leading-none tabular-nums">{stats.fullyTracedPercent}%</div>
+          <div className="mt-3 text-sm font-medium uppercase tracking-wide text-[var(--muted)]">Fully traced</div>
+          <div className="mt-1 text-sm text-[var(--muted)]">
+            {summary.linkedRequirements} of {summary.totalRequirements} linked to work and tests
+          </div>
+        </Link>
+        <Link href={`${base}/findings`} className={heroLinkClass}>
+          <div className={`text-5xl font-semibold leading-none tabular-nums ${findingTone}`}>
+            {summary.totalFindings}
+          </div>
+          <div className="mt-3 text-sm font-medium uppercase tracking-wide text-[var(--muted)]">Findings</div>
+          <div className="mt-1 text-sm text-[var(--muted)]">
+            {plural(error, "error")} · {plural(warning, "warning")} · {info} info
+          </div>
+        </Link>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {supportingMetrics.map(({ key, label, href, gap }) => {
-          const value = summary[key];
-          const flagged = gap !== undefined && typeof value === "number" && value > 0;
-          const tone = gap ? tones[gap] : null;
-
-          return (
-            <Link
-              key={key}
-              href={href(projectId)}
-              aria-label={`${label}: ${value}. Open details.`}
-              className={`group ${panelClass} p-4 transition hover:border-[var(--accent)] hover:bg-[var(--panel-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
-                flagged && tone ? tone.bar : ""
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className={`text-3xl font-semibold ${flagged && tone ? tone.num : ""}`}>{value}</div>
-                  <div className="mt-2 text-sm text-[var(--muted)]">{label}</div>
+      <div>
+        <h2 className="mb-2 text-base font-semibold">Gaps to review</h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {gaps.map((gap) => {
+            const flagged = gap.value > 0;
+            return (
+              <Link
+                key={gap.label}
+                href={gap.href}
+                className={`group ${panelClass} border-l-4 p-4 transition-colors hover:bg-[var(--panel-strong)] ${
+                  flagged ? tones[gap.tone].bar : "border-l-[var(--line)]"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className={`text-3xl font-semibold tabular-nums ${flagged ? tones[gap.tone].num : ""}`}>{gap.value}</div>
+                  <span
+                    aria-hidden="true"
+                    className="text-[var(--muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--accent-strong)]"
+                  >
+                    →
+                  </span>
                 </div>
-                <span aria-hidden="true" className="text-[var(--muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--accent-strong)]">
-                  →
-                </span>
-              </div>
-            </Link>
-          );
-        })}
+                <div className="mt-2 text-sm text-[var(--muted)]">{gap.label}</div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
+
+      <p className="text-sm text-[var(--muted)]">
+        Inventory: {plural(summary.totalWorkItems, "work item")} · {plural(summary.totalTests, "test")} ·{" "}
+        <Link href={`${base}/trace-graph`} className="text-[var(--accent-strong)] hover:underline">
+          {plural(summary.totalTraceLinks, "trace link")}
+        </Link>
+      </p>
     </section>
   );
 }

@@ -15,6 +15,7 @@ import {
   listFindingsData,
   searchRequirementsData
 } from "../tools";
+import { MAX_RESULTS_LIMIT, normalizeDoorframeMcpOptions } from "../options";
 import { createDemoProjectDb } from "./fixtures";
 
 function projectDb() {
@@ -102,6 +103,14 @@ describe("Doorframe MCP tool data adapters", () => {
     ]);
   });
 
+  it("honors the configured MCP result cap for findings", () => {
+    const result = listFindingsData(projectDb(), { limit: 100 }, { mode: "summary", maxResults: 2 });
+
+    expect(result.findings).toHaveLength(2);
+    expect(result.limit).toMatchObject({ limit: 2, returned: 2, total: 4, capped: true });
+    expect(listFindingsData(projectDb(), {}, { maxResults: 1 }).limit.limit).toBe(1);
+  });
+
   it("returns traceability gaps by type", () => {
     const result = getTraceabilityGapsData(projectDb(), {
       gapType: "failed_tests",
@@ -182,6 +191,18 @@ describe("Doorframe MCP tool data adapters", () => {
       "testCase:TC-003",
       "workItem:DOOR-3"
     ]);
+  });
+
+  it("honors the configured MCP result cap for orphan items", () => {
+    const result = findOrphanItemsData(projectDb(), { entityType: "all", limit: 100 }, { maxResults: 2 });
+
+    expect(result.items).toHaveLength(2);
+    expect(result.limit).toMatchObject({ limit: 2, returned: 2, total: 3, capped: true });
+  });
+
+  it("treats max results above the tool cap as the cap", () => {
+    expect(normalizeDoorframeMcpOptions({ maxResults: 500 }).maxResults).toBe(MAX_RESULTS_LIMIT);
+    expect(listFindingsData(projectDb(), { limit: 500 }, { maxResults: 500 }).limit.limit).toBe(MAX_RESULTS_LIMIT);
   });
 
   it("returns baseline diff summary", () => {

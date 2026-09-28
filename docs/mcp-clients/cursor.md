@@ -41,4 +41,8 @@ Example shape:
 
 On Windows, launch npx through `cmd` (`"command": "cmd"`, args starting with `"/c", "npx"`) — the MCP Setup page generates this automatically on Windows. See [Windows: spawn npx ENOENT](../mcp-troubleshooting.md#windows-spawn-npx-enoent).
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
 Reference: [Cursor MCP docs](https://docs.cursor.com/context/model-context-protocol).

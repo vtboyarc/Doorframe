@@ -1,7 +1,6 @@
 import { type Finding, type ProjectData, type Requirement, type TestCase, type WorkItem } from "@doorframe/core";
-import { escapeHtml, matrixRows, summarizeReport } from "./shared";
-
-const DOORFRAME_VERSION = "0.1.0";
+import { categoryLabel, severityLabel, sourceTypeLabel } from "./labels";
+import { escapeHtml, matrixRows, summarizeReportFromRows, type MatrixRow } from "./shared";
 
 function text(value: string | number | undefined): string {
   return escapeHtml(String(value ?? ""));
@@ -24,11 +23,11 @@ function severityRank(finding: Finding): number {
   return 1;
 }
 
-function severityCounts(findings: Finding[]): { high: number; medium: number; low: number } {
+function severityCounts(findings: Finding[]): { errors: number; warnings: number; info: number } {
   return {
-    high: findings.filter((finding) => finding.severity === "error").length,
-    medium: findings.filter((finding) => finding.severity === "warning").length,
-    low: findings.filter((finding) => finding.severity === "info").length
+    errors: findings.filter((finding) => finding.severity === "error").length,
+    warnings: findings.filter((finding) => finding.severity === "warning").length,
+    info: findings.filter((finding) => finding.severity === "info").length
   };
 }
 
@@ -42,24 +41,42 @@ function testClass(status: TestCase["status"]): string {
   return "warn";
 }
 
-function linkedRequirementIdsForEntity(
-  data: ProjectData,
-  entityType: "workItem" | "testCase",
-  entityId: string
-): string[] {
+/** Requirement external IDs linked to each work item, in trace-link order. */
+function linkedRequirementIdsByWorkItem(data: ProjectData): Map<string, string[]> {
   const requirementsById = new Map(data.requirements.map((requirement) => [requirement.id, requirement]));
-  return data.traceLinks
-    .filter((link) => {
-      const entityIsSource =
-        link.sourceType === entityType && link.sourceId === entityId && link.targetType === "requirement";
-      const entityIsTarget =
-        link.targetType === entityType && link.targetId === entityId && link.sourceType === "requirement";
-      return entityIsSource || entityIsTarget;
-    })
-    .flatMap((link) => {
-      const requirement = requirementsById.get(link.sourceType === "requirement" ? link.sourceId : link.targetId);
-      return requirement ? [requirement.externalId] : [];
-    });
+  const index = new Map<string, string[]>();
+  data.traceLinks.forEach((link) => {
+    const workIsSource = link.sourceType === "workItem" && link.targetType === "requirement";
+    const workIsTarget = link.targetType === "workItem" && link.sourceType === "requirement";
+    if (!workIsSource && !workIsTarget) {
+      return;
+    }
+
+    const requirement = requirementsById.get(workIsSource ? link.targetId : link.sourceId);
+    if (!requirement) {
+      return;
+    }
+
+    const workItemId = workIsSource ? link.sourceId : link.targetId;
+    const ids = index.get(workItemId);
+    if (ids) {
+      ids.push(requirement.externalId);
+    } else {
+      index.set(workItemId, [requirement.externalId]);
+    }
+  });
+  return index;
+}
+
+/** First record for each id, matching what `Array.find` would return. */
+function firstById<T extends { id: string }>(items: T[]): Map<string, T> {
+  const byId = new Map<string, T>();
+  items.forEach((item) => {
+    if (!byId.has(item.id)) {
+      byId.set(item.id, item);
+    }
+  });
+  return byId;
 }
 
 function requirementRows(requirements: Requirement[]): string {
@@ -77,17 +94,17 @@ function requirementRows(requirements: Requirement[]): string {
   );
 }
 
-function topRiskRows(data: ProjectData): string {
+function topRiskRows(data: ProjectData, matrix: MatrixRow[]): string {
   const rows = [
     {
       concern: "Requirements missing verification",
-      count: matrixRows(data).filter(
+      count: matrix.filter(
         (row) => row.testCases.length === 0 || !row.testCases.some((testCase) => testCase.status === "passed")
       ).length
     },
     {
       concern: "Requirements missing linked work",
-      count: matrixRows(data).filter((row) => row.workItems.length === 0).length
+      count: matrix.filter((row) => row.workItems.length === 0).length
     },
     {
       concern: "Closed work without passing tests",
@@ -95,7 +112,7 @@ function topRiskRows(data: ProjectData): string {
     },
     {
       concern: "Failed or errored tests linked to requirements",
-      count: matrixRows(data).filter((row) =>
+      count: matrix.filter((row) =>
         row.testCases.some((testCase) => testCase.status === "failed" || testCase.status === "errored")
       ).length
     },
@@ -112,9 +129,14 @@ function topRiskRows(data: ProjectData): string {
   );
 }
 
-export function generateHtmlTraceabilityReport(data: ProjectData): string {
+export interface HtmlReportOptions {
+  /** Doorframe version shown in the report header. Omitted when not provided. */
+  version?: string;
+}
+
+export function generateHtmlTraceabilityReport(data: ProjectData, options: HtmlReportOptions = {}): string {
   const matrix = matrixRows(data);
-  const summary = summarizeReport(data);
+  const summary = summarizeReportFromRows(data, matrix);
   const counts = severityCounts(data.findings);
   const generatedAt = new Date().toISOString();
   const topConcerns = [...data.findings]
@@ -124,16 +146,19 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
   const requirementsWithoutPassingVerification = matrix
     .filter((row) => row.testCases.length === 0 || !row.testCases.some((testCase) => testCase.status === "passed"))
     .map((row) => row.requirement);
+  const workItemsById = firstById(data.workItems);
+  const requirementsById = firstById(data.requirements);
+  const requirementIdsByWorkItem = linkedRequirementIdsByWorkItem(data);
   const closedWorkWithoutPassingTests = data.findings
     .filter((finding) => finding.category === "closed_work_without_verification")
     .flatMap((finding) => {
-      const workItem = data.workItems.find((item) => item.id === finding.entityId);
+      const workItem = workItemsById.get(finding.entityId);
       return workItem ? [{ workItem, finding }] : [];
     });
   const weakLanguageFindings = data.findings
     .filter((finding) => finding.category === "weak_wording")
     .flatMap((finding) => {
-      const requirement = data.requirements.find((item) => item.id === finding.entityId);
+      const requirement = requirementsById.get(finding.entityId);
       return requirement ? [{ requirement, finding }] : [];
     });
   const failedTestsByRequirement = matrix.flatMap((row) =>
@@ -197,7 +222,7 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
 <main>
 <h1>Doorframe Traceability Report</h1>
 <p class="meta">Project: ${text(data.project.name)}</p>
-<p class="meta">Generated: ${text(generatedAt)} · Doorframe version: ${DOORFRAME_VERSION}</p>
+<p class="meta">Generated: ${text(generatedAt)}${options.version ? ` · Doorframe version: ${text(options.version)}` : ""}</p>
 <p class="meta">Generated from local imported data. The report contains only data available in this Doorframe project.</p>
 
 <h2>Executive Summary</h2>
@@ -207,9 +232,9 @@ export function generateHtmlTraceabilityReport(data: ProjectData): string {
   <div class="metric"><strong>${data.testCases.length}</strong>Tests</div>
   <div class="metric"><strong>${data.traceLinks.length}</strong>Trace links</div>
   <div class="metric"><strong>${data.findings.length}</strong>Total findings</div>
-  <div class="metric"><strong>${counts.high}</strong>High</div>
-  <div class="metric"><strong>${counts.medium}</strong>Medium</div>
-  <div class="metric"><strong>${counts.low}</strong>Low</div>
+  <div class="metric"><strong>${counts.errors}</strong>Errors</div>
+  <div class="metric"><strong>${counts.warnings}</strong>Warnings</div>
+  <div class="metric"><strong>${counts.info}</strong>Info</div>
 </div>
 <table>
 <thead><tr><th>Top concern</th><th>Severity</th><th>Category</th><th>Recommendation</th></tr></thead>
@@ -218,8 +243,8 @@ ${topConcerns
     .map(
       (finding) => `<tr>
 <td>${text(finding.title)}<br /><span class="small">${text(finding.description)}</span></td>
-<td>${text(finding.severity)}</td>
-<td>${text(finding.category)}</td>
+<td>${text(severityLabel(finding.severity))}</td>
+<td>${text(categoryLabel(finding.category))}</td>
 <td>${text(finding.recommendation)}</td>
 </tr>`
     )
@@ -235,7 +260,7 @@ ${data.importBatches
     .map(
       (batch) => `<tr>
 <td>${text(batch.filename)}</td>
-<td>${text(batch.sourceType)}</td>
+<td>${text(sourceTypeLabel(batch.sourceType))}</td>
 <td>${batch.recordCount}</td>
 <td>${batch.errors.length > 0 ? list(batch.errors) : "None"}</td>
 </tr>`
@@ -247,7 +272,7 @@ ${data.importBatches
 <h2>Top Risks Before Review</h2>
 <table>
 <thead><tr><th>Risk prompt</th><th>Count</th></tr></thead>
-<tbody>${topRiskRows(data)}</tbody>
+<tbody>${topRiskRows(data, matrix)}</tbody>
 </table>
 
 <h2>Traceability Matrix</h2>
@@ -296,7 +321,7 @@ ${closedWorkWithoutPassingTests
       ({ workItem, finding }) => `<tr>
 <td>${text(workItem.externalId)}<br />${text(workItem.title)}</td>
 <td>${text(workItem.status)}</td>
-<td>${list(linkedRequirementIdsForEntity(data, "workItem", workItem.id))}</td>
+<td>${list(requirementIdsByWorkItem.get(workItem.id) ?? [])}</td>
 <td>${text(finding.description)}</td>
 </tr>`
     )
@@ -362,7 +387,7 @@ ${duplicateFindings
 <tr><td>All requirement IDs</td><td>${list(data.requirements.map((requirement) => requirement.externalId))}</td></tr>
 <tr><td>All work item IDs</td><td>${list(data.workItems.map((workItem) => workItem.externalId))}</td></tr>
 <tr><td>All test IDs</td><td>${list(data.testCases.map((testCase) => testCase.externalId))}</td></tr>
-<tr><td>Finding categories</td><td>${list(categories)}</td></tr>
+<tr><td>Finding categories</td><td>${list(categories.map(categoryLabel))}</td></tr>
 <tr><td>Rule definitions</td><td>Missing work trace, missing or non-passing verification, weak wording, multiple shall statements, non-verifiable wording, duplicate candidates, stale links, closed work without passing verification, and custom rules when configured.</td></tr>
 </tbody>
 </table>

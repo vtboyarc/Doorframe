@@ -4,3 +4,4 @@ export * from "./html";
 export * from "./json";
 export * from "./markdown";
 export * from "./shared";
+export * from "./labels";

@@ -5,7 +5,7 @@ Doorframe MCP supports result minimization so a connected AI client can receive 
 ## Startup Flags
 
 ```bash
-npx -y doorframe@0.1.16 mcp \
+npx -y doorframe@0.1.17 mcp \
   --project ./doorframe.sqlite \
   --project-id project_123 \
   --mode standard \
@@ -32,6 +32,21 @@ Data minimization applies to:
 - `get_stale_trace_candidates`
 - `get_review_brief`
 
+`--max-results` caps list results from 1 to 100 (larger values act as 100) in:
+
+- `search_requirements`
+- `list_findings`
+- `get_traceability_gaps`
+- `get_review_risk_summary`
+- `find_orphan_items`
+- `list_changed_requirements`
+- `get_stale_trace_candidates`
+- `get_review_brief`
+
+The stale trace and review brief resources also follow `--max-results`. The findings, traceability matrix, and review prep resources keep fixed caps (50 findings, 100 matrix rows, and 20 items per gap list).
+
 Doorframe MCP still does not expose arbitrary SQL, arbitrary file reads, mutation tools, imported source files, environment variables, or secrets.
+
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
 
 Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”

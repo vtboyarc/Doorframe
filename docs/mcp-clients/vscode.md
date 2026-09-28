@@ -43,4 +43,8 @@ On Windows, launch npx through `cmd` (`"command": "cmd"`, args starting with `"/
 
 Your organization may disable or restrict MCP servers in VS Code. Confirm local policy before connecting project data.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
 Reference: [VS Code MCP configuration reference](https://code.visualstudio.com/docs/copilot/reference/mcp-configuration).

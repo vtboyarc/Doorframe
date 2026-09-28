@@ -4,7 +4,6 @@ import {
   normalizeText,
   type AnalyzerConfig,
   type CustomRule,
-  type EntityType,
   type FindingCategory,
   type FindingInput,
   type Requirement,
@@ -21,59 +20,76 @@ export interface AnalysisInput {
   traceLinks: TraceLink[];
 }
 
-function isClosedWith(status: string | undefined, closedStatuses: string[]): boolean {
-  return closedStatuses.includes((status ?? "").trim().toLowerCase());
+/** Configured statuses are matched case-insensitively; blank entries are ignored. */
+function statusKeys(statuses: string[]): string[] {
+  return statuses.map((status) => status.trim().toLowerCase()).filter(Boolean);
 }
 
-function isDraftOrChangedWith(status: string | undefined, draftStatuses: string[]): boolean {
+export function isClosedWith(status: string | undefined, closedStatuses: string[]): boolean {
+  return statusKeys(closedStatuses).includes((status ?? "").trim().toLowerCase());
+}
+
+export function isDraftOrChangedWith(status: string | undefined, draftStatuses: string[]): boolean {
   const normalized = (status ?? "").trim().toLowerCase();
-  return draftStatuses.some((candidate) => normalized.includes(candidate));
+  return statusKeys(draftStatuses).some((candidate) => normalized.includes(candidate));
 }
 
-function linkedEntityIds(
-  requirement: Requirement,
-  targetType: EntityType,
-  traceLinks: TraceLink[]
-): string[] {
-  return traceLinks
-    .filter((link) => {
-      const requirementIsSource =
-        link.sourceType === "requirement" &&
-        link.sourceId === requirement.id &&
-        link.targetType === targetType;
-      const requirementIsTarget =
-        link.targetType === "requirement" &&
-        link.targetId === requirement.id &&
-        link.sourceType === targetType;
-
-      return requirementIsSource || requirementIsTarget;
-    })
-    .map((link) => (link.sourceId === requirement.id ? link.targetId : link.sourceId));
+/** [requirementId, otherId] for each link between a requirement and an entity of `otherType`, in link order. */
+function requirementLinkPairs(traceLinks: TraceLink[], otherType: "workItem" | "testCase"): Array<[string, string]> {
+  const pairs: Array<[string, string]> = [];
+  traceLinks.forEach((link) => {
+    if (link.sourceType === "requirement" && link.targetType === otherType) {
+      pairs.push([link.sourceId, link.targetId]);
+    } else if (link.targetType === "requirement" && link.sourceType === otherType) {
+      pairs.push([link.targetId, link.sourceId]);
+    }
+  });
+  return pairs;
 }
 
-function hasPassingTest(requirement: Requirement, testCases: TestCase[], traceLinks: TraceLink[]): boolean {
-  const linkedTestIds = linkedEntityIds(requirement, "testCase", traceLinks);
-  return testCases.some((testCase) => linkedTestIds.includes(testCase.id) && testCase.status === "passed");
+/** Group link pairs by one side, keeping link order: `keySide` 0 keys by requirement, 1 by the other entity. */
+function groupLinkedIds(pairs: Array<[string, string]>, keySide: 0 | 1): Map<string, string[]> {
+  const grouped = new Map<string, string[]>();
+  pairs.forEach((pair) => {
+    const key = pair[keySide];
+    const value = pair[keySide === 0 ? 1 : 0];
+    const ids = grouped.get(key);
+    if (ids) {
+      ids.push(value);
+    } else {
+      grouped.set(key, [value]);
+    }
+  });
+  return grouped;
+}
+
+/**
+ * Ids of the `otherType` entities linked to each requirement. Built once per rule so a rule does
+ * not rescan every trace link for every requirement.
+ */
+function linkedIdsByRequirement(traceLinks: TraceLink[], otherType: "workItem" | "testCase"): Map<string, string[]> {
+  return groupLinkedIds(requirementLinkPairs(traceLinks, otherType), 0);
+}
+
+/** Ids of the requirements linked to each work item. */
+function requirementIdsByWorkItem(traceLinks: TraceLink[]): Map<string, string[]> {
+  return groupLinkedIds(requirementLinkPairs(traceLinks, "workItem"), 1);
+}
+
+function passingTestIds(testCases: TestCase[]): Set<string> {
+  return new Set(testCases.filter((testCase) => testCase.status === "passed").map((testCase) => testCase.id));
+}
+
+function hasPassingLinkedTest(linkedTestIds: string[], passingIds: Set<string>): boolean {
+  return linkedTestIds.some((id) => passingIds.has(id));
 }
 
 function requirementById(requirements: Requirement[]): Map<string, Requirement> {
   return new Map(requirements.map((requirement) => [requirement.id, requirement]));
 }
 
-function requirementsForWorkItem(workItem: WorkItem, requirements: Requirement[], traceLinks: TraceLink[]): Requirement[] {
-  const byId = requirementById(requirements);
-  const requirementIds = traceLinks
-    .filter((link) => {
-      const workIsSource =
-        link.sourceType === "workItem" && link.sourceId === workItem.id && link.targetType === "requirement";
-      const workIsTarget =
-        link.targetType === "workItem" && link.targetId === workItem.id && link.sourceType === "requirement";
-
-      return workIsSource || workIsTarget;
-    })
-    .map((link) => (link.sourceId === workItem.id ? link.targetId : link.sourceId));
-
-  return requirementIds.flatMap((id) => {
+function requirementsForIds(ids: string[], byId: Map<string, Requirement>): Requirement[] {
+  return ids.flatMap((id) => {
     const requirement = byId.get(id);
     return requirement ? [requirement] : [];
   });
@@ -87,22 +103,30 @@ function tokenSet(text: string): Set<string> {
   );
 }
 
-function jaccard(left: Set<string>, right: Set<string>): number {
+/** Jaccard similarity of two token sets. Runs once per requirement pair, so it avoids allocating. */
+export function jaccard(left: Set<string>, right: Set<string>): number {
   if (left.size === 0 || right.size === 0) {
     return 0;
   }
 
-  const intersection = Array.from(left).filter((token) => right.has(token)).length;
-  const union = new Set([...left, ...right]).size;
-  return intersection / union;
+  const smaller = left.size <= right.size ? left : right;
+  const larger = smaller === left ? right : left;
+  let shared = 0;
+  for (const token of smaller) {
+    if (larger.has(token)) {
+      shared += 1;
+    }
+  }
+  return shared / (left.size + right.size - shared);
 }
 
 export function findMissingVerification(input: AnalysisInput): FindingInput[] {
+  const testsByRequirement = linkedIdsByRequirement(input.traceLinks, "testCase");
+  const passingIds = passingTestIds(input.testCases);
+
   return input.requirements.flatMap((requirement) => {
-    const linkedTests = linkedEntityIds(requirement, "testCase", input.traceLinks);
-    const hasLinkedPassingTest = input.testCases.some(
-      (testCase) => linkedTests.includes(testCase.id) && testCase.status === "passed"
-    );
+    const linkedTests = testsByRequirement.get(requirement.id) ?? [];
+    const hasLinkedPassingTest = hasPassingLinkedTest(linkedTests, passingIds);
     const findings: FindingInput[] = [];
 
     if (!requirement.verificationMethod?.trim()) {
@@ -144,8 +168,10 @@ export function findMissingVerification(input: AnalysisInput): FindingInput[] {
 }
 
 export function findMissingWorkTrace(input: AnalysisInput): FindingInput[] {
+  const workByRequirement = linkedIdsByRequirement(input.traceLinks, "workItem");
+
   return input.requirements
-    .filter((requirement) => linkedEntityIds(requirement, "workItem", input.traceLinks).length === 0)
+    .filter((requirement) => (workByRequirement.get(requirement.id) ?? []).length === 0)
     .map((requirement) => ({
       severity: "warning",
       category: "missing_work_trace",
@@ -229,6 +255,24 @@ export function findNonVerifiableRequirements(
     }));
 }
 
+/**
+ * Most duplicate candidates reported for any one requirement. Exports built from
+ * templates can make thousands of requirements look alike; without a cap every
+ * similar pair becomes a finding, which can exhaust memory on large imports.
+ */
+export const MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT = 5;
+
+/**
+ * Jaccard similarity can never exceed smaller size / larger size, so pairs whose token counts
+ * differ too much are skipped without comparing tokens. Division is used (not multiplication)
+ * so the bound rounds the same way as the similarity itself and a pair exactly at the
+ * threshold is still compared.
+ */
+export function canReachThreshold(leftSize: number, rightSize: number, threshold: number): boolean {
+  const bound = Math.min(leftSize, rightSize) / Math.max(leftSize, rightSize);
+  return !(bound < threshold);
+}
+
 export function findDuplicateCandidates(
   input: AnalysisInput,
   threshold: number = DEFAULT_RULESET.analyzer.jaccardThreshold
@@ -240,10 +284,17 @@ export function findDuplicateCandidates(
   }));
 
   for (let i = 0; i < tokenized.length; i += 1) {
-    for (let j = i + 1; j < tokenized.length; j += 1) {
+    let candidates = 0;
+
+    for (let j = i + 1; j < tokenized.length && candidates < MAX_DUPLICATE_CANDIDATES_PER_REQUIREMENT; j += 1) {
+      if (!canReachThreshold(tokenized[i].tokens.size, tokenized[j].tokens.size, threshold)) {
+        continue;
+      }
+
       const score = jaccard(tokenized[i].tokens, tokenized[j].tokens);
 
       if (score >= threshold) {
+        candidates += 1;
         findings.push({
           severity: "info",
           category: "duplicate_candidate",
@@ -264,14 +315,19 @@ export function findClosedWorkWithoutVerification(
   input: AnalysisInput,
   closedStatuses: string[] = DEFAULT_RULESET.analyzer.closedStatuses
 ): FindingInput[] {
+  const requirementsById = requirementById(input.requirements);
+  const requirementsByWork = requirementIdsByWorkItem(input.traceLinks);
+  const testsByRequirement = linkedIdsByRequirement(input.traceLinks, "testCase");
+  const passingIds = passingTestIds(input.testCases);
+
   return input.workItems.flatMap((workItem) => {
     if (!isClosedWith(workItem.status, closedStatuses)) {
       return [];
     }
 
-    const linkedRequirements = requirementsForWorkItem(workItem, input.requirements, input.traceLinks);
+    const linkedRequirements = requirementsForIds(requirementsByWork.get(workItem.id) ?? [], requirementsById);
     const unverifiedRequirements = linkedRequirements.filter(
-      (requirement) => !hasPassingTest(requirement, input.testCases, input.traceLinks)
+      (requirement) => !hasPassingLinkedTest(testsByRequirement.get(requirement.id) ?? [], passingIds)
     );
 
     if (linkedRequirements.length === 0 || unverifiedRequirements.length === 0) {
@@ -299,12 +355,15 @@ export function findPossibleStaleLinks(
   closedStatuses: string[] = DEFAULT_RULESET.analyzer.closedStatuses,
   draftStatuses: string[] = DEFAULT_RULESET.analyzer.draftStatuses
 ): FindingInput[] {
+  const requirementsById = requirementById(input.requirements);
+  const requirementsByWork = requirementIdsByWorkItem(input.traceLinks);
+
   return input.workItems.flatMap((workItem) => {
     if (!isClosedWith(workItem.status, closedStatuses)) {
       return [];
     }
 
-    return requirementsForWorkItem(workItem, input.requirements, input.traceLinks)
+    return requirementsForIds(requirementsByWork.get(workItem.id) ?? [], requirementsById)
       .filter((requirement) => isDraftOrChangedWith(requirement.status, draftStatuses))
       .map((requirement) => ({
         severity: "warning",

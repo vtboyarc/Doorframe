@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { getProject, getRuleset, recordAuditEvent, saveRuleset } from "@/lib/db";
+import { getFindings, getProject, getRuleset, recordAuditEvent, runImportTransaction, saveRuleset } from "@/lib/db";
 import { auditActor } from "@/lib/audit-actor";
 import { rerunAnalysis } from "@/lib/analysis";
 import { rulesetSchema } from "@doorframe/core";
+import { analyzerRangeProblems, normalizeStatusList, rulesetProblems } from "@/lib/ruleset-form";
 
 export const runtime = "nodejs";
 
@@ -35,14 +36,32 @@ export const PUT = async (request: Request, context: { params: Promise<{ project
     );
   }
 
-  const saved = saveRuleset(projectId, parsed.data);
-  recordAuditEvent({
-    projectId,
-    action: "ruleset.updated",
-    actor: auditActor(),
-    summary: "Updated project ruleset."
-  });
-  rerunAnalysis(projectId);
+  const ruleset = {
+    ...parsed.data,
+    analyzer: {
+      ...parsed.data.analyzer,
+      closedStatuses: normalizeStatusList(parsed.data.analyzer.closedStatuses),
+      draftStatuses: normalizeStatusList(parsed.data.analyzer.draftStatuses)
+    }
+  };
+  const problems = rulesetProblems(ruleset);
+  const messages = [...analyzerRangeProblems(ruleset.analyzer), ...problems.requirementIdPatterns, ...problems.customRules];
+  if (messages.length > 0) {
+    return NextResponse.json({ error: messages.join(" ") }, { status: 400 });
+  }
 
-  return NextResponse.json(saved);
+  const previousFindingCount = getFindings(projectId).length;
+  // Save and re-analyze together so a failure cannot leave the new ruleset with findings from the old one.
+  const { saved, findings } = runImportTransaction(() => {
+    const stored = saveRuleset(projectId, ruleset);
+    recordAuditEvent({
+      projectId,
+      action: "ruleset.updated",
+      actor: auditActor(),
+      summary: "Updated project ruleset."
+    });
+    return { saved: stored, findings: rerunAnalysis(projectId) };
+  });
+
+  return NextResponse.json({ ruleset: saved, findingCount: findings.length, previousFindingCount });
 };

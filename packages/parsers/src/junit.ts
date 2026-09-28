@@ -10,8 +10,9 @@ import type { ParsedTestCase } from "./types";
 
 type XmlNode = Record<string, unknown>;
 
+/** Text of a result element: its message attribute or body. Empty elements such as `<failure/>` give "". */
 function nodeText(value: unknown): string {
-  if (!value) {
+  if (value === undefined || value === null) {
     return "";
   }
 
@@ -27,16 +28,25 @@ function nodeText(value: unknown): string {
   return String(value);
 }
 
+/**
+ * A result element counts when it is present at all. The XML parser turns an
+ * empty element such as `<skipped/>` into "" and `<failure>0</failure>` into 0,
+ * so presence, not truthiness, decides the status.
+ */
+function hasElement(testcase: XmlNode, name: "skipped" | "error" | "failure"): boolean {
+  return testcase[name] !== undefined;
+}
+
 function testcaseStatus(testcase: XmlNode): ParsedTestCase["status"] {
-  if (testcase.skipped) {
+  if (hasElement(testcase, "skipped")) {
     return "skipped";
   }
 
-  if (testcase.error) {
+  if (hasElement(testcase, "error")) {
     return "errored";
   }
 
-  if (testcase.failure) {
+  if (hasElement(testcase, "failure")) {
     return "failed";
   }
 

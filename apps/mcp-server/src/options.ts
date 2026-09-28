@@ -7,6 +7,9 @@ export interface DoorframeMcpOptions {
   auditLogPath?: string;
 }
 
+/** Highest --max-results value any tool honors. Larger values are treated as this cap. */
+export const MAX_RESULTS_LIMIT = 100;
+
 export const defaultDoorframeMcpOptions: DoorframeMcpOptions = {
   mode: "standard",
   maxResults: 25,
@@ -26,7 +29,7 @@ export function normalizeDoorframeMcpOptions(
 ): DoorframeMcpOptions {
   const maxResults =
     typeof options.maxResults === "number" && Number.isFinite(options.maxResults)
-      ? Math.max(1, Math.min(Math.floor(options.maxResults), 500))
+      ? Math.max(1, Math.min(Math.floor(options.maxResults), MAX_RESULTS_LIMIT))
       : defaultDoorframeMcpOptions.maxResults;
 
   return {

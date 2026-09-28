@@ -29,6 +29,9 @@ import {
   type WorkItem,
   type WorkItemInput
 } from "@doorframe/core";
+import { stableFindingId } from "./finding-id";
+import { compareExternalIds } from "./sort";
+import type { TraceReference } from "./trace-references";
 import { projectSummary } from "./view-models";
 
 type Db = Database.Database;
@@ -285,6 +288,7 @@ function migrate(db: Db): void {
     CREATE INDEX IF NOT EXISTS idx_baselines_project_id ON baselines(project_id);
     CREATE INDEX IF NOT EXISTS idx_audit_log_project_id ON audit_log(project_id);
   `);
+  migrateImportSupport(db);
 }
 
 function projectFromRow(row: ProjectRow): Project {
@@ -416,6 +420,59 @@ export function createProject(name: string): Project {
   return project;
 }
 
+export interface ProjectListItem extends Project {
+  requirementCount: number;
+  findingCount: number;
+}
+
+/** Projects with cheap per-project counts for the home page list. */
+export function listProjectsWithCounts(): ProjectListItem[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT p.*,
+        (SELECT COUNT(*) FROM requirements r WHERE r.project_id = p.id) AS requirement_count,
+        (SELECT COUNT(*) FROM findings f WHERE f.project_id = p.id) AS finding_count
+      FROM projects p
+      ORDER BY p.updated_at DESC`
+    )
+    .all() as Array<ProjectRow & { requirement_count: number; finding_count: number }>;
+
+  return rows.map((row) => ({
+    ...projectFromRow(row),
+    requirementCount: row.requirement_count,
+    findingCount: row.finding_count
+  }));
+}
+
+/** Record counts for one project without loading the records themselves. */
+export function getProjectCounts(projectId: string): { requirements: number; workItems: number; testCases: number } {
+  const row = getDb()
+    .prepare(
+      `SELECT
+        (SELECT COUNT(*) FROM requirements WHERE project_id = ?) AS requirements,
+        (SELECT COUNT(*) FROM work_items WHERE project_id = ?) AS work_items,
+        (SELECT COUNT(*) FROM test_cases WHERE project_id = ?) AS test_cases`
+    )
+    .get(projectId, projectId, projectId) as { requirements: number; work_items: number; test_cases: number };
+
+  return { requirements: row.requirements, workItems: row.work_items, testCases: row.test_cases };
+}
+
+export function renameProject(projectId: string, name: string): Project | null {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return getProject(projectId);
+  }
+
+  getDb().prepare("UPDATE projects SET name = ?, updated_at = ? WHERE id = ?").run(trimmed, nowIso(), projectId);
+  return getProject(projectId);
+}
+
+/** Delete a project and, through ON DELETE CASCADE, all of its local data. */
+export function deleteProject(projectId: string): boolean {
+  return getDb().prepare("DELETE FROM projects WHERE id = ?").run(projectId).changes > 0;
+}
+
 export function getProject(projectId: string): Project | null {
   const row = getDb()
     .prepare("SELECT * FROM projects WHERE id = ?")
@@ -430,16 +487,16 @@ export function touchProject(projectId: string): void {
 
 export function getRequirements(projectId: string): Requirement[] {
   const rows = getDb()
-    .prepare("SELECT * FROM requirements WHERE project_id = ? ORDER BY external_id")
+    .prepare("SELECT * FROM requirements WHERE project_id = ?")
     .all(projectId) as RequirementRow[];
-  return rows.map(requirementFromRow);
+  return rows.map(requirementFromRow).sort((left, right) => compareExternalIds(left.externalId, right.externalId));
 }
 
 export function getWorkItems(projectId: string): WorkItem[] {
   const rows = getDb()
-    .prepare("SELECT * FROM work_items WHERE project_id = ? ORDER BY external_id")
+    .prepare("SELECT * FROM work_items WHERE project_id = ?")
     .all(projectId) as WorkItemRow[];
-  return rows.map(workItemFromRow);
+  return rows.map(workItemFromRow).sort((left, right) => compareExternalIds(left.externalId, right.externalId));
 }
 
 export function getTestCases(projectId: string): TestCase[] {
@@ -458,14 +515,17 @@ export function getTraceLinks(projectId: string): TraceLink[] {
 
 export function getFindings(projectId: string): Finding[] {
   const rows = getDb()
-    .prepare("SELECT * FROM findings WHERE project_id = ? ORDER BY severity DESC, category, title")
+    .prepare(
+      `SELECT * FROM findings WHERE project_id = ?
+      ORDER BY CASE severity WHEN 'error' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END, category, title`
+    )
     .all(projectId) as FindingRow[];
   return rows.map(findingFromRow);
 }
 
 export function getImportBatches(projectId: string): ImportBatch[] {
   const rows = getDb()
-    .prepare("SELECT * FROM import_batches WHERE project_id = ? ORDER BY imported_at DESC")
+    .prepare("SELECT * FROM import_batches WHERE project_id = ? ORDER BY imported_at DESC, rowid DESC")
     .all(projectId) as ImportBatchRow[];
   return rows.map(importBatchFromRow);
 }
@@ -720,6 +780,7 @@ export function replaceFindings(projectId: string, findings: FindingInput[]): Fi
   return getDb().transaction((inputs: FindingInput[]) => {
     getDb().prepare("DELETE FROM findings WHERE project_id = ?").run(projectId);
     const now = nowIso();
+    const seenIds = new Map<string, number>();
 
     inputs.forEach((finding) => {
       getDb()
@@ -730,7 +791,7 @@ export function replaceFindings(projectId: string, findings: FindingInput[]): Fi
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
-          createId("finding"),
+          stableFindingId(projectId, finding, seenIds),
           projectId,
           finding.severity,
           finding.category,
@@ -837,19 +898,14 @@ function baselineFromRow(row: BaselineRow): Baseline {
   };
 }
 
-/** Capture the project's current analyzed data as a named, immutable baseline. */
-export function createBaseline(projectId: string, label: string): Baseline | null {
-  const data = getProjectData(projectId);
-  if (!data) {
-    return null;
-  }
-
+/** Store an already-built snapshot as a named, immutable baseline. */
+export function saveBaselineSnapshot(projectId: string, label: string, snapshot: ProjectSnapshot): Baseline {
   const baseline: Baseline = {
     id: createId("baseline"),
     projectId,
     label: label.trim() || `Baseline ${nowIso()}`,
     createdAt: nowIso(),
-    snapshot: snapshotFromProjectData(data)
+    snapshot
   };
 
   getDb()
@@ -861,11 +917,67 @@ export function createBaseline(projectId: string, label: string): Baseline | nul
   return baseline;
 }
 
+/** Capture the project's current analyzed data as a named, immutable baseline. */
+export function createBaseline(projectId: string, label: string): Baseline | null {
+  const data = getProjectData(projectId);
+  if (!data) {
+    return null;
+  }
+
+  return saveBaselineSnapshot(projectId, label, snapshotFromProjectData(data));
+}
+
 export function listBaselines(projectId: string): Baseline[] {
+  // rowid breaks ties between baselines captured within the same millisecond.
   const rows = getDb()
-    .prepare("SELECT * FROM baselines WHERE project_id = ? ORDER BY created_at DESC")
+    .prepare("SELECT * FROM baselines WHERE project_id = ? ORDER BY created_at DESC, rowid DESC")
     .all(projectId) as BaselineRow[];
   return rows.map(baselineFromRow);
+}
+
+export interface BaselineSummary {
+  id: string;
+  projectId: string;
+  label: string;
+  createdAt: string;
+  requirementCount: number;
+  findingCount: number;
+}
+
+/** Baseline metadata and counts without parsing each stored snapshot. */
+export function listBaselineSummaries(projectId: string): BaselineSummary[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT id, project_id, label, created_at,
+        json_array_length(snapshot_json, '$.requirements') AS requirement_count,
+        json_array_length(snapshot_json, '$.findings') AS finding_count
+      FROM baselines WHERE project_id = ?
+      ORDER BY created_at DESC, rowid DESC`
+    )
+    .all(projectId) as Array<{
+    id: string;
+    project_id: string;
+    label: string;
+    created_at: string;
+    requirement_count: number | null;
+    finding_count: number | null;
+  }>;
+
+  return rows.map((row) => ({
+    id: row.id,
+    projectId: row.project_id,
+    label: row.label,
+    createdAt: row.created_at,
+    requirementCount: row.requirement_count ?? 0,
+    findingCount: row.finding_count ?? 0
+  }));
+}
+
+/** Whether the project already has a baseline with this label, ignoring case. */
+export function baselineLabelExists(projectId: string, label: string): boolean {
+  return Boolean(
+    getDb().prepare("SELECT 1 FROM baselines WHERE project_id = ? AND label = ? COLLATE NOCASE").get(projectId, label)
+  );
 }
 
 export function getBaseline(baselineId: string): Baseline | null {
@@ -921,9 +1033,194 @@ export function recordAuditEvent(event: AuditEventInput): AuditEvent | null {
   }
 }
 
+export function countAuditEvents(projectId: string): number {
+  const row = getDb().prepare("SELECT COUNT(*) AS count FROM audit_log WHERE project_id = ?").get(projectId) as {
+    count: number;
+  };
+  return row.count;
+}
+
 export function listAuditEvents(projectId: string, limit = 200): AuditEvent[] {
   const rows = getDb()
-    .prepare("SELECT * FROM audit_log WHERE project_id = ? ORDER BY timestamp DESC LIMIT ?")
+    .prepare("SELECT * FROM audit_log WHERE project_id = ? ORDER BY timestamp DESC, rowid DESC LIMIT ?")
     .all(projectId, limit) as AuditRow[];
   return rows.map(auditFromRow);
+}
+
+// Import support
+//
+// Trace references and record removal for the import flow. Trace references
+// keep the requirement IDs a work item or test case mentioned at import time,
+// so links appear whichever file is imported first (see lib/trace-references).
+
+type RecordEntityType = TraceLink["sourceType"];
+type ReferenceEntityType = TraceReference["entityType"];
+
+interface TraceReferenceRow {
+  project_id: string;
+  entity_type: ReferenceEntityType;
+  entity_external_id: string;
+  requirement_external_id: string;
+  link_type: TraceReference["linkType"];
+  confidence: number;
+  source: string;
+}
+
+const RECORD_TABLES: Record<RecordEntityType, string> = {
+  requirement: "requirements",
+  workItem: "work_items",
+  testCase: "test_cases"
+};
+
+function migrateImportSupport(db: Db): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS trace_references (
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL,
+      entity_external_id TEXT NOT NULL,
+      requirement_external_id TEXT NOT NULL,
+      link_type TEXT NOT NULL,
+      confidence REAL NOT NULL,
+      source TEXT NOT NULL,
+      UNIQUE(project_id, entity_type, entity_external_id, requirement_external_id, link_type)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_trace_references_requirement
+      ON trace_references(project_id, requirement_external_id);
+  `);
+}
+
+const importSupportReady = new WeakSet<Db>();
+
+/**
+ * The shared connection with the import tables ensured. migrate() creates them
+ * for new connections; this also covers a connection opened before they
+ * existed (a long-running dev server).
+ */
+function importDb(): Db {
+  const db = getDb();
+  if (!importSupportReady.has(db)) {
+    migrateImportSupport(db);
+    importSupportReady.add(db);
+  }
+
+  return db;
+}
+
+/** Run several import writes atomically. Nested calls join the outer transaction. */
+export function runImportTransaction<T>(work: () => T): T {
+  return importDb().transaction(work)();
+}
+
+/** Internal and external IDs of one kind of record in a project. */
+export function listRecordIds(projectId: string, entityType: RecordEntityType): Array<{ id: string; externalId: string }> {
+  const rows = importDb()
+    .prepare(`SELECT id, external_id FROM ${RECORD_TABLES[entityType]} WHERE project_id = ?`)
+    .all(projectId) as Array<{ id: string; external_id: string }>;
+  return rows.map((row) => ({ id: row.id, externalId: row.external_id }));
+}
+
+/** Replace the stored references of the given entities with `references`. */
+export function replaceTraceReferences(
+  projectId: string,
+  entityType: ReferenceEntityType,
+  entityExternalIds: string[],
+  references: TraceReference[]
+): void {
+  const db = importDb();
+  const remove = db.prepare(
+    "DELETE FROM trace_references WHERE project_id = ? AND entity_type = ? AND entity_external_id = ?"
+  );
+  const insert = db.prepare(
+    `INSERT OR IGNORE INTO trace_references (
+      project_id, entity_type, entity_external_id, requirement_external_id, link_type, confidence, source
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  );
+
+  db.transaction(() => {
+    new Set(entityExternalIds).forEach((externalId) => remove.run(projectId, entityType, externalId));
+    references.forEach((reference) => {
+      insert.run(
+        projectId,
+        reference.entityType,
+        reference.entityExternalId,
+        reference.requirementExternalId,
+        reference.linkType,
+        reference.confidence,
+        reference.source
+      );
+    });
+  })();
+}
+
+export function listTraceReferences(projectId: string): TraceReference[] {
+  const rows = importDb()
+    .prepare("SELECT * FROM trace_references WHERE project_id = ?")
+    .all(projectId) as TraceReferenceRow[];
+  return rows.map((row) => ({
+    entityType: row.entity_type,
+    entityExternalId: row.entity_external_id,
+    requirementExternalId: row.requirement_external_id,
+    linkType: row.link_type,
+    confidence: row.confidence,
+    source: row.source
+  }));
+}
+
+export function deleteTraceLinksById(projectId: string, linkIds: string[]): number {
+  const db = importDb();
+  const remove = db.prepare("DELETE FROM trace_links WHERE project_id = ? AND id = ?");
+  return db.transaction(() => linkIds.reduce((count, id) => count + remove.run(projectId, id).changes, 0))();
+}
+
+export interface RemovedRecords {
+  removedExternalIds: string[];
+  removedLinkCount: number;
+}
+
+/**
+ * Delete records by external ID together with their trace links, findings, and
+ * (for work items and tests) their stored trace references. References that
+ * point at a removed requirement are kept: they belong to the work item or
+ * test that mentions it, and relink it if the requirement is imported again.
+ */
+export function removeRecords(projectId: string, entityType: RecordEntityType, externalIds: string[]): RemovedRecords {
+  const db = importDb();
+  const table = RECORD_TABLES[entityType];
+  const find = db.prepare(`SELECT id FROM ${table} WHERE project_id = ? AND external_id = ?`);
+  const removeLinks = db.prepare(
+    `DELETE FROM trace_links WHERE project_id = ?
+      AND ((source_type = ? AND source_id = ?) OR (target_type = ? AND target_id = ?))`
+  );
+  const removeFindings = db.prepare("DELETE FROM findings WHERE project_id = ? AND entity_type = ? AND entity_id = ?");
+  const removeReferences = db.prepare(
+    "DELETE FROM trace_references WHERE project_id = ? AND entity_type = ? AND entity_external_id = ?"
+  );
+  const removeRecord = db.prepare(`DELETE FROM ${table} WHERE project_id = ? AND id = ?`);
+
+  return db.transaction(() => {
+    const removedExternalIds: string[] = [];
+    let removedLinkCount = 0;
+
+    new Set(externalIds).forEach((externalId) => {
+      const row = find.get(projectId, externalId) as { id: string } | undefined;
+      if (!row) {
+        return;
+      }
+
+      removedLinkCount += removeLinks.run(projectId, entityType, row.id, entityType, row.id).changes;
+      removeFindings.run(projectId, entityType, row.id);
+      if (entityType !== "requirement") {
+        removeReferences.run(projectId, entityType, externalId);
+      }
+      removeRecord.run(projectId, row.id);
+      removedExternalIds.push(externalId);
+    });
+
+    if (removedExternalIds.length > 0) {
+      touchProject(projectId);
+    }
+
+    return { removedExternalIds, removedLinkCount };
+  })();
 }

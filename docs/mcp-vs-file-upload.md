@@ -26,4 +26,6 @@ Uploading a requirements export directly into an enterprise AI client may be all
 - Doorframe returns scoped structured results.
 - There are no mutation tools, arbitrary SQL tools, arbitrary file reads, or direct AI-provider calls.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
 Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”

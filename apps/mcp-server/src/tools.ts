@@ -44,6 +44,7 @@ import {
 import {
   canReturnFullText,
   dataPolicy,
+  MAX_RESULTS_LIMIT,
   normalizeDoorframeMcpOptions,
   resultLimit,
   shouldHideRawText,
@@ -229,6 +230,68 @@ function linkedIds(requirement: Requirement, traceLinks: TraceLink[], entityType
     .map((link) => (link.sourceId === requirement.id ? link.targetId : link.sourceId));
 }
 
+function addToGroup<T>(groups: Map<string, T[]>, key: string, item: T): void {
+  const group = groups.get(key);
+  if (group) {
+    group.push(item);
+  } else {
+    groups.set(key, [item]);
+  }
+}
+
+/** Groups items by key, keeping their original order inside each group. */
+function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  items.forEach((item) => addToGroup(groups, key(item), item));
+  return groups;
+}
+
+/** Positions of items grouped by key, so a few keys can be looked up without scanning every item. */
+function positionsBy<T>(items: T[], key: (item: T) => string): Map<string, number[]> {
+  const positions = new Map<string, number[]>();
+  items.forEach((item, position) => addToGroup(positions, key(item), position));
+  return positions;
+}
+
+/**
+ * Same result as `items.filter((item) => keys.has(key(item)))`, in the same order, where
+ * `positionsByKey` is `positionsBy(items, key)`.
+ */
+function itemsWithKeys<T>(items: T[], positionsByKey: Map<string, number[]>, keys: Set<string>): T[] {
+  return [...keys]
+    .flatMap((key) => positionsByKey.get(key) ?? [])
+    .sort((left, right) => left - right)
+    .map((position) => items[position]);
+}
+
+/** Maps each key to the first item that has it, matching Array.prototype.find when keys repeat. */
+function firstBy<T>(items: T[], key: (item: T) => string): Map<string, T> {
+  const firstByKey = new Map<string, T>();
+  items.forEach((item) => {
+    const value = key(item);
+    if (!firstByKey.has(value)) {
+      firstByKey.set(value, item);
+    }
+  });
+  return firstByKey;
+}
+
+/**
+ * Groups trace links under their source id and their target id, keeping project order. A link whose
+ * source and target ids are equal (such as a self link) is listed once. Callers still filter a group
+ * with their usual link check, so the result matches filtering every link in the project.
+ */
+function linksByEndpointId(traceLinks: TraceLink[]): Map<string, TraceLink[]> {
+  const groups = new Map<string, TraceLink[]>();
+  traceLinks.forEach((link) => {
+    addToGroup(groups, link.sourceId, link);
+    if (link.targetId !== link.sourceId) {
+      addToGroup(groups, link.targetId, link);
+    }
+  });
+  return groups;
+}
+
 function compactWorkItem(workItem: WorkItem): EntityReference {
   return {
     id: workItem.id,
@@ -251,22 +314,37 @@ function compactTestCase(testCase: TestCase): EntityReference {
   };
 }
 
-function entityLabel(data: ProjectData, entityType: EntityType, entityId: string): string {
+/** First record for each id, used to label findings without scanning every record per finding. */
+interface EntityLookup {
+  requirements: Map<string, Requirement>;
+  workItems: Map<string, WorkItem>;
+  testCases: Map<string, TestCase>;
+}
+
+function buildEntityLookup(data: Pick<ProjectData, "requirements" | "workItems" | "testCases">): EntityLookup {
+  return {
+    requirements: firstBy(data.requirements, (requirement) => requirement.id),
+    workItems: firstBy(data.workItems, (workItem) => workItem.id),
+    testCases: firstBy(data.testCases, (testCase) => testCase.id)
+  };
+}
+
+function entityLabel(lookup: EntityLookup, entityType: EntityType, entityId: string): string {
   if (entityType === "requirement") {
-    const requirement = data.requirements.find((item) => item.id === entityId);
+    const requirement = lookup.requirements.get(entityId);
     return requirement ? `${requirement.externalId}: ${requirement.title}` : entityId;
   }
 
   if (entityType === "workItem") {
-    const workItem = data.workItems.find((item) => item.id === entityId);
+    const workItem = lookup.workItems.get(entityId);
     return workItem ? `${workItem.externalId}: ${workItem.title}` : entityId;
   }
 
-  const testCase = data.testCases.find((item) => item.id === entityId);
+  const testCase = lookup.testCases.get(entityId);
   return testCase ? `${testCase.externalId}: ${testCase.name}` : entityId;
 }
 
-function findingToData(finding: Finding, data: ProjectData) {
+function findingToData(finding: Finding, lookup: EntityLookup) {
   return {
     id: finding.id,
     severity: toPublicSeverity(finding.severity),
@@ -275,7 +353,7 @@ function findingToData(finding: Finding, data: ProjectData) {
     description: finding.description,
     entityType: finding.entityType,
     entityId: finding.entityId,
-    entityLabel: entityLabel(data, finding.entityType, finding.entityId),
+    entityLabel: entityLabel(lookup, finding.entityType, finding.entityId),
     recommendation: finding.recommendation
   };
 }
@@ -283,10 +361,14 @@ function findingToData(finding: Finding, data: ProjectData) {
 function buildRequirementFacts(data: ProjectData): RequirementFact[] {
   const workById = new Map(data.workItems.map((workItem) => [workItem.id, workItem]));
   const testsById = new Map(data.testCases.map((testCase) => [testCase.id, testCase]));
+  const traceLinksById = linksByEndpointId(data.traceLinks);
+  const findingsByEntityId = groupBy(data.findings, (finding) => finding.entityId);
 
   return data.requirements.map((requirement) => {
-    const workIds = linkedIds(requirement, data.traceLinks, "workItem");
-    const testIds = linkedIds(requirement, data.traceLinks, "testCase");
+    const candidateLinks = traceLinksById.get(requirement.id) ?? [];
+    const candidateFindings = findingsByEntityId.get(requirement.id) ?? [];
+    const workIds = linkedIds(requirement, candidateLinks, "workItem");
+    const testIds = linkedIds(requirement, candidateLinks, "testCase");
     const linkedWorkItems = workIds.flatMap((id) => {
       const workItem = workById.get(id);
       return workItem ? [workItem] : [];
@@ -300,8 +382,10 @@ function buildRequirementFacts(data: ProjectData): RequirementFact[] {
       requirement,
       linkedWorkItems,
       linkedTestCases,
-      linkedTraceLinks: data.traceLinks.filter((link) => linkTouchesRequirement(link, requirement)),
-      findings: data.findings.filter((finding) => finding.entityType === "requirement" && finding.entityId === requirement.id),
+      linkedTraceLinks: candidateLinks.filter((link) => linkTouchesRequirement(link, requirement)),
+      findings: candidateFindings.filter(
+        (finding) => finding.entityType === "requirement" && finding.entityId === requirement.id
+      ),
       passingTests: linkedTestCases.filter((testCase) => testCase.status === "passed"),
       failedTests: linkedTestCases.filter((testCase) => testCase.status === "failed" || testCase.status === "errored"),
       skippedTests: linkedTestCases.filter((testCase) => testCase.status === "skipped")
@@ -357,7 +441,7 @@ function makeGap(
   severity: PublicSeverity,
   description: string,
   findings: Finding[],
-  data: ProjectData
+  lookup: EntityLookup
 ): TraceabilityGap {
   return {
     gapType,
@@ -371,12 +455,13 @@ function makeGap(
     description,
     linkedWorkItems: fact.linkedWorkItems.map(compactWorkItem),
     linkedTestCases: fact.linkedTestCases.map(compactTestCase),
-    findings: findings.map((finding) => findingToData(finding, data))
+    findings: findings.map((finding) => findingToData(finding, lookup))
   };
 }
 
-function allTraceabilityGaps(data: ProjectData): TraceabilityGap[] {
-  const facts = buildRequirementFacts(data);
+function allTraceabilityGaps(data: ProjectData, facts: RequirementFact[], lookup: EntityLookup): TraceabilityGap[] {
+  const closedWorkFindings = data.findings.filter((finding) => finding.category === "closed_work_without_verification");
+  const closedWorkFindingPositions = positionsBy(closedWorkFindings, (finding) => finding.entityId);
   const gaps: TraceabilityGap[] = [];
 
   facts.forEach((fact) => {
@@ -393,7 +478,7 @@ function allTraceabilityGaps(data: ProjectData): TraceabilityGap[] {
           "medium",
           `${fact.requirement.externalId} has no linked work item.`,
           missingWorkFindings,
-          data
+          lookup
         )
       );
     }
@@ -406,7 +491,7 @@ function allTraceabilityGaps(data: ProjectData): TraceabilityGap[] {
           "high",
           `${fact.requirement.externalId} has no linked verification test case.`,
           missingVerificationFindings,
-          data
+          lookup
         )
       );
     }
@@ -419,15 +504,14 @@ function allTraceabilityGaps(data: ProjectData): TraceabilityGap[] {
           "high",
           `${fact.requirement.externalId} has ${fact.failedTests.length} linked failed test(s).`,
           [],
-          data
+          lookup
         )
       );
     }
 
     if (closedWorkItems.length > 0 && fact.passingTests.length === 0) {
-      const findings = data.findings.filter(
-        (finding) => finding.category === "closed_work_without_verification" && closedWorkItems.some((workItem) => workItem.id === finding.entityId)
-      );
+      const closedWorkIds = new Set(closedWorkItems.map((workItem) => workItem.id));
+      const findings = itemsWithKeys(closedWorkFindings, closedWorkFindingPositions, closedWorkIds);
       gaps.push(
         makeGap(
           fact,
@@ -435,7 +519,7 @@ function allTraceabilityGaps(data: ProjectData): TraceabilityGap[] {
           "high",
           `${fact.requirement.externalId} is linked to closed work without passing verification evidence.`,
           findings,
-          data
+          lookup
         )
       );
     }
@@ -448,7 +532,7 @@ function allTraceabilityGaps(data: ProjectData): TraceabilityGap[] {
           "medium",
           `${fact.requirement.externalId} has weak wording findings.`,
           weakLanguageFindings,
-          data
+          lookup
         )
       );
     }
@@ -457,9 +541,74 @@ function allTraceabilityGaps(data: ProjectData): TraceabilityGap[] {
   return sortGaps(gaps);
 }
 
+/**
+ * Project data for one adapter call. It loads project data and baselines at most once and keeps
+ * derived requirement facts, traceability gaps, and baseline comparisons, so adapters that call
+ * other adapters (such as the review brief) do not repeat the same work. Every top-level adapter
+ * call creates a new ProjectAnalysis, so nothing is cached between calls.
+ */
+class ProjectAnalysis {
+  private data?: ProjectData;
+  private baselines?: Baseline[];
+  private facts?: RequirementFact[];
+  private lookup?: EntityLookup;
+  private gaps?: TraceabilityGap[];
+  private readonly comparisons: Array<{
+    baselineAId?: string;
+    baselineBId?: string;
+    comparison: BaselineComparison;
+  }> = [];
+
+  constructor(private readonly projectDb: ProjectDb) {}
+
+  loadProjectData(): ProjectData {
+    this.data ??= this.projectDb.loadProjectData();
+    return this.data;
+  }
+
+  listBaselines(): Baseline[] {
+    this.baselines ??= this.projectDb.listBaselines?.() ?? [];
+    return this.baselines;
+  }
+
+  requirementFacts(): RequirementFact[] {
+    this.facts ??= buildRequirementFacts(this.loadProjectData());
+    return this.facts;
+  }
+
+  entityLookup(): EntityLookup {
+    this.lookup ??= buildEntityLookup(this.loadProjectData());
+    return this.lookup;
+  }
+
+  traceabilityGaps(): TraceabilityGap[] {
+    this.gaps ??= allTraceabilityGaps(this.loadProjectData(), this.requirementFacts(), this.entityLookup());
+    return this.gaps;
+  }
+
+  baselineComparison(args: { baselineAId?: string; baselineBId?: string } = {}): BaselineComparison {
+    const cached = this.comparisons.find(
+      (entry) => entry.baselineAId === args.baselineAId && entry.baselineBId === args.baselineBId
+    );
+    if (cached) {
+      return cached.comparison;
+    }
+
+    const comparison = resolveBaselineComparison(this, args);
+    this.comparisons.push({ baselineAId: args.baselineAId, baselineBId: args.baselineBId, comparison });
+    return comparison;
+  }
+}
+
+/** Reuses the ProjectAnalysis when one adapter calls another; otherwise starts a new one. */
+function projectAnalysis(projectDb: ProjectDb): ProjectAnalysis {
+  return projectDb instanceof ProjectAnalysis ? projectDb : new ProjectAnalysis(projectDb);
+}
+
 export function getProjectSummaryData(projectDb: ProjectDb) {
-  const data = projectDb.loadProjectData();
-  const facts = buildRequirementFacts(data);
+  const analysis = projectAnalysis(projectDb);
+  const data = analysis.loadProjectData();
+  const facts = analysis.requirementFacts();
   const findingsBySeverity = {
     high: data.findings.filter((finding) => toPublicSeverity(finding.severity) === "high").length,
     medium: data.findings.filter((finding) => toPublicSeverity(finding.severity) === "medium").length,
@@ -472,7 +621,7 @@ export function getProjectSummaryData(projectDb: ProjectDb) {
     (fact) => isChangedRequirement(fact.requirement.status) && fact.passingTests.length === 0
   ).length;
   const failedTestsLinkedToRequirements = facts.reduce((count, fact) => count + fact.failedTests.length, 0);
-  const closedWorkWithoutVerification = allTraceabilityGaps(data).filter(
+  const closedWorkWithoutVerification = analysis.traceabilityGaps().filter(
     (gap) => gap.gapType === "closed_work_without_verification"
   ).length;
   const weakRequirements = data.findings.filter((finding) => finding.category === "weak_wording").length;
@@ -548,11 +697,12 @@ export function searchRequirementsData(
   },
   options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const data = projectDb.loadProjectData();
+  const analysis = projectAnalysis(projectDb);
+  const data = analysis.loadProjectData();
   const query = normalize(filters.query);
   const status = normalize(filters.status);
-  const limit = resultLimit(filters.limit, options, 20, 100);
-  const facts = buildRequirementFacts(data);
+  const limit = resultLimit(filters.limit, options, 20, MAX_RESULTS_LIMIT);
+  const facts = analysis.requirementFacts();
 
   const matched = facts.filter((fact) => {
     const requirement = fact.requirement;
@@ -615,9 +765,10 @@ export function getTraceabilityMatrixData(
     limit?: number;
   } = {}
 ) {
-  const data = projectDb.loadProjectData();
+  const analysis = projectAnalysis(projectDb);
+  const data = analysis.loadProjectData();
   const limit = clampLimit(options.limit, 100, 100);
-  const rows = buildRequirementFacts(data).map((fact) => ({
+  const rows = analysis.requirementFacts().map((fact) => ({
     requirementId: fact.requirement.externalId,
     title: fact.requirement.title,
     linkedWorkCount: fact.linkedWorkItems.length,
@@ -650,11 +801,12 @@ export function getRequirementDetailData(
   requirementId: string,
   options: Partial<DoorframeMcpOptions> = {}
 ): RequirementDetailData {
-  const data = projectDb.loadProjectData();
+  const analysis = projectAnalysis(projectDb);
+  const facts = analysis.requirementFacts();
   const requestedId = normalize(requirementId);
   const hideText = shouldHideRawText(options);
   const includeFullText = canReturnFullText(options);
-  const fact = buildRequirementFacts(data).find(
+  const fact = facts.find(
     (candidate) =>
       normalize(candidate.requirement.id) === requestedId ||
       normalize(candidate.requirement.externalId) === requestedId
@@ -694,7 +846,7 @@ export function getRequirementDetailData(
       confidence: link.confidence,
       source: link.source
     })),
-    findings: fact.findings.map((finding) => findingToData(finding, data)),
+    findings: fact.findings.map((finding) => findingToData(finding, analysis.entityLookup())),
     traceSummary: {
       linkedWorkCount: fact.linkedWorkItems.length,
       linkedTestCount: fact.linkedTestCases.length,
@@ -740,16 +892,18 @@ export function listFindingsData(
     category?: string;
     entityType?: EntityType | "traceLink";
     limit?: number;
-  }
+  },
+  options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const data = projectDb.loadProjectData();
-  const limit = clampLimit(filters.limit, 25, 100);
+  const analysis = projectAnalysis(projectDb);
+  const data = analysis.loadProjectData();
+  const limit = resultLimit(filters.limit, options, 25, MAX_RESULTS_LIMIT);
   const coreSeverity = filters.severity ? fromPublicSeverity(filters.severity) : undefined;
   const findings = data.findings
     .filter((finding) => !coreSeverity || finding.severity === coreSeverity)
     .filter((finding) => !filters.category || finding.category === filters.category)
     .filter((finding) => !filters.entityType || finding.entityType === filters.entityType)
-    .map((finding) => findingToData(finding, data))
+    .map((finding) => findingToData(finding, analysis.entityLookup()))
     .sort((left, right) => {
       const severityDiff = severityOrder[left.severity] - severityOrder[right.severity];
       if (severityDiff !== 0) {
@@ -799,10 +953,12 @@ export function getTraceabilityGapsData(
   },
   options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const data = projectDb.loadProjectData();
+  const analysis = projectAnalysis(projectDb);
+  const data = analysis.loadProjectData();
   const gapType = filters.gapType ?? "all";
-  const limit = resultLimit(filters.limit, options, 25, 100);
-  const filtered = allTraceabilityGaps(data)
+  const limit = resultLimit(filters.limit, options, 25, MAX_RESULTS_LIMIT);
+  const filtered = analysis
+    .traceabilityGaps()
     .filter((gap) => gapType === "all" || gap.gapType === gapType)
     .filter((gap) => !filters.severity || gap.severity === filters.severity);
   const limited = limitItems(filtered, limit);
@@ -873,9 +1029,10 @@ export function getReviewRiskSummaryData(
   options: Partial<DoorframeMcpOptions> = {}
 ) {
   const reviewType = args.reviewType ?? "general";
-  const limit = resultLimit(args.limit, options, 10, 100);
-  const data = projectDb.loadProjectData();
-  const gaps = getTraceabilityGapsData(projectDb, { gapType: "all", limit }, options).gaps;
+  const limit = resultLimit(args.limit, options, 10, MAX_RESULTS_LIMIT);
+  const analysis = projectAnalysis(projectDb);
+  const data = analysis.loadProjectData();
+  const gaps = getTraceabilityGapsData(analysis, { gapType: "all", limit }, options).gaps;
   const affectedRequirements = Array.from(
     new Map(gaps.map((gap) => [gap.requirement.id, gap.requirement])).values()
   ).slice(0, limit);
@@ -965,21 +1122,23 @@ export function formatTraceLinksForRequirementText(result: ReturnType<typeof get
 
 export function findOrphanItemsData(
   projectDb: ProjectDb,
-  options: {
+  filters: {
     entityType: "requirements" | "workItems" | "testCases" | "all";
     limit?: number;
-  }
+  },
+  options: Partial<DoorframeMcpOptions> = {}
 ) {
   const data = projectDb.loadProjectData();
-  const limit = clampLimit(options.limit, 25, 100);
+  const limit = resultLimit(filters.limit, options, 25, MAX_RESULTS_LIMIT);
+  const traceLinksById = linksByEndpointId(data.traceLinks);
   const isLinked = (entityType: EntityType, entityId: string) =>
-    data.traceLinks.some(
+    (traceLinksById.get(entityId) ?? []).some(
       (link) =>
         (link.sourceType === entityType && link.sourceId === entityId) ||
         (link.targetType === entityType && link.targetId === entityId)
     );
   const items = [
-    ...(options.entityType === "requirements" || options.entityType === "all"
+    ...(filters.entityType === "requirements" || filters.entityType === "all"
       ? data.requirements
           .filter((requirement) => !isLinked("requirement", requirement.id))
           .map((requirement) => ({
@@ -990,7 +1149,7 @@ export function findOrphanItemsData(
             status: requirement.status
           }))
       : []),
-    ...(options.entityType === "workItems" || options.entityType === "all"
+    ...(filters.entityType === "workItems" || filters.entityType === "all"
       ? data.workItems
           .filter((workItem) => !isLinked("workItem", workItem.id))
           .map((workItem) => ({
@@ -1001,7 +1160,7 @@ export function findOrphanItemsData(
             status: workItem.status
           }))
       : []),
-    ...(options.entityType === "testCases" || options.entityType === "all"
+    ...(filters.entityType === "testCases" || filters.entityType === "all"
       ? data.testCases
           .filter((testCase) => !isLinked("testCase", testCase.id))
           .map((testCase) => ({
@@ -1134,35 +1293,53 @@ function requirementExternalIdByInternalId(snapshot: ProjectSnapshot): Map<strin
   return new Map(snapshot.requirements.map((requirement) => [requirement.id, requirement.externalId]));
 }
 
-function entityIdsForRequirement(snapshot: ProjectSnapshot, requirementExternalId: string, entityType: EntityType): string[] {
-  const requirement = snapshot.requirements.find((candidate) => candidate.externalId === requirementExternalId);
+/** Lookups for one baseline snapshot, built once instead of scanning the snapshot per requirement. */
+interface SnapshotIndex {
+  snapshot: ProjectSnapshot;
+  requirementByExternalId: Map<string, Requirement>;
+  traceLinksById: Map<string, TraceLink[]>;
+  workItemPositionsById: Map<string, number[]>;
+  testCasePositionsById: Map<string, number[]>;
+}
+
+function indexSnapshot(snapshot: ProjectSnapshot): SnapshotIndex {
+  return {
+    snapshot,
+    requirementByExternalId: firstBy(snapshot.requirements, (requirement) => requirement.externalId),
+    traceLinksById: linksByEndpointId(snapshot.traceLinks),
+    workItemPositionsById: positionsBy(snapshot.workItems, (workItem) => workItem.id),
+    testCasePositionsById: positionsBy(snapshot.testCases, (testCase) => testCase.id)
+  };
+}
+
+function entityIdsForRequirement(index: SnapshotIndex, requirementExternalId: string, entityType: EntityType): string[] {
+  const requirement = index.requirementByExternalId.get(requirementExternalId);
   if (!requirement) {
     return [];
   }
 
-  return snapshot.traceLinks
-    .filter((link) => linkTouchesRequirement(link, requirement, entityType))
-    .map((link) => (link.sourceId === requirement.id ? link.targetId : link.sourceId));
+  return linkedIds(requirement, index.traceLinksById.get(requirement.id) ?? [], entityType);
 }
 
-function linkedWorkItemsForSnapshot(snapshot: ProjectSnapshot, requirementExternalId: string): WorkItem[] {
-  const ids = new Set(entityIdsForRequirement(snapshot, requirementExternalId, "workItem"));
-  return snapshot.workItems.filter((workItem) => ids.has(workItem.id));
+function linkedWorkItemsForSnapshot(index: SnapshotIndex, requirementExternalId: string): WorkItem[] {
+  const ids = new Set(entityIdsForRequirement(index, requirementExternalId, "workItem"));
+  return itemsWithKeys(index.snapshot.workItems, index.workItemPositionsById, ids);
 }
 
-function linkedTestsForSnapshot(snapshot: ProjectSnapshot, requirementExternalId: string): TestCase[] {
-  const ids = new Set(entityIdsForRequirement(snapshot, requirementExternalId, "testCase"));
-  return snapshot.testCases.filter((testCase) => ids.has(testCase.id));
+function linkedTestsForSnapshot(index: SnapshotIndex, requirementExternalId: string): TestCase[] {
+  const ids = new Set(entityIdsForRequirement(index, requirementExternalId, "testCase"));
+  return itemsWithKeys(index.snapshot.testCases, index.testCasePositionsById, ids);
 }
 
 function workItemContexts(snapshot: ProjectSnapshot) {
   const requirementsByInternalId = requirementExternalIdByInternalId(snapshot);
+  const traceLinksById = linksByEndpointId(snapshot.traceLinks);
 
   return snapshot.workItems.map((workItem) => ({
     externalId: workItem.externalId,
     title: workItem.title,
     status: workItem.status,
-    requirementIds: snapshot.traceLinks
+    requirementIds: (traceLinksById.get(workItem.id) ?? [])
       .filter(
         (link) =>
           link.linkType === "implements" &&
@@ -1176,12 +1353,13 @@ function workItemContexts(snapshot: ProjectSnapshot) {
 
 function testContexts(snapshot: ProjectSnapshot) {
   const requirementsByInternalId = requirementExternalIdByInternalId(snapshot);
+  const traceLinksById = linksByEndpointId(snapshot.traceLinks);
 
   return snapshot.testCases.map((testCase) => ({
     externalId: testCase.externalId,
     name: testCase.name,
     status: testCase.status,
-    requirementIds: snapshot.traceLinks
+    requirementIds: (traceLinksById.get(testCase.id) ?? [])
       .filter(
         (link) =>
           link.linkType === "verifies" &&
@@ -1321,9 +1499,9 @@ function changedRequirementSummary(
   };
 }
 
-function traceSummaryForExternalId(snapshot: ProjectSnapshot, requirementExternalId: string) {
-  const workItems = linkedWorkItemsForSnapshot(snapshot, requirementExternalId);
-  const testCases = linkedTestsForSnapshot(snapshot, requirementExternalId);
+function traceSummaryForExternalId(index: SnapshotIndex, requirementExternalId: string) {
+  const workItems = linkedWorkItemsForSnapshot(index, requirementExternalId);
+  const testCases = linkedTestsForSnapshot(index, requirementExternalId);
 
   return {
     linkedWorkItems: workItems.map(compactWorkItem),
@@ -1424,12 +1602,14 @@ function buildStaleTraceCandidates(comparison: BaselineComparison): StaleTraceCa
   const afterRequirements = new Map(comparison.snapshotB.requirements.map((requirement) => [requirement.externalId, requirement]));
   const afterWork = new Map(comparison.snapshotB.workItems.map((workItem) => [workItem.externalId, workItem]));
   const afterTests = new Map(comparison.snapshotB.testCases.map((testCase) => [testCase.externalId, testCase]));
+  const indexA = indexSnapshot(comparison.snapshotA);
+  const indexB = indexSnapshot(comparison.snapshotB);
 
   comparison.report.changed.forEach((change) => {
     const reasons: string[] = [];
     const indicators: string[] = [];
-    const linkedWorkItems = linkedWorkItemsForSnapshot(comparison.snapshotB, change.externalId);
-    const linkedTestCases = linkedTestsForSnapshot(comparison.snapshotB, change.externalId);
+    const linkedWorkItems = linkedWorkItemsForSnapshot(indexB, change.externalId);
+    const linkedTestCases = linkedTestsForSnapshot(indexB, change.externalId);
     const textChange = change.changes.find((fieldChange) => fieldChange.field === "text");
     const verificationChange = change.changes.find((fieldChange) => fieldChange.field === "verificationMethod");
     const afterRequirement = afterRequirements.get(change.externalId);
@@ -1486,10 +1666,10 @@ function buildStaleTraceCandidates(comparison: BaselineComparison): StaleTraceCa
   });
 
   comparison.report.deleted.forEach((requirement) => {
-    const linkedWork = linkedWorkItemsForSnapshot(comparison.snapshotA, requirement.externalId).filter((workItem) =>
+    const linkedWork = linkedWorkItemsForSnapshot(indexA, requirement.externalId).filter((workItem) =>
       afterWork.has(workItem.externalId)
     );
-    const linkedTests = linkedTestsForSnapshot(comparison.snapshotA, requirement.externalId).filter((testCase) =>
+    const linkedTests = linkedTestsForSnapshot(indexA, requirement.externalId).filter((testCase) =>
       afterTests.has(testCase.externalId)
     );
 
@@ -1515,8 +1695,8 @@ function buildStaleTraceCandidates(comparison: BaselineComparison): StaleTraceCa
   });
 
   comparison.report.added.forEach((requirement) => {
-    const linkedWork = linkedWorkItemsForSnapshot(comparison.snapshotB, requirement.externalId);
-    const linkedTests = linkedTestsForSnapshot(comparison.snapshotB, requirement.externalId);
+    const linkedWork = linkedWorkItemsForSnapshot(indexB, requirement.externalId);
+    const linkedTests = linkedTestsForSnapshot(indexB, requirement.externalId);
 
     if (linkedWork.length > 0 && linkedTests.length > 0) {
       return;
@@ -1564,7 +1744,7 @@ export function getBaselineDiffSummaryData(
   args: { baselineAId?: string; baselineBId?: string } = {},
   options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const comparison = resolveBaselineComparison(projectDb, args);
+  const comparison = projectAnalysis(projectDb).baselineComparison(args);
 
   return {
     ...baselineResponseEnvelope(comparison, options),
@@ -1601,8 +1781,8 @@ export function listChangedRequirementsData(
   } = {},
   options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const comparison = resolveBaselineComparison(projectDb, args);
-  const limit = resultLimit(args.limit, options, 25, 100);
+  const comparison = projectAnalysis(projectDb).baselineComparison(args);
+  const limit = resultLimit(args.limit, options, 25, MAX_RESULTS_LIMIT);
   const requestedType = args.changeType ?? "all";
   const includeUnconcernedChanges = !args.concernLevel;
   const items = [
@@ -1665,12 +1845,13 @@ export function getRequirementChangeDetailData(
   args: { requirementId: string; baselineAId?: string; baselineBId?: string },
   options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const comparison = resolveBaselineComparison(projectDb, args);
+  const comparison = projectAnalysis(projectDb).baselineComparison(args);
   const requestedId = normalize(args.requirementId);
   const changed = comparison.report.changed.find((change) => normalize(change.externalId) === requestedId);
   const added = comparison.report.added.find((requirement) => normalize(requirement.externalId) === requestedId);
   const deleted = comparison.report.deleted.find((requirement) => normalize(requirement.externalId) === requestedId);
-  const facts = buildRequirementFacts(snapshotProjectData({ ...comparison.project, updatedAt: "", createdAt: "" }, comparison.snapshotB));
+  const snapshotData = snapshotProjectData({ ...comparison.project, updatedAt: "", createdAt: "" }, comparison.snapshotB);
+  const facts = buildRequirementFacts(snapshotData);
   const fact = facts.find((candidate) => normalize(candidate.requirement.externalId) === requestedId);
   const staleCandidates = buildStaleTraceCandidates(comparison).filter(
     (candidate) => normalize(candidate.requirement.externalId) === requestedId
@@ -1686,9 +1867,10 @@ export function getRequirementChangeDetailData(
 
   const externalId = changed?.externalId ?? added?.externalId ?? deleted?.externalId ?? args.requirementId;
   const traceSummary = traceSummaryForExternalId(
-    deleted ? comparison.snapshotA : comparison.snapshotB,
+    indexSnapshot(deleted ? comparison.snapshotA : comparison.snapshotB),
     externalId
   );
+  const snapshotLookup = buildEntityLookup(snapshotData);
 
   return {
     ...baselineResponseEnvelope(comparison, options),
@@ -1705,7 +1887,7 @@ export function getRequirementChangeDetailData(
     changedFields: changed?.changes.map((change) => changeFieldData(change, options)) ?? [],
     linkedWorkItems: traceSummary.linkedWorkItems,
     linkedTestCases: traceSummary.linkedTestCases,
-    findings: fact?.findings.map((finding) => findingToData(finding, snapshotProjectData({ ...comparison.project, updatedAt: "", createdAt: "" }, comparison.snapshotB))) ?? [],
+    findings: fact?.findings.map((finding) => findingToData(finding, snapshotLookup)) ?? [],
     traceSummary,
     staleTraceIndicators: staleCandidates.flatMap((candidate) => candidate.staleIndicators),
     staleTraceReasons: staleCandidates.flatMap((candidate) => candidate.reasons),
@@ -1752,8 +1934,8 @@ export function getStaleTraceCandidatesData(
   } = {},
   options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const comparison = resolveBaselineComparison(projectDb, args);
-  const limit = resultLimit(args.limit, options, 25, 100);
+  const comparison = projectAnalysis(projectDb).baselineComparison(args);
+  const limit = resultLimit(args.limit, options, 25, MAX_RESULTS_LIMIT);
   const candidates = buildStaleTraceCandidates(comparison).filter(
     (candidate) => !args.concernLevel || candidate.requirement.concern === args.concernLevel
   );
@@ -1850,23 +2032,24 @@ export function getReviewBriefData(
   } = {},
   options: Partial<DoorframeMcpOptions> = {}
 ) {
-  const limit = resultLimit(args.limit, options, 10, 100);
-  const projectSummary = getProjectSummaryData(projectDb);
-  const baselineSummary = getBaselineDiffSummaryData(projectDb, args, options);
-  const changedRequirements = listChangedRequirementsData(projectDb, { ...args, changeType: "changed", limit }, options);
-  const staleTraceCandidates = getStaleTraceCandidatesData(projectDb, { ...args, limit }, options);
-  const topGaps = getTraceabilityGapsData(projectDb, { gapType: "all", limit }, options);
-  const missingVerification = getTraceabilityGapsData(projectDb, { gapType: "missing_tests", limit }, options);
-  const failedTests = getTraceabilityGapsData(projectDb, { gapType: "failed_tests", limit }, options);
+  const limit = resultLimit(args.limit, options, 10, MAX_RESULTS_LIMIT);
+  const analysis = projectAnalysis(projectDb);
+  const projectSummary = getProjectSummaryData(analysis);
+  const baselineSummary = getBaselineDiffSummaryData(analysis, args, options);
+  const changedRequirements = listChangedRequirementsData(analysis, { ...args, changeType: "changed", limit }, options);
+  const staleTraceCandidates = getStaleTraceCandidatesData(analysis, { ...args, limit }, options);
+  const topGaps = getTraceabilityGapsData(analysis, { gapType: "all", limit }, options);
+  const missingVerification = getTraceabilityGapsData(analysis, { gapType: "missing_tests", limit }, options);
+  const failedTests = getTraceabilityGapsData(analysis, { gapType: "failed_tests", limit }, options);
   const weakRequirements = getTraceabilityGapsData(
-    projectDb,
+    analysis,
     {
       gapType: "weak_requirement_language",
       limit
     },
     options
   );
-  const reviewRisk = getReviewRiskSummaryData(projectDb, { reviewType: args.reviewType ?? "general", limit }, options);
+  const reviewRisk = getReviewRiskSummaryData(analysis, { reviewType: args.reviewType ?? "general", limit }, options);
 
   return {
     project: projectSummary.project,
@@ -1985,7 +2168,11 @@ export function registerDoorframeTools(
       return undefined;
     }
 
-    cachedProject ??= projectDb.loadProjectData().project;
+    if (!cachedProject) {
+      // The audit log records only the project id and name, not the whole project row.
+      const { id, name } = projectDb.loadProjectData().project;
+      cachedProject = { id, name };
+    }
     return cachedProject;
   };
 
@@ -2060,7 +2247,7 @@ export function registerDoorframeTools(
     },
     (args) =>
       safeTool("list_findings", auditProject(), options, args, () => {
-        const data = listFindingsData(projectDb, args);
+        const data = listFindingsData(projectDb, args, options);
         return toolResult(formatFindingsText(data), data);
       })
   );
@@ -2256,7 +2443,7 @@ export function registerDoorframeTools(
     },
     (args) =>
       safeTool("find_orphan_items", auditProject(), options, args, () => {
-        const data = findOrphanItemsData(projectDb, args);
+        const data = findOrphanItemsData(projectDb, args, options);
         return toolResult(formatOrphanItemsText(data), data);
       })
   );

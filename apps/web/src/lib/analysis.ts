@@ -1,6 +1,7 @@
 import { generateFindings } from "@doorframe/analyzers";
 import { getProjectData, getRuleset, recordAuditEvent, replaceFindings } from "./db";
 import { auditActor } from "./audit-actor";
+import { plural } from "./import-messages";
 
 export function rerunAnalysis(projectId: string) {
   const data = getProjectData(projectId);
@@ -26,7 +27,7 @@ export function rerunAnalysis(projectId: string) {
     projectId,
     action: "analysis.rerun",
     actor: auditActor(),
-    summary: `Re-ran analysis and generated ${findings.length} finding(s).`
+    summary: `Re-ran analysis and generated ${plural(findings.length, "finding")}.`
   });
 
   return findings;

@@ -17,4 +17,8 @@ If your organization wants Doorframe inside ChatGPT, you may need a future inter
 
 Doorframe does not include an AI model and does not call OpenAI or any other AI provider directly.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
 Reference: [OpenAI remote MCP docs](https://platform.openai.com/docs/guides/tools-remote-mcp).

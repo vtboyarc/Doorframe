@@ -3,7 +3,7 @@
 Doorframe MCP can write an optional local JSONL audit log for MCP tool calls.
 
 ```bash
-npx -y doorframe@0.1.16 mcp \
+npx -y doorframe@0.1.17 mcp \
   --project ./doorframe.sqlite \
   --project-id project_123 \
   --audit-log ./doorframe-mcp-audit.jsonl
@@ -32,5 +32,7 @@ If no audit log path is provided, Doorframe MCP does not write an MCP audit log.
 - Secrets.
 
 The log is a local artifact. Protect it the same way you protect other project review artifacts.
+
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
 
 Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”

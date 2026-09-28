@@ -16,6 +16,10 @@ This package uses stdio transport only. It never writes diagnostics to stdout be
 
 Doorframe MCP does not include an AI model and does not call OpenAI, Anthropic, or any other AI provider. It only exposes read-only local Doorframe project context to an MCP-compatible client.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
 Use `--project-id` to select a project when the database contains more than one project. Use `--mode summary`, `--mode standard`, `--mode detailed`, `--max-results`, `--hide-raw-text`, and optional `--audit-log ./doorframe-mcp-audit.jsonl` to control result scope and local audit logging.
 
 See [docs/mcp-server.md](../../docs/mcp-server.md) for tools, resources, prompts, client configuration, and security notes.

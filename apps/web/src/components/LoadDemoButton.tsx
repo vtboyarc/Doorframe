@@ -1,108 +1,52 @@
 "use client";
 
-import { AlertTriangle, Database } from "lucide-react";
+import { Database } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { panelClass } from "@/lib/ui";
+import { secondaryButtonClass } from "@/lib/ui";
 
-export function LoadDemoButton({
-  projectId,
-  hasProjectData = false
-}: {
-  projectId: string;
-  hasProjectData?: boolean;
-}) {
+/** Fill an empty project with the fictional Falcon Telemetry Gateway data. */
+export function LoadDemoButton({ projectId }: { projectId: string }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  async function requestLoadDemo() {
-    if (hasProjectData && !isConfirming) {
-      setIsConfirming(true);
-      setMessage(null);
-      return;
-    }
-
-    await loadDemo();
-  }
+  const [error, setError] = useState<string | null>(null);
 
   async function loadDemo() {
     setIsLoading(true);
-    setIsConfirming(false);
-    setMessage(null);
+    setError(null);
 
-    const response = await fetch(`/api/projects/${projectId}/demo`, {
-      method: "POST"
-    });
-    const payload = (await response.json()) as {
-      recordCount?: number;
-      linkCount?: number;
-      findingCount?: number;
-      error?: string;
-    };
+    try {
+      const response = await fetch(`/api/projects/${projectId}/demo`, { method: "POST" });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Demo data could not be loaded.");
+      }
 
-    setIsLoading(false);
-
-    if (!response.ok) {
-      setMessage(payload.error ?? "Demo data could not be loaded.");
-      return;
+      router.refresh();
+    } catch (loadError) {
+      setError(
+        loadError instanceof TypeError
+          ? "Could not reach the local Doorframe server. Check that it is still running, then try again."
+          : loadError instanceof Error
+            ? loadError.message
+            : "Demo data could not be loaded."
+      );
+    } finally {
+      setIsLoading(false);
     }
-
-    setMessage(
-      `Loaded ${payload.recordCount ?? 0} records, ${payload.linkCount ?? 0} trace links, and ${
-        payload.findingCount ?? 0
-      } findings.`
-    );
-    router.refresh();
   }
 
   return (
-    <div className="max-w-md">
-      <button
-        type="button"
-        onClick={requestLoadDemo}
-        disabled={isLoading}
-        className="inline-flex min-h-10 w-full items-center justify-center gap-2 border border-[var(--foreground)] bg-[var(--panel)] px-4 disabled:opacity-60 sm:w-auto"
-      >
-        <Database size={16} />
-        {isLoading ? "Loading demo" : hasProjectData ? "Add demo data" : "Load Demo Project"}
+    <div>
+      <button type="button" onClick={loadDemo} disabled={isLoading} aria-busy={isLoading} className={secondaryButtonClass}>
+        <Database size={16} aria-hidden="true" />
+        {isLoading ? "Loading demo data…" : "Load fictional demo data"}
       </button>
-      {isConfirming ? (
-        <div className="mt-2 border border-[var(--warning)] bg-[var(--warning-soft)] p-3 text-sm">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 shrink-0 text-[var(--warning)]" size={16} />
-            <div>
-              <p className="font-medium">This project already has data.</p>
-              <p className="mt-1 text-[var(--muted)]">
-                Demo records will be added to the current project. Use a fresh project when you do not want sample data mixed with real imports.
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={loadDemo}
-              disabled={isLoading}
-              className="min-h-9 border border-[var(--warning)] bg-[var(--panel)] px-3 font-medium"
-            >
-              Load anyway
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsConfirming(false)}
-              className={`min-h-9 ${panelClass} px-3`}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Loads fictional sample data (Falcon Telemetry Gateway). Use a fresh project so it is not mixed with real imports.
+      {error ? (
+        <p role="alert" className="mt-2 text-sm text-[var(--danger)]">
+          {error}
         </p>
-      )}
-      {message ? <div className="mt-2 text-sm text-[var(--muted)]">{message}</div> : null}
+      ) : null}
     </div>
   );
 }

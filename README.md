@@ -86,6 +86,10 @@ Doorframe itself does not include an AI model and does not call OpenAI, Anthropi
 
 Run Doorframe, open a project in your browser, go to **MCP Setup**, pick an approved AI client, run the health check, and copy the generated local stdio config.
 
+Any data returned by Doorframe MCP may become part of the connected AI client's context.
+
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
 ## Local, internal, and air-gapped use
 
 Doorframe is designed to run locally by default. It has no telemetry and does not call external AI providers.
@@ -109,7 +113,7 @@ Doorframe does not claim to be DoD-approved, FedRAMP-approved, CMMC-compliant, N
 ## Pinned Docker Version
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.16
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.17
 ```
 
 ## What Doorframe Is
@@ -155,7 +159,7 @@ This detects `REQ-014` changing from a 5 second processing threshold to a 2 seco
 With Docker:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.16
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.17
 ```
 
 From source:
@@ -182,7 +186,9 @@ Run Doorframe, open it in your browser, and configure MCP from the project setti
 
 The MCP server is not an AI client and does not call AI providers. It exposes scoped local context such as traceability gaps, changed requirements, stale trace candidates, and review-brief facts. Data returned by MCP may enter the connected AI client's context.
 
-Advanced users can still run the generated command manually, for example `npx -y doorframe@0.1.16 mcp --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25`. To validate the same stdio connection from a terminal, run `npx -y doorframe@0.1.16 mcp doctor --project /absolute/path/to/doorframe.sqlite --project-id project_123`.
+Warning: “Doorframe does not determine whether a project, AI client, model, network, or deployment is approved for your data. Your organization is responsible for approving tools and workflows before use.”
+
+Advanced users can still run the generated command manually, for example `npx -y doorframe@0.1.17 mcp --project /absolute/path/to/doorframe.sqlite --project-id project_123 --mode standard --max-results 25`. To validate the same stdio connection from a terminal, run `npx -y doorframe@0.1.17 mcp doctor --project /absolute/path/to/doorframe.sqlite --project-id project_123`.
 
 The generated command includes `--project-id` so MCP opens the project shown on the setup page when the database contains multiple projects. Use `--mode summary`, `--mode standard`, `--mode detailed`, `--max-results`, `--hide-raw-text`, and optional `--audit-log ./doorframe-mcp-audit.jsonl` to control result scope. See `docs/mcp-server.md`, `docs/mcp-clients/README.md`, `docs/mcp-troubleshooting.md`, `docs/mcp-value-case.md`, `docs/mcp-vs-file-upload.md`, `docs/mcp-data-minimization.md`, `docs/mcp-approved-ai-client-guidance.md`, and `docs/mcp-audit-logging.md`.
 

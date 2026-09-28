@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Doorframe",
+  title: { default: "Doorframe", template: "%s · Doorframe" },
   description: "Open-source requirements traceability and review tooling for regulated engineering teams."
 };
 

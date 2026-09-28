@@ -9,15 +9,66 @@ import type {
   TraceLink,
   WorkItem
 } from "@doorframe/core";
+import { compareFindings } from "./findings";
 
 export interface RequirementTableRow extends Requirement {
   linkedWorkCount: number;
   linkedTestCount: number;
+  passingTestCount: number;
   failingTestCount: number;
+  skippedTestCount: number;
   findingCount: number;
+  /** Lowercase text the requirements filter searches: IDs, title, text, attributes, linked work and tests. */
+  searchText: string;
 }
 
-export type RequirementView = "without-work" | "without-tests" | "failed-tests";
+/** The subset of a {@link RequirementTableRow} the requirements table needs on the client. */
+export type RequirementListRow = Pick<
+  RequirementTableRow,
+  | "id"
+  | "externalId"
+  | "title"
+  | "status"
+  | "verificationMethod"
+  | "linkedWorkCount"
+  | "linkedTestCount"
+  | "passingTestCount"
+  | "failingTestCount"
+  | "skippedTestCount"
+  | "findingCount"
+  | "searchText"
+>;
+
+export function toListRow(row: RequirementTableRow): RequirementListRow {
+  return {
+    id: row.id,
+    externalId: row.externalId,
+    title: row.title,
+    status: row.status,
+    verificationMethod: row.verificationMethod,
+    linkedWorkCount: row.linkedWorkCount,
+    linkedTestCount: row.linkedTestCount,
+    passingTestCount: row.passingTestCount,
+    failingTestCount: row.failingTestCount,
+    skippedTestCount: row.skippedTestCount,
+    findingCount: row.findingCount,
+    searchText: row.searchText
+  };
+}
+
+export type RequirementView = "without-work" | "without-tests" | "without-passing-tests" | "failed-tests";
+
+/** Headings for the filtered requirement views linked from the dashboard. */
+export const requirementViewLabels: Record<RequirementView, string> = {
+  "without-work": "Requirements without linked work",
+  "without-tests": "Requirements without linked tests",
+  "without-passing-tests": "Requirements without a passing linked test",
+  "failed-tests": "Requirements with failed or errored tests"
+};
+
+export function isRequirementView(value: string | undefined): value is RequirementView {
+  return value !== undefined && value in requirementViewLabels;
+}
 
 export type FindingContext =
   | {
@@ -46,22 +97,9 @@ export interface AuditEventTarget {
   label: string;
 }
 
-const severityRank: Record<Finding["severity"], number> = {
-  error: 0,
-  warning: 1,
-  info: 2
-};
-
+/** Errors first, then by category and title. See {@link compareFindings}. */
 export function findingsByPriority(findings: Finding[]): Finding[] {
-  return [...findings].sort((left, right) => {
-    const severityDifference = severityRank[left.severity] - severityRank[right.severity];
-
-    if (severityDifference !== 0) {
-      return severityDifference;
-    }
-
-    return left.title.localeCompare(right.title);
-  });
+  return [...findings].sort(compareFindings);
 }
 
 export function linkedIds(
@@ -85,20 +123,94 @@ export function linkedIds(
     .map((link) => (link.sourceId === requirement.id ? link.targetId : link.sourceId));
 }
 
+/** Requirement -> linked work item / test case ids, built once from the trace links. */
+function requirementLinkIndex(data: ProjectData): {
+  work: Map<string, string[]>;
+  tests: Map<string, string[]>;
+} {
+  const requirementIds = new Set(data.requirements.map((requirement) => requirement.id));
+  const work = new Map<string, string[]>();
+  const tests = new Map<string, string[]>();
+  const add = (index: Map<string, string[]>, requirementId: string, entityId: string) => {
+    index.set(requirementId, [...(index.get(requirementId) ?? []), entityId]);
+  };
+
+  data.traceLinks.forEach((link) => {
+    const ends: Array<[EntityType, string, EntityType, string]> = [
+      [link.sourceType, link.sourceId, link.targetType, link.targetId],
+      [link.targetType, link.targetId, link.sourceType, link.sourceId]
+    ];
+    ends.forEach(([type, id, otherType, otherId]) => {
+      if (type !== "requirement" || !requirementIds.has(id)) {
+        return;
+      }
+      if (otherType === "workItem") {
+        add(work, id, otherId);
+      } else if (otherType === "testCase") {
+        add(tests, id, otherId);
+      }
+    });
+  });
+
+  return { work, tests };
+}
+
 export function requirementRows(data: ProjectData): RequirementTableRow[] {
+  const index = requirementLinkIndex(data);
+  const workById = new Map(data.workItems.map((workItem) => [workItem.id, workItem]));
+  const testById = new Map(data.testCases.map((testCase) => [testCase.id, testCase]));
+  const findingsByEntity = new Map<string, number>();
+  data.findings.forEach((finding) => {
+    findingsByEntity.set(finding.entityId, (findingsByEntity.get(finding.entityId) ?? 0) + 1);
+  });
+
   return data.requirements.map((requirement) => {
-    const testIds = linkedIds(requirement, data.traceLinks, "testCase");
+    const workIds = index.work.get(requirement.id) ?? [];
+    const testIds = index.tests.get(requirement.id) ?? [];
+    const linkedWork = workIds.flatMap((id) => workById.get(id) ?? []);
+    const linkedTests = testIds.flatMap((id) => testById.get(id) ?? []);
+    const relatedEntityIds = new Set([requirement.id, ...workIds, ...testIds]);
+    const findingCount = [...relatedEntityIds].reduce((total, id) => total + (findingsByEntity.get(id) ?? 0), 0);
 
     return {
       ...requirement,
-      linkedWorkCount: linkedIds(requirement, data.traceLinks, "workItem").length,
+      linkedWorkCount: workIds.length,
       linkedTestCount: testIds.length,
-      failingTestCount: data.testCases.filter(
-        (testCase) => testIds.includes(testCase.id) && (testCase.status === "failed" || testCase.status === "errored")
-      ).length,
-      findingCount: requirementFindings(requirement, data).length
+      passingTestCount: linkedTests.filter((testCase) => testCase.status === "passed").length,
+      failingTestCount: linkedTests.filter((testCase) => testCase.status === "failed" || testCase.status === "errored")
+        .length,
+      skippedTestCount: linkedTests.filter((testCase) => testCase.status === "skipped").length,
+      findingCount,
+      searchText: [
+        requirement.externalId,
+        requirement.title,
+        requirement.text,
+        requirement.status,
+        requirement.verificationMethod,
+        requirement.type,
+        requirement.priority,
+        ...linkedWork.map((workItem) => workItem.externalId),
+        ...linkedTests.map((testCase) => testCase.name)
+      ]
+        .filter(Boolean)
+        .join("\n")
+        .toLowerCase()
     };
   });
+}
+
+/** Requirements that name this requirement as their parent. */
+export function childRequirements(requirement: Requirement, data: ProjectData): Requirement[] {
+  return data.requirements.filter((candidate) => candidate.parentExternalId === requirement.externalId);
+}
+
+/** The requirement this one names as its parent, when it is in the project. */
+export function parentRequirement(requirement: Requirement, data: ProjectData): Requirement | null {
+  if (!requirement.parentExternalId) {
+    return null;
+  }
+
+  return data.requirements.find((candidate) => candidate.externalId === requirement.parentExternalId) ?? null;
 }
 
 export function projectSummary(data: ProjectData): ProjectSummary {
@@ -154,6 +266,41 @@ export function projectSummary(data: ProjectData): ProjectSummary {
   };
 }
 
+export interface DashboardStats {
+  /** Share of requirements linked to both work and tests, 0-100. */
+  fullyTracedPercent: number;
+  requirementsWithoutPassingTests: number;
+  findingsBySeverity: Record<Finding["severity"], number>;
+}
+
+/**
+ * Whole-number percentage that only reads 0 or 100 when that is exactly true,
+ * so "100%" never hides a remaining gap.
+ */
+export function coveragePercent(covered: number, total: number): number {
+  if (total === 0 || covered === 0) {
+    return 0;
+  }
+  if (covered >= total) {
+    return 100;
+  }
+  return Math.min(99, Math.max(1, Math.round((covered / total) * 100)));
+}
+
+/** Figures shown on the dashboard in addition to the shared {@link ProjectSummary}. */
+export function dashboardStats(data: ProjectData, summary: ProjectSummary): DashboardStats {
+  const findingsBySeverity: Record<Finding["severity"], number> = { error: 0, warning: 0, info: 0 };
+  data.findings.forEach((finding) => {
+    findingsBySeverity[finding.severity] += 1;
+  });
+
+  return {
+    fullyTracedPercent: coveragePercent(summary.linkedRequirements, summary.totalRequirements),
+    requirementsWithoutPassingTests: filterRequirementRows(requirementRows(data), "without-passing-tests").length,
+    findingsBySeverity
+  };
+}
+
 export function filterRequirementRows(
   rows: RequirementTableRow[],
   view?: string
@@ -164,6 +311,10 @@ export function filterRequirementRows(
 
   if (view === "without-tests") {
     return rows.filter((row) => row.linkedTestCount === 0);
+  }
+
+  if (view === "without-passing-tests") {
+    return rows.filter((row) => row.passingTestCount === 0);
   }
 
   if (view === "failed-tests") {
@@ -250,13 +401,11 @@ export function findingContext(finding: Finding, data: ProjectData): FindingCont
   };
 }
 
-export function auditEventTarget(
-  projectId: string,
-  action: AuditAction
-): AuditEventTarget {
+export function auditEventTarget(projectId: string, action: string): AuditEventTarget {
   const base = `/projects/${projectId}`;
+  const known = action as AuditAction;
 
-  switch (action) {
+  switch (known) {
     case "import.completed":
       return { href: `${base}/imports`, label: "Review imports" };
     case "analysis.rerun":
@@ -269,5 +418,16 @@ export function auditEventTarget(
       return { href: `${base}/reports`, label: "Review reports" };
     case "project.created":
       return { href: base, label: "Open dashboard" };
+    case "project.renamed":
+      return { href: `${base}/settings`, label: "Review settings" };
+    case "records.removed":
+      return { href: `${base}/imports`, label: "Review imports" };
+    default: {
+      // Compile-time check that every known action has a target. At runtime the
+      // database may hold actions from a newer Doorframe version; send those to the dashboard.
+      const unhandled: never = known;
+      void unhandled;
+      return { href: base, label: "Open dashboard" };
+    }
   }
 }

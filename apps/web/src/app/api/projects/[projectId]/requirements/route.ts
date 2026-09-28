@@ -1,28 +1,18 @@
 import { NextResponse } from "next/server";
-import { getFindings, getRequirements, getTraceLinks } from "@/lib/db";
+import { getProjectData } from "@/lib/db";
+import { requirementRows } from "@/lib/view-models";
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await context.params;
-  const traceLinks = getTraceLinks(projectId);
-  const findings = getFindings(projectId);
-  const requirements = getRequirements(projectId).map((requirement) => ({
-    ...requirement,
-    linkedWorkCount: traceLinks.filter(
-      (link) =>
-        (link.sourceType === "requirement" && link.sourceId === requirement.id && link.targetType === "workItem") ||
-        (link.targetType === "requirement" && link.targetId === requirement.id && link.sourceType === "workItem")
-    ).length,
-    linkedTestCount: traceLinks.filter(
-      (link) =>
-        (link.sourceType === "requirement" && link.sourceId === requirement.id && link.targetType === "testCase") ||
-        (link.targetType === "requirement" && link.targetId === requirement.id && link.sourceType === "testCase")
-    ).length,
-    findingCount: findings.filter((finding) => finding.entityType === "requirement" && finding.entityId === requirement.id)
-      .length
-  }));
+  const data = getProjectData(projectId);
+  if (!data) {
+    return NextResponse.json({ error: "Project not found." }, { status: 404 });
+  }
 
+  // Same rows and counts as the Requirements page.
+  const requirements = requirementRows(data).map(({ searchText: _searchText, ...row }) => row);
   return NextResponse.json({ requirements });
 }
