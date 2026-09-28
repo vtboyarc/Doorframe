@@ -204,7 +204,7 @@ The audit log records timestamp, project ID/name when available, tool name, sani
 
 The MCP Setup page includes a health check for the current project. It verifies that the project exists, the database path is readable, requirements exist, how many findings the latest analysis stored, baseline data is available when baseline tools are relevant, and any configured audit log path is writable.
 
-The **Run tool checks** button then calls read-only MCP tool adapters (project summary, review brief, stale trace candidates when the project has two baselines, and requirement search) with the chosen data options, and confirms that summary mode hides raw requirement text. These run only when asked because they can take a minute on large projects.
+The **Run tool checks** button then calls read-only MCP tool adapters (project summary, review brief, stale trace candidates when the project has two baselines, and requirement search) with the chosen data options, and confirms that summary mode hides raw requirement text. These run only when asked because they can take a few seconds on large projects.
 
 If something fails, use the fix shown on the page or see [MCP troubleshooting](./mcp-troubleshooting.md).
 

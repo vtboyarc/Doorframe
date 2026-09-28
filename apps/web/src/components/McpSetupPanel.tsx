@@ -707,7 +707,7 @@ export function McpSetupPanel({
               <p className="mt-0.5 text-[var(--muted)]">
                 Calls read-only MCP tools on this project with the data options above: project summary, review brief, stale
                 trace candidates (when the project has two baselines), and requirement search in summary mode. On large
-                projects this can take a minute, and other Doorframe pages may respond slowly until it finishes.
+                projects this can take a few seconds.
               </p>
             </div>
             {/* aria-disabled rather than disabled, so keyboard focus stays on the button while the checks run. */}
