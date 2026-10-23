@@ -1,6 +1,6 @@
 {
   "name": "doorframe",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "description": "Turn requirements exports, work items, and test results into local traceability reports with optional read-only MCP support.",
   "license": "MIT",
   "repository": {
@@ -45,9 +45,9 @@
     "better-sqlite3": "^12.10.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.561.0",
-    "next": "^16.2.6",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
     "reactflow": "^11.11.4",
     "zod": "^4.4.3"
   },

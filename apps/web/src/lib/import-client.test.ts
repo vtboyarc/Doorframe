@@ -34,6 +34,14 @@ describe("requestJson", () => {
     const tooLarge = await requestJson("/x", init, async () => new Response("Payload Too Large", { status: 413 }));
     expect(!tooLarge.ok && tooLarge.failure.message).toMatch(/up to 25\.0 MB/);
   });
+
+  it.each([200, 500, 502])("settles an empty HTTP %i body without a JSON parse rejection (#35)", async (status) => {
+    const outcome = await requestJson("/api/projects/fresh/import", init, async () => new Response("", { status }));
+    expect(outcome).toEqual({
+      ok: false,
+      failure: { message: expect.stringContaining(`unexpected response (HTTP ${status})`) }
+    });
+  });
 });
 
 describe("readFileCopy", () => {

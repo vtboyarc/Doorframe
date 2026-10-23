@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.18 - Draft
+
+- Support `doorframe serve -p <port>` (and `server`) and reject invalid port options; document npm, source, and Docker port configuration.
+- Pin the npm package's Next/React runtime to the web build versions so fresh installs do not load a different framework against bundled build files.
+- Cover fresh-project sample CSV import, empty-response errors, and project deletion; explain the existing Settings deletion flow.
+- Align local Docker build version metadata with the package and image version.
+- Check distribution version pins in tests to prevent release drift.
+
 ## v0.1.17 - Draft
 
 Web app usability and correctness pass. The layout, navigation, and dark theme are unchanged.
