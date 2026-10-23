@@ -42,11 +42,35 @@ npx doorframe serve
 
 Options:
 
-- `--port <port>` Port to listen on, default `3000`.
+- `--port <port>` or `-p <port>` Port to listen on (1–65535). Overrides `PORT`; default `3000`.
 - `--host <host>` Host to bind, default `127.0.0.1`.
 - `--data-dir <path>` Local data directory, default `./.doorframe` from the directory where you run the command.
 
 The npm-served web app uses the same local-first SQLite storage model as Docker. It does not send imported project data to Doorframe-hosted services.
+
+If port 3000 is in use:
+
+```bash
+npx doorframe serve -p 3100
+# Equivalent: npx doorframe serve --port 3100
+# Environment variable (POSIX shells): PORT=3100 npx doorframe serve
+```
+
+For a source checkout, pass Next.js options directly to the web workspace:
+
+```bash
+npm run dev -w apps/web -- -p 3100
+# After npm run build:web:
+npm run start -w apps/web -- -p 3100
+```
+
+Docker uses host port mapping instead; see [Docker](docker.md#choose-a-host-port).
+
+## Project deletion and CSV imports
+
+Open a project, go to **Settings**, choose **Delete project**, then **Delete permanently** to confirm. This removes the project's imported records, findings, baselines, and audit history from the local database. It leaves your original export files and other projects alone. Deletion cannot be undone; make a backup first if you need to retain the project. The same UI is available through npm, Docker, and a source checkout; editing the SQLite file manually is unnecessary.
+
+For a fresh project, open **Imports**, select **Requirements CSV**, and choose `examples/sample-requirements.csv` from the repository (five requirements). Check the preview and column mapping, then choose **Import**. An empty or non-JSON server response should show an error instead of leaving the button busy. If importing fails, check `/api/health` and the local server log, then retry after correcting the server problem. A missing native SQLite binding means the local installation is incomplete; follow your package manager's dependency-script policy rather than disabling it globally.
 
 ## `analyze`
 
@@ -127,6 +151,6 @@ Environment variables:
 - The CLI does not write to the database used by the web app.
 - Use the web app to store projects, baselines, findings, and audit history over time.
 - Run `doorframe --version` to confirm the installed CLI version.
-- Configure MCP from the web app's project MCP Setup page. Advanced users can run the generated `npx -y doorframe@0.1.17 mcp --project ...` command manually.
+- Configure MCP from the web app's project MCP Setup page. Advanced users can run the generated `npx -y doorframe@0.1.18 mcp --project ...` command manually.
 - Run `doorframe mcp doctor --project ... --project-id ...` to validate the same local stdio MCP path before configuring an AI client.
 - MCP is optional and read-only.

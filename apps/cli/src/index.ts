@@ -49,6 +49,7 @@ import { loadProjectDb, usageText as mcpUsageText } from "../../mcp-server/src/p
 import { normalizeMcpMode } from "../../mcp-server/src/options";
 import { runStdioServer } from "../../mcp-server/src/server";
 import { resolveDoorframeDataDir } from "./paths";
+import { parseServeOptions } from "./serve-options";
 
 type ReportFormat = "html" | "md" | "json" | "csv";
 type JsonRpcId = number | string;
@@ -91,6 +92,7 @@ Usage:
   doorframe server [--port 3000] [--host 127.0.0.1] [--data-dir ./.doorframe]
 
 Starts the local Doorframe web app. Open the printed localhost URL in a browser.
+Use --port <port> or -p <port> to choose a port (overrides PORT; default 3000).
 `;
 }
 
@@ -556,11 +558,9 @@ async function serve(args: string[]): Promise<void> {
     return;
   }
 
-  const options = parseOptions(args);
+  const { port, host, dataDir: configuredDataDir } = parseServeOptions(args);
   const serverPath = await resolveWebServer();
-  const port = options.port ?? process.env.PORT ?? "3000";
-  const host = options.host ?? process.env.HOSTNAME ?? "127.0.0.1";
-  const dataDir = resolveDoorframeDataDir(options["data-dir"] ?? process.env.DOORFRAME_DATA_DIR);
+  const dataDir = resolveDoorframeDataDir(configuredDataDir);
   const displayHost = host === "0.0.0.0" ? "localhost" : host;
 
   console.log(`Starting Doorframe web app at http://${displayHost}:${port}`);
