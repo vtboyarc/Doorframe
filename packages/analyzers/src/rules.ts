@@ -149,7 +149,7 @@ export function findMissingVerification(input: AnalysisInput): FindingInput[] {
         description: "No JUnit test case is linked to this requirement.",
         entityType: "requirement",
         entityId: requirement.id,
-        recommendation: "Link passing test evidence or mark why verification is handled outside automated tests."
+        recommendation: "Import passing JUnit evidence that references this requirement ID. The verification method describes the approach; it does not waive the linked-test check. Manual verification cannot currently be marked complete in Doorframe."
       });
     } else if (!hasLinkedPassingTest) {
       findings.push({
