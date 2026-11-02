@@ -2,6 +2,8 @@
 
 ## v0.1.19 - Draft
 
+- Update the aligned web/CLI Next runtime and vulnerable dependencies; upgrade CSV parsing to the patched 7.x line.
+
 - Correct missing-verification guidance so it no longer suggests an unsupported manual-completion marker.
 - Document verification methods versus linked evidence and add regression coverage without weakening verification checks.
 

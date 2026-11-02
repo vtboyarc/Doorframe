@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@doorframe/core": "0.1.0",
-    "csv-parse": "^6.1.0",
+    "csv-parse": "7.0.3",
     "fast-xml-parser": "^5.3.2",
     "jszip": "^3.10.1"
   }
