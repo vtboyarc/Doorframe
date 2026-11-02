@@ -50,6 +50,18 @@ npx doorframe diff \
 
 Doorframe detects requirement IDs in Jira and test text with patterns such as `REQ-001`, `SYS-123`, `SRS-123`, `DOORS-123`, and `SHALL-123`. Requirement ID patterns are configurable in project rulesets.
 
+## Manual Verification And Missing Test Evidence
+
+The requirement's **Verification Method** describes how it will be verified (for example, test, inspection, analysis, or demonstration). It is not a pass/fail result or a waiver of the linked-test check.
+
+Doorframe currently checks for linked JUnit test results regardless of the verification method. It has no per-requirement control to mark manual verification complete or waive the missing-test finding. Recording "inspection" or manual acceptance criteria in your requirements export therefore does not clear that finding.
+
+To supply test evidence, import actual JUnit XML results with the requirement ID in the test name or class name (matching your project's requirement ID patterns). A linked passing result satisfies the passing-test check; failed, errored, or skipped results do not. A missing verification method is a separate finding and still needs a method in the requirements export.
+
+For verification performed outside this workflow, retain the real evidence and review disposition in your organization's process. Doorframe's finding indicates missing linked evidence in Doorframe, not proof that the requirement has never been verified. Do not invent a passing test result merely to clear a finding.
+
+If an existing project still shows older guidance about marking verification outside automated tests after upgrading, rerun analysis to refresh its stored findings.
+
 ## Report
 
 The report is a local HTML file. It is designed to work offline and print cleanly to PDF from a browser.

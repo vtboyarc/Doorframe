@@ -103,6 +103,43 @@ describe("generateFindings", () => {
   });
 });
 
+describe("manual verification guidance", () => {
+  it.each(["Inspection", "Analysis", "Demonstration", "Manual test"])(
+    "does not treat %s as a waiver and gives supported next steps",
+    (verificationMethod) => {
+      const findings = findMissingVerification({
+        requirements: [requirement({ verificationMethod })],
+        workItems: [],
+        testCases: [],
+        traceLinks: []
+      });
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0]).toMatchObject({
+        severity: "error",
+        title: "REQ-1 has no linked test case",
+        recommendation: "Import passing JUnit evidence that references this requirement ID. The verification method describes the approach; it does not waive the linked-test check. Manual verification cannot currently be marked complete in Doorframe."
+      });
+    }
+  );
+
+  it.each(["passed", "failed", "errored", "skipped"] as const)(
+    "requires actual passing linked evidence, not just a method (%s)",
+    (status) => {
+      const findings = findMissingVerification({
+        requirements: [requirement({ verificationMethod: "Inspection" })],
+        workItems: [],
+        testCases: [testCase({ status })],
+        traceLinks: [traceLink({})]
+      });
+
+      expect(findings.map((finding) => finding.title)).toEqual(
+        status === "passed" ? [] : ["REQ-1 has no passing linked test evidence"]
+      );
+    }
+  );
+});
+
 describe("findDuplicateCandidates", () => {
   it("caps the candidates reported for one requirement so templated exports stay bounded", () => {
     const requirements = Array.from({ length: 40 }, (_, index) =>
