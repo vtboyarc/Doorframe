@@ -31,7 +31,7 @@ docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:lates
 ## Run Pinned Version
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.18
+docker run -p 3000:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.19
 ```
 
 Open `http://localhost:3000`.
@@ -41,7 +41,7 @@ Open `http://localhost:3000`.
 If port 3000 is in use, change the host side of the mapping and keep the container port at 3000:
 
 ```bash
-docker run -p 3100:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.18
+docker run -p 3100:3000 -v doorframe-data:/data ghcr.io/vtboyarc/doorframe:0.1.19
 ```
 
 Open `http://localhost:3100`. For Compose, change `ports` to `"3100:3000"` in `docker-compose.yml`. The internal port stays at 3000 so the health check continues to work. npm and source launch flags are covered in [CLI](cli.md#serve).
@@ -79,7 +79,7 @@ Do not assume Docker-based MCP works unless the AI client can launch the MCP ser
 ```bash
 docker build \
   -f docker/Dockerfile \
-  --build-arg VERSION=0.1.18 \
+  --build-arg VERSION=0.1.19 \
   --build-arg SOURCE_REPOSITORY=https://github.com/vtboyarc/Doorframe \
   -t doorframe:local .
 ```
@@ -89,15 +89,15 @@ docker build \
 Companies and contractors should typically scan and mirror the pinned image into an internal registry before use.
 
 ```bash
-docker pull ghcr.io/vtboyarc/doorframe:0.1.18
-docker tag ghcr.io/vtboyarc/doorframe:0.1.18 internal-registry.example.com/tools/doorframe:0.1.18
-docker push internal-registry.example.com/tools/doorframe:0.1.18
+docker pull ghcr.io/vtboyarc/doorframe:0.1.19
+docker tag ghcr.io/vtboyarc/doorframe:0.1.19 internal-registry.example.com/tools/doorframe:0.1.19
+docker push internal-registry.example.com/tools/doorframe:0.1.19
 ```
 
 Then deploy the mirrored image:
 
 ```bash
-docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.18
+docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/tools/doorframe:0.1.19
 ```
 
 ## Image Notes
@@ -108,6 +108,6 @@ docker run -p 3000:3000 -v doorframe-data:/data internal-registry.example.com/to
 - The image has a healthcheck at `/api/health`.
 - OCI labels include source repository, version, license, title, and description.
 - Main branch publishes get `main`, `main-<short-sha>`, and `latest` tags for non-prerelease versions.
-- Main branch publishes also include version tags such as `0.1.18` when that version is unpublished or already belongs to the same commit.
+- Main branch publishes also include version tags such as `0.1.19` when that version is unpublished or already belongs to the same commit.
 - Tagged stable releases also get minor tags such as `0.1`.
 - Prereleases should not receive the `latest` tag.

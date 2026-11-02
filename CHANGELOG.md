@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.19 - Draft
+
+- Correct missing-verification guidance so it no longer suggests an unsupported manual-completion marker.
+- Document verification methods versus linked evidence and add regression coverage without weakening verification checks.
+
 ## v0.1.18 - Draft
 
 - Support `doorframe serve -p <port>` (and `server`) and reject invalid port options; document npm, source, and Docker port configuration.
