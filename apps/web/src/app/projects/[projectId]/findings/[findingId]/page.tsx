@@ -113,7 +113,8 @@ export default async function FindingDetailPage({
     data.findings,
     {
       category: isFindingCategory(listCategory) ? listCategory : undefined,
-      severity: isFindingSeverity(listSeverity) ? listSeverity : undefined
+      severity: isFindingSeverity(listSeverity) ? listSeverity : undefined,
+      query: backParams.get("q") ?? undefined
     },
     Number.MAX_SAFE_INTEGER
   ).items;

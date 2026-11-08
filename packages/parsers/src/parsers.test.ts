@@ -118,6 +118,65 @@ describe("parseJiraCsv", () => {
 });
 
 describe("parseJUnitXml", () => {
+  it("extracts suite and ancestor requirement IDs even when a testcase has a classname", () => {
+    const result = parseJUnitXml(`<testsuites><testsuite name="REQ-1 gateway">
+      <testsuite name="REQ-2 timing">
+        <testcase classname="TimingTests" name="REQ-3 finishes on time" />
+      </testsuite>
+      <testsuite name="REQ-4 display">
+        <testcase classname="DisplayTests" name="renders" />
+      </testsuite>
+    </testsuite></testsuites>`);
+
+    expect(result.errors).toEqual([]);
+    expect(result.records[0]?.requirementIds).toEqual(["REQ-3", "REQ-1", "REQ-2"]);
+    expect(result.records[1]?.requirementIds).toEqual(["REQ-1", "REQ-4"]);
+    expect(result.records[0]?.externalId).toBe("TimingTests.REQ-3 finishes on time");
+  });
+
+  it("preserves repeated failure messages and bodies for tracing", () => {
+    const result = parseJUnitXml(`<testsuite name="gateway">
+      <testcase classname="TimingTests" name="meets limits">
+        <failure message="REQ-1 exceeded">REQ-2 timed out</failure>
+        <failure message="REQ-3 exceeded" />
+        <error message="REQ-4 unavailable" />
+      </testcase>
+    </testsuite>`);
+
+    expect(result.errors).toEqual([]);
+    expect(result.records[0]?.failureMessage).toBe("REQ-1 exceeded\nREQ-2 timed out\nREQ-3 exceeded\nREQ-4 unavailable");
+    expect(result.records[0]?.requirementIds).toEqual(["REQ-1", "REQ-2", "REQ-3", "REQ-4"]);
+    expect(result.records[0]?.status).toBe("errored");
+  });
+
+  it("honors custom requirement patterns in suite names", () => {
+    const result = parseJUnitXml(
+      '<testsuite name="FTG-42"><testcase classname="Gateway" name="responds" /></testsuite>',
+      [{ name: "Gateway", regex: "(FTG-\\d+)" }]
+    );
+
+    expect(result.records[0]?.requirementIds).toEqual(["FTG-42"]);
+  });
+
+  it.each([
+    '<testsuite><testcase name="REQ-1 passes"></testsuite>',
+    '<testsuite><testcase name="REQ-1 passes" />',
+    ""
+  ])("rejects malformed XML without importing partial passing evidence: %s", (xml) => {
+    const result = parseJUnitXml(xml);
+
+    expect(result.records).toEqual([]);
+    expect(result.errors[0]).toContain("JUnit XML parse failed");
+  });
+
+  it("reports a non-JUnit XML document and accepts an empty JUnit suite", () => {
+    expect(parseJUnitXml("<requirements />")).toEqual({
+      records: [],
+      errors: ["Expected a JUnit <testsuite> or <testsuites> root element."]
+    });
+    expect(parseJUnitXml("<testsuite />")).toEqual({ records: [], errors: [] });
+  });
+
   it("parses pass and fail test cases with requirement ids", () => {
     const xml = `<testsuite name="doorframe">
       <testcase classname="LoginTests" name="REQ-1 authenticates user" time="0.02" />

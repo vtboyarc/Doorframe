@@ -1,6 +1,6 @@
 {
   "name": "doorframe-monorepo",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "private": true,
   "description": "Turn requirements exports, work items, and test results into local traceability reports with optional read-only MCP support.",
   "workspaces": [
@@ -22,11 +22,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^5.1.1",
-    "esbuild": "^0.28.0",
-    "tsx": "^4.21.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^4.0.14"
+    "vitest": "^4.1.12"
   }
 }

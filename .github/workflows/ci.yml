@@ -5,15 +5,31 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - name: Build web app and CLI package
+        if: matrix.node-version == 24
+        run: npm run build
+      - name: Check npm package contents and binary
+        if: matrix.node-version == 24
+        run: npm pack --dry-run -w apps/cli

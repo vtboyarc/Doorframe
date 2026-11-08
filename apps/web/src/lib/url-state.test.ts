@@ -27,6 +27,12 @@ describe("sort parameter", () => {
     expect(parseSort(undefined)).toEqual([]);
   });
 
+  it("ignores unknown, incomplete, and prototype column names", () => {
+    for (const value of ["removedColumn", "-", "--title", "constructor", "__proto__"]) {
+      expect(parseSort(value)).toEqual([]);
+    }
+  });
+
   it("round-trips", () => {
     expect(serializeSort(parseSort("-findingCount"))).toBe("-findingCount");
     expect(serializeSort([])).toBeUndefined();

@@ -43,15 +43,15 @@ export interface FindingsListView {
   total: number;
   page: number;
   pageCount: number;
-  /** Counts per category within the severity filter, so category chips stay meaningful. */
+  /** Counts per category within the search and severity filters. */
   categoryCounts: Record<FindingCategory, number>;
-  /** Counts per severity within the category filter. */
+  /** Counts per severity within the search and category filters. */
   severityCounts: Record<FindingSeverity, number>;
 }
 
 export function findingsListView(
   findings: Finding[],
-  filters: { category?: FindingCategory; severity?: FindingSeverity; page?: number },
+  filters: { category?: FindingCategory; severity?: FindingSeverity; query?: string; page?: number },
   pageSize = FINDINGS_PAGE_SIZE
 ): FindingsListView {
   const categoryCounts = Object.fromEntries(FINDING_CATEGORIES.map((category) => [category, 0])) as Record<
@@ -59,22 +59,35 @@ export function findingsListView(
     number
   >;
   const severityCounts: Record<FindingSeverity, number> = { error: 0, warning: 0, info: 0 };
+  const query = filters.query?.trim().toLowerCase() ?? "";
+  const matching: Finding[] = [];
 
   findings.forEach((finding) => {
+    if (
+      query &&
+      ![finding.title, finding.description, finding.recommendation]
+        .some((text) => text?.toLowerCase().includes(query))
+    ) {
+      return;
+    }
     if (!filters.severity || finding.severity === filters.severity) {
       categoryCounts[finding.category] += 1;
     }
     if (!filters.category || finding.category === filters.category) {
       severityCounts[finding.severity] += 1;
     }
+    if (
+      (!filters.category || finding.category === filters.category) &&
+      (!filters.severity || finding.severity === filters.severity)
+    ) {
+      matching.push(finding);
+    }
   });
 
-  const matching = findings
-    .filter((finding) => !filters.category || finding.category === filters.category)
-    .filter((finding) => !filters.severity || finding.severity === filters.severity)
-    .sort(compareFindings);
+  matching.sort(compareFindings);
   const pageCount = Math.max(1, Math.ceil(matching.length / pageSize));
-  const page = Math.min(Math.max(1, Math.floor(filters.page ?? 1)), pageCount);
+  const requestedPage = typeof filters.page === "number" && Number.isFinite(filters.page) ? Math.floor(filters.page) : 1;
+  const page = Math.min(Math.max(1, requestedPage), pageCount);
 
   return {
     items: matching.slice((page - 1) * pageSize, page * pageSize),
