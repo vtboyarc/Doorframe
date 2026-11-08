@@ -71,6 +71,62 @@ describe("finding filters", () => {
     expect(findingsListView([finding({})], { page: 99 }).page).toBe(1);
     expect(findingsListView([], { page: -3 }).pageCount).toBe(1);
   });
+
+  it.each([NaN, Infinity, -Infinity])("uses the first page for a non-finite page (%s)", (page) => {
+    const view = findingsListView([finding({})], { page });
+    expect(view.page).toBe(1);
+    expect(view.items).toHaveLength(1);
+  });
+
+  it("searches titles, descriptions, and recommendations without case or surrounding whitespace sensitivity", () => {
+    const findings = [
+      finding({ id: "title", title: "REQ-42 has no linked work item" }),
+      finding({ id: "description", description: "A trace to REQ-42 is stale." }),
+      finding({ id: "recommendation", recommendation: "Check the verification for REQ-42." }),
+      finding({ id: "other" })
+    ];
+    const view = findingsListView(findings, { query: "  req-42  " });
+
+    expect(view.items.map((item) => item.id).sort()).toEqual(["description", "recommendation", "title"]);
+    expect(view.total).toBe(3);
+    expect(findingsListView(findings, { query: "  " }).total).toBe(4);
+    expect(findingsListView(findings, { query: "[REQ-42]" }).total).toBe(0);
+  });
+
+  it("counts facets within search results while applying category and severity independently", () => {
+    const findings = [
+      finding({ id: "first", title: "REQ-42 missing work", severity: "error" }),
+      finding({ id: "second", title: "REQ-42 missing work", severity: "warning" }),
+      finding({ id: "third", title: "REQ-42 missing test", category: "missing_verification", severity: "error" }),
+      finding({ id: "excluded", title: "REQ-99 missing work", severity: "error" })
+    ];
+    const view = findingsListView(findings, { query: "REQ-42", category: "missing_work_trace", severity: "error" });
+
+    expect(view.items.map((item) => item.id)).toEqual(["first"]);
+    expect(view.categoryCounts.missing_work_trace).toBe(1);
+    expect(view.categoryCounts.missing_verification).toBe(1);
+    expect(view.severityCounts).toEqual({ error: 1, warning: 1, info: 0 });
+  });
+
+  it("pages the matching findings and clamps the page when a search narrows the results", () => {
+    const findings = Array.from({ length: 7 }, (_, index) =>
+      finding({ id: `f${index}`, title: `REQ-${index} missing ${index < 5 ? "test" : "work"}` })
+    );
+    const view = findingsListView(findings, { query: "missing test", page: 2 }, 3);
+
+    expect(view.total).toBe(5);
+    expect(view.pageCount).toBe(2);
+    expect(view.items.map((item) => item.id)).toEqual(["f3", "f4"]);
+    const narrowed = findingsListView(findings, { query: "REQ-3", page: 2 }, 3);
+    expect(narrowed.page).toBe(1);
+    expect(narrowed.items.map((item) => item.id)).toEqual(["f3"]);
+    const empty = findingsListView(findings, { query: "no match", page: 2 }, 3);
+    expect(empty.page).toBe(1);
+    expect(empty.total).toBe(0);
+    expect(empty.items).toEqual([]);
+    expect(Object.values(empty.categoryCounts).every((count) => count === 0)).toBe(true);
+    expect(Object.values(empty.severityCounts).every((count) => count === 0)).toBe(true);
+  });
 });
 
 describe("mentionedEntities", () => {

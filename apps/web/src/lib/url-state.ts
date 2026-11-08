@@ -17,13 +17,18 @@ function withQuery(path: string, params: URLSearchParams): string {
   return `${path}${query ? `?${query}` : ""}`;
 }
 
-/** Table sort from a ?sort= value: a column ID, with a leading "-" for descending. */
+const requirementSortColumns = new Set([
+  "externalId", "title", "status", "verificationMethod", "linkedWorkCount", "linkedTestCount", "findingCount"
+]);
+
+/** Table sort from a ?sort= value; unknown columns from old or edited URLs are ignored. */
 export function parseSort(value: string | null | undefined): SortingState {
   if (!value) {
     return [];
   }
 
-  return [{ id: value.replace(/^-/, ""), desc: value.startsWith("-") }];
+  const id = value.replace(/^-/, "");
+  return requirementSortColumns.has(id) ? [{ id, desc: value.startsWith("-") }] : [];
 }
 
 export function serializeSort(sorting: SortingState): string | undefined {

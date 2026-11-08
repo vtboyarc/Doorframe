@@ -19,6 +19,7 @@ import {
   activeChipClass,
   chipClass,
   chipCountClass,
+  fieldClass,
   inactiveChipClass,
   panelClass,
   primaryButtonClass,
@@ -47,7 +48,7 @@ export default async function FindingsPage({
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ category?: SearchValue; severity?: SearchValue; page?: SearchValue }>;
+  searchParams: Promise<{ category?: SearchValue; severity?: SearchValue; q?: SearchValue; page?: SearchValue }>;
 }) {
   const { projectId } = await params;
   const query = await searchParams;
@@ -61,14 +62,17 @@ export default async function FindingsPage({
   const rawSeverity = first(query.severity);
   const category = isFindingCategory(rawCategory) ? rawCategory : undefined;
   const severity = isFindingSeverity(rawSeverity) ? rawSeverity : undefined;
+  const searchQuery = first(query.q)?.trim() ?? "";
   const findings = getFindings(projectId);
-  const view = findingsListView(findings, { category, severity, page: Number(first(query.page)) || 1 });
+  const view = findingsListView(findings, { category, severity, query: searchQuery, page: Number(first(query.page)) });
   const counts = getProjectCounts(projectId);
   const hasData = counts.requirements + counts.workItems + counts.testCases > 0;
   const base = `/projects/${projectId}`;
 
-  const listHref = (next: { category?: FindingCategory; severity?: FindingSeverity; page?: number }) => {
+  const listHref = (next: { category?: FindingCategory; severity?: FindingSeverity; page?: number; q?: string }) => {
     const search = new URLSearchParams();
+    const nextQuery = next.q ?? searchQuery;
+    if (nextQuery) search.set("q", nextQuery);
     if (next.category) search.set("category", next.category);
     if (next.severity) search.set("severity", next.severity);
     if (next.page && next.page > 1) search.set("page", String(next.page));
@@ -86,7 +90,7 @@ export default async function FindingsPage({
     <PageShell project={project}>
       <PageHeader
         title="Findings"
-        description="Traceability gaps and wording issues from the latest analysis, errors first. Open a finding to see the affected records and the recommended next step."
+        description="Search and filter traceability gaps and wording issues from the latest analysis, errors first. Open a finding to see the affected records and the recommended next step."
       />
 
       {findings.length === 0 ? (
@@ -117,6 +121,31 @@ export default async function FindingsPage({
         </section>
       ) : (
         <>
+          <form action={`${base}/findings`} method="get" role="search" aria-label="Search findings" className={`mb-4 ${panelClass} p-3`}>
+            <label htmlFor="findings-search" className="mb-2 block text-sm font-medium">
+              Search findings
+            </label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {category ? <input type="hidden" name="category" value={category} /> : null}
+              {severity ? <input type="hidden" name="severity" value={severity} /> : null}
+              <input
+                key={searchQuery}
+                id="findings-search"
+                name="q"
+                type="search"
+                defaultValue={searchQuery}
+                placeholder="Requirement ID, issue, or recommended next step"
+                className={fieldClass}
+              />
+              <button type="submit" className={primaryButtonClass}>Search</button>
+              {searchQuery ? (
+                <Link href={listHref({ category, severity, q: "" })} className={secondaryButtonClass}>
+                  Clear search
+                </Link>
+              ) : null}
+            </div>
+          </form>
+
           <nav aria-labelledby="severity-filter-label" className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
             <span id="severity-filter-label" className="text-[var(--muted)]">
               Severity:
@@ -172,13 +201,14 @@ export default async function FindingsPage({
 
           <p className="mb-3 text-sm text-[var(--muted)]" aria-live="polite">
             {view.total === 0
-              ? "No findings match these filters."
+              ? "No findings match these filters"
               : `Showing ${firstShown}–${lastShown} of ${view.total} finding${view.total === 1 ? "" : "s"}`}
-            {view.total === 0 ? (
+            {searchQuery ? <> for &ldquo;{searchQuery}&rdquo;</> : null}
+            {view.total === 0 || category || severity ? (
               <>
                 {" "}
                 <Link href={`${base}/findings`} className={textLinkClass}>
-                  Show all findings
+                  Clear all filters
                 </Link>
               </>
             ) : null}

@@ -66,9 +66,9 @@ npm publish -w apps/cli --access public
 Verify:
 
 ```bash
-npx doorframe@0.1.19 --help
-npx doorframe@0.1.19 demo
-npx doorframe@0.1.19 serve
+npx doorframe@0.1.20 --help
+npx doorframe@0.1.20 demo
+npx doorframe@0.1.20 serve
 ```
 
 ## Publishing Authentication

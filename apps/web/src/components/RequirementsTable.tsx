@@ -56,6 +56,7 @@ export function RequirementsTable({
   const [sorting, setSorting] = useState<SortingState>(() => parseSort(searchParams.get("sort") ?? initialSort));
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const scrollBox = useRef<HTMLDivElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
 
   // Keep the filter and sort in the URL so "Back to requirements" returns to the same list, and
   // follow the URL when it changes from outside (the Requirements tab, browser Back or Forward).
@@ -173,23 +174,39 @@ export function RequirementsTable({
   return (
     <div className={panelClass}>
       <div className="flex flex-col gap-2 border-b border-[var(--line)] p-3 sm:flex-row sm:items-center sm:justify-between">
-        <input
-          type="search"
-          value={globalFilter}
-          onChange={(event) => {
-            setGlobalFilter(event.target.value);
-            setVisibleCount(PAGE_SIZE);
-          }}
-          aria-label="Filter requirements"
-          placeholder="Filter by ID, title, text, status, work item, or test"
-          className={`${fieldClass} sm:max-w-md`}
-        />
-        <div className="text-sm text-[var(--muted)]" aria-live="polite">
-          Showing {Math.min(shownRows.length, filteredRows.length)} of {rows.length} requirement
-          {rows.length === 1 ? "" : "s"}
+        <div className="flex flex-1 items-center gap-2">
+          <input
+            ref={searchInput}
+            type="search"
+            value={globalFilter}
+            onChange={(event) => {
+              setGlobalFilter(event.target.value);
+              setVisibleCount(PAGE_SIZE);
+            }}
+            aria-label="Filter requirements"
+            placeholder="Filter by ID, title, text, status, work item, or test"
+            className={`${fieldClass} sm:max-w-md`}
+          />
+          {globalFilter ? (
+            <button
+              type="button"
+              className={`shrink-0 ${secondaryButtonClass}`}
+              onClick={() => {
+                setGlobalFilter("");
+                setVisibleCount(PAGE_SIZE);
+                searchInput.current?.focus();
+              }}
+            >
+              Clear search
+            </button>
+          ) : null}
+        </div>
+        <div className="text-sm text-[var(--muted)]" aria-live="polite" aria-atomic="true">
+          Showing {shownRows.length} of {filteredRows.length} requirement{filteredRows.length === 1 ? "" : "s"}
+          {globalFilter.trim() ? ` matching search (${rows.length} in this view)` : ""}
         </div>
       </div>
-      <div ref={scrollBox} className={tableScrollClass}>
+      <div ref={scrollBox} className={tableScrollClass} tabIndex={0} role="region" aria-label="Requirements table">
         <table className="w-full min-w-[880px] border-collapse text-sm print:min-w-0">
           <caption className="sr-only">Requirements</caption>
           <thead>

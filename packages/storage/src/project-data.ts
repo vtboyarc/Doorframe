@@ -116,22 +116,17 @@ function createImportBatch(
 
 function addTraceLink(
   traceLinks: TraceLink[],
+  traceKeys: Set<string>,
   projectId: string,
   timestamp: string,
   input: Omit<TraceLink, "id" | "projectId" | "createdAt" | "updatedAt">
 ): void {
-  const exists = traceLinks.some(
-    (link) =>
-      link.sourceType === input.sourceType &&
-      link.sourceId === input.sourceId &&
-      link.targetType === input.targetType &&
-      link.targetId === input.targetId &&
-      link.linkType === input.linkType
-  );
-
-  if (exists) {
+  // A shared key set avoids scanning every prior link for each imported trace.
+  const key = JSON.stringify([input.sourceType, input.sourceId, input.targetType, input.targetId, input.linkType]);
+  if (traceKeys.has(key)) {
     return;
   }
+  traceKeys.add(key);
 
   traceLinks.push(
     withProject<TraceLink>(
@@ -175,6 +170,7 @@ export function buildProjectDataFromImportedRecords(
   const workByExternalId = new Map(workItems.map((workItem) => [workItem.externalId, workItem]));
   const testsByExternalId = new Map(testCases.map((testCase) => [testCase.externalId, testCase]));
   const traceLinks: TraceLink[] = [];
+  const traceKeys = new Set<string>();
 
   requirements.forEach((requirement) => {
     if (!requirement.parentExternalId) {
@@ -186,7 +182,7 @@ export function buildProjectDataFromImportedRecords(
       return;
     }
 
-    addTraceLink(traceLinks, project.id, timestamp, {
+    addTraceLink(traceLinks, traceKeys, project.id, timestamp, {
       sourceType: "requirement",
       sourceId: parent.id,
       targetType: "requirement",
@@ -209,7 +205,7 @@ export function buildProjectDataFromImportedRecords(
         return;
       }
 
-      addTraceLink(traceLinks, project.id, timestamp, {
+      addTraceLink(traceLinks, traceKeys, project.id, timestamp, {
         sourceType: "requirement",
         sourceId: requirement.id,
         targetType: "workItem",
@@ -233,7 +229,7 @@ export function buildProjectDataFromImportedRecords(
         return;
       }
 
-      addTraceLink(traceLinks, project.id, timestamp, {
+      addTraceLink(traceLinks, traceKeys, project.id, timestamp, {
         sourceType: "requirement",
         sourceId: requirement.id,
         targetType: "testCase",

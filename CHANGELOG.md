@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.1.20 - Draft
+
+- Search findings by requirement ID, issue text, or recommendation while keeping search and filters through pagination and finding navigation.
+- Show accurate matching requirements counts, add a clear-search control, and support keyboard scrolling of the requirements table. Ignore obsolete sort columns in shared URLs.
+- Preserve JUnit suite-name and failure-message requirement links, and reject malformed XML before importing partial results.
+- Deduplicate imported trace links with indexed lookups instead of repeatedly scanning all prior links.
+- Check supported Node.js 20, 22, and 24 runtimes in CI, including production build and npm package checks on Node.js 24.
+
+- Refresh compatible runtime and development dependencies, keeping the packaged CLI and web app on the same pinned Next.js and React versions.
+- Align npm, Docker, and install examples with the next unpublished release version.
+
 ## v0.1.19 - Draft
 
 - Update the aligned web/CLI Next runtime and vulnerable dependencies; upgrade CSV parsing to the patched 7.x line.
